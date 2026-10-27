@@ -1,0 +1,237 @@
+Task ID,Parent ID,Task Name,Task Description,Status,Priority,Story Points
+E1,,EPIC: Retrieval & Generation Service,"Implement the LLM Retrieval & Generation service per the LLD (Python/FastAPI, Clean Architecture, shared libs). Subtasks are independent user stories built against ports and fakes; none is a prerequisite for another.",in progress,high,
+S1,E1,"Foundation: platform bootstrap, schema and isolation","As a platform engineer I want the service booted on the shared libs with both databases, RLS and migrations so every other story has a runnable, isolated host.
+
+Includes:
+
+Platform bootstrap and configuration [built, unverified against real peers] (LLD §17, §24, DEP-1..5)
+- [ ] App built via fastapicommon.create_platform_app; logging/metrics/tracing only through shared libs
+- [ ] All §17 env vars load via pydantic-settings with validation
+- [ ] Pools via pgcommon for llm_corpus and llm_generation; migration runner wired
+- [ ] 32-code error taxonomy mapped to RFC 9457
+- [ ] AST test enforces DEP-1..5
+
+Database schema, roles and RLS (both Postgres instances) [built, unverified against real peers] (LLD §4, ISO-*)
+- [ ] 24 tables across llm_corpus and llm_generation with up and down migrations
+- [ ] FORCE RLS on all tables except processed_events and outbox tables
+- [ ] Roles rag_app, rag_activity, rag_owner; trigger uses pg_has_role membership
+- [ ] Repository/RLS tests green on PostgreSQL 18
+
+Verify schema on PostgreSQL 18 with testcontainers [not started] (LLD §4, CI-1)
+- [ ] Tests run against PG18 container, no uuidv7 polyfill
+- [ ] test_two_concurrent_first_documents_create_one_row passes 50 consecutive runs
+- [ ] CI job runs integration marker
+
+Independence: built against ports and fakes; no other story is a prerequisite.",in progress,high,16
+S2,E1,"Corpus management: collections, index generations and model catalogue","As Ingestion and tenant admins I want collections provisioned, resolved, promoted and listed so documents have a safe, tenant-scoped home.
+
+Includes:
+
+Provision a collection on first document (C-I1) [built, unverified against real peers] (LLD C-I1, COL-11)
+- [ ] Deterministic UUIDv5 collection id (COL-11)
+- [ ] Concurrent first documents create one row
+- [ ] CollectionProvisioned emitted via outbox
+- [ ] Unique-slot conflict under a different id raises
+
+Resolve collections and index generations (C-I2, C-I5) [built, unverified against real peers] (LLD C-I2, C-I5, CG-*, IG-*)
+- [ ] Resolve endpoint is tenant-scoped
+- [ ] Activation is optimistic-locked via record_version
+- [ ] IndexGenerationActivated emitted
+
+Collection lifecycle: promote, status change, retention (C-I4, C-I6, C-I8) [built, unverified against real peers] (LLD C-I4, C-I6, C-I8)
+- [ ] Illegal transitions rejected with taxonomy error
+- [ ] CollectionPromoted / CollectionStatusChanged emitted
+- [ ] Retention rules applied per C-I8
+
+Collections public API (P-1, P-2, P-3, P-6) [built, unverified against real peers] (LLD P-1..P-6, §5.4)
+- [ ] GET/PUT /collections routes with auth dependency
+- [ ] Pagination and filtering
+- [ ] Cross-tenant access returns not-found
+
+Model catalogue endpoint (C-M1) [built, unverified against real peers] (LLD C-M1)
+- [ ] GET /api/internal/models proxied via ModelCatalogue port
+- [ ] Gateway failure maps to taxonomy error
+- [ ] Verified against real Model Gateway
+
+Independence: built against ports and fakes; no other story is a prerequisite.",in review,high,22
+S3,E1,"Retrieval: scope filters, hybrid search and retrieval sets","As a user I want fused, reranked, scope-correct evidence from search so answers are grounded.
+
+Includes:
+
+Scope resolution and Qdrant filters (corpusscope) [built, unverified against real peers] (LLD §11, SCOPE-*)
+- [ ] Every §11 filter implemented; only corpusscope imports qdrant_client
+- [ ] Tenant isolation test passes
+- [ ] Tested against a real Qdrant container
+
+Hybrid search, fusion, rerank and sufficiency (R-1) [built, unverified against real peers] (LLD R-1)
+- [ ] Dense + lexical retrieval, fusion and rerank
+- [ ] Sufficiency decision exposed
+- [ ] Retrieval set recorded for R-5
+
+Retrieval-set read and purge markers (R-5) [built, unverified against real peers] (LLD R-5)
+- [ ] GET /retrieval-sets/{id}
+- [ ] Purged documents shown as markers
+- [ ] Scope re-resolved via authorizer
+
+Classification proposal and required-input checks (R-6, R-7) [built, unverified against real peers] (LLD R-6, R-7)
+- [ ] POST /classification/propose
+- [ ] POST /required-input-checks
+- [ ] No persistence side effects
+
+Independence: built against ports and fakes; no other story is a prerequisite.",in review,high,22
+S4,E1,"Generation: grounded answers, section drafts and extraction","As a user I want streamed, verified answers, drafts and structured extractions so output is trustworthy.
+
+Includes:
+
+Short-form answers with SSE streaming (R-2) [built, unverified against real peers] (LLD R-2, LD-22)
+- [ ] Admission and completion SQL per LD-22
+- [ ] GenerationStarted/Completed events
+- [ ] Streaming metrics declared
+
+Section drafts with verification ladder (R-3) [built, unverified against real peers] (LLD R-3, VER-*)
+- [ ] POST /sections/drafts SSE
+- [ ] Tiered verification stops at first failing tier
+- [ ] Refusals close run as cancelled
+
+Structured extraction sync and async (R-4) [built, unverified against real peers] (LLD R-4, W-6)
+- [ ] POST /extractions and /extractions/async
+- [ ] ExtractionCompleted event
+- [ ] Real S3 and Gateway verified
+
+Independence: built against ports and fakes; no other story is a prerequisite.",in review,high,21
+S5,E1,"Artefacts: read, render and regenerate","As a user I want to read, render and regenerate artefacts and resolve fact conflicts.
+
+Includes:
+
+Read artefacts, versions and sections (A-1..A-4, A-9) [built, unverified against real peers] (LLD A-1..A-4, A-9)
+- [ ] All six GET routes
+- [ ] Content fetched from S3 store
+- [ ] RLS isolation
+
+Artefact render endpoint (A-8) [built, unverified against real peers] (LLD A-8, S-6)
+- [ ] Returns 503 RENDERER_UNAVAILABLE until a renderer exists (scope cut S-6)
+- [ ] Replace stub when renderer service is specified
+
+Regenerate artefact and sections, fact-conflict resolution (A-5..A-7) [built, unverified against real peers] (LLD A-5..A-7)
+- [ ] Regenerate artefact and section (SSE)
+- [ ] Fact-conflict-resolution endpoint
+- [ ] ArtefactRegenerated / SectionCompleted events
+
+REGEN-5 reuse of unchanged sections [not started] (LLD REGEN-5)
+- [ ] Unchanged sections skip generation
+- [ ] Reuse recorded in version lineage
+- [ ] Tests added
+
+Independence: built against ports and fakes; no other story is a prerequisite.",in progress,medium,19
+S6,E1,"Long-running workflows: runs, approval gate and operator tools","As a user I want long generations started, approved, resumed and cancelled deterministically, and operators able to rematerialise runs.
+
+Includes:
+
+Start, read and cancel generation runs (W-1..W-5) [built, unverified against real peers] (LLD W-1..W-5, RUN-*)
+- [ ] Deterministic Temporal workflow ids (RUN-2)
+- [ ] Guarded run status transitions
+- [ ] GenerationStarted/Progressed/Cancelled/Failed events
+- [ ] Verified against a real Temporal
+
+Outline approval gate, resume and gate expiry (W-4, W-7) [built, unverified against real peers] (LLD W-7, ASYNC-14)
+- [ ] Approve and resume signals
+- [ ] Gate expiry handled
+- [ ] Lost resume signal recoverable
+
+Operator rematerialise run (W-8) [built, unverified against real peers] (LLD W-8, AUD-*)
+- [ ] Operator route authorised
+- [ ] Audit hash chain with advisory-lock seq
+- [ ] llm.cross_tenant_access entry
+
+Worker Pool contract and fake worker [not started] (LLD ASYNC-14, S-1)
+- [ ] Implements docs/worker-pool-contract.md
+- [ ] End-to-end outline→stage→coherence run in tests
+- [ ] Contract versioned for the Worker Pool team
+
+Independence: built against ports and fakes; no other story is a prerequisite.",in progress,high,21
+S7,E1,"Events: outbox, contracts and consumers","As a platform engineer I want reliable event publication and idempotent consumption so services stay consistent.
+
+Includes:
+
+Outbox and relay with routing publisher [built, unverified against real peers] (LLD OBX-*, EVT-8, LD-11)
+- [ ] One relay per database via RoutingPublisher
+- [ ] Atomic with business writes
+- [ ] Failure and retry tests
+
+Published event contracts and schemas [built, unverified against real peers] (LLD §12)
+- [ ] 17 schemas validated in tests
+- [ ] Envelope via eventcommon
+
+AsyncAPI document and Glue encoder [not started] (LLD §12, EVT-*)
+- [ ] AsyncAPI generated from schemas
+- [ ] Glue encoder wired into Codec
+- [ ] CI check for drift
+
+Inbound consumers with idempotency ledger [built, unverified against real peers] (LLD §12.4)
+- [ ] DocumentPurged, DomainProfilePublished, TenantStateChanged, TenantMembershipsPurged, tender lifecycle, TenantQuotaRestored
+- [ ] Replay is a no-op
+- [ ] Verified on real SQS
+
+Independence: built against ports and fakes; no other story is a prerequisite.",in progress,high,21
+S8,E1,Sweeps: scheduled housekeeping,"As an operator I want stuck runs, orphans and stale data cleaned up by least-privilege jobs.
+
+Includes:
+
+Existing sweeps and rag_sweeper role [built, unverified against real peers] (LLD §21.2)
+- [ ] Ten sweeps via CLI python -m rag.infrastructure.sweeps
+- [ ] rag_sweeper role and sweep DB URLs approved by platform team
+
+Zombie-run and orphan-S3-object sweeps [not started] (LLD §21.2)
+- [ ] Zombie runs transition to failed with event
+- [ ] Orphan S3 objects deleted after grace period
+- [ ] Tests
+
+Independence: built against ports and fakes; no other story is a prerequisite.",in progress,medium,10
+S9,E1,"Cross-cutting: cache invalidation, tenant purge and seed data","As a compliance owner I want caches, purges and seed data handled consistently.
+
+Includes:
+
+Scope-cache invalidation on collection writes (§11.1) [not started] (LLD §11.1)
+- [ ] Valkey scope cache invalidated on collection write
+- [ ] Test with real Valkey
+
+Tenant purge reach into Valkey and evaluation samples [not started] (LLD ISO-*, §12.4)
+- [ ] Purge deletes Valkey keys and evaluation samples
+- [ ] Idempotent
+
+Reference-collection seed [not started] (LLD §4)
+- [ ] Idempotent seed migration or job
+- [ ] Tests
+
+Independence: built against ports and fakes; no other story is a prerequisite.",to do,high,10
+S10,E1,Observability: metrics and readiness,"As an SRE I want metrics and a truthful readiness probe so we can operate the service.
+
+Includes:
+
+Register llm metrics domain and enable Tier-3 metrics [not started] (LLD §16, OQ-103)
+- [ ] llm domain registered in platform registry (OQ-103)
+- [ ] Metrics enabled by default
+- [ ] Dashboards for §16 metrics
+
+Readiness probe reflecting relay and dependencies [not started] (LLD §16)
+- [ ] Probe covers both DBs, relay, Valkey
+- [ ] Tested
+
+Independence: built against ports and fakes; no other story is a prerequisite.",to do,high,6
+S11,E1,"Verification and sign-off: real peers, contracts and deviations","As an architect I want the build proven against real peers and open decisions ratified.
+
+Includes:
+
+Integration environment with real peers [not started] (LLD all)
+- [ ] docker-compose or testcontainers set
+- [ ] Contract tests replace assumed shapes
+- [ ] Peer-spec mismatches logged as defects
+
+Confirm assumed peer contracts [not started] (LLD S-1..S-8)
+- [ ] Written sign-off per peer
+- [ ] Adapters updated where different
+
+Sign-off on LLD deviations [not started] (LLD §4, OBX-3, §4.3.6)
+- [ ] Decision recorded for: pg_has_role trigger, relay per DB, rag_sweeper role, extra scope_revoked run edges, refusal closure as cancelled
+
+Independence: built against ports and fakes; no other story is a prerequisite.",to do,high,13

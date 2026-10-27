@@ -1,0 +1,86 @@
+{
+  "$defs": {
+    "ConflictEntry": {
+      "additionalProperties": true,
+      "description": "One disagreement: a fact key and the identifiers behind it, never the text (CONF-2).",
+      "properties": {
+        "chunk_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Chunk Ids",
+          "type": "array"
+        },
+        "document_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Document Ids",
+          "type": "array"
+        },
+        "fact_key": {
+          "title": "Fact Key",
+          "type": "string"
+        },
+        "severity": {
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fact_key",
+        "severity",
+        "chunk_ids",
+        "document_ids"
+      ],
+      "title": "ConflictEntry",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "Declared in the AsyncAPI file and **not published in v1** (LD-64, \u00a79.8).",
+  "properties": {
+    "checked_at": {
+      "title": "Checked At",
+      "type": "string"
+    },
+    "collection_id": {
+      "title": "Collection Id",
+      "type": "string"
+    },
+    "conflict_count": {
+      "title": "Conflict Count",
+      "type": "integer"
+    },
+    "conflicts": {
+      "items": {
+        "$ref": "#/$defs/ConflictEntry"
+      },
+      "title": "Conflicts",
+      "type": "array"
+    },
+    "index_generation": {
+      "title": "Index Generation",
+      "type": "integer"
+    },
+    "tender_id": {
+      "title": "Tender Id",
+      "type": "string"
+    },
+    "truncated": {
+      "title": "Truncated",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "collection_id",
+    "tender_id",
+    "index_generation",
+    "checked_at",
+    "conflicts",
+    "conflict_count",
+    "truncated"
+  ],
+  "title": "CorpusConflictDetected",
+  "type": "object"
+}

@@ -1,0 +1,161 @@
+{
+  "$defs": {
+    "ArtefactKind": {
+      "description": "Kind of generated artefact.",
+      "enum": [
+        "answer",
+        "section_draft",
+        "document",
+        "extraction"
+      ],
+      "title": "ArtefactKind",
+      "type": "string"
+    },
+    "EligibilityState": {
+      "description": "Domain Profile generation eligibility (\u00a77.6).",
+      "enum": [
+        "GENERATABLE",
+        "PARTIALLY_GENERATABLE",
+        "NOT_GENERATABLE"
+      ],
+      "title": "EligibilityState",
+      "type": "string"
+    },
+    "GenerationMode": {
+      "description": "Generation mode.",
+      "enum": [
+        "assistance",
+        "automation"
+      ],
+      "title": "GenerationMode",
+      "type": "string"
+    },
+    "Recipient": {
+      "additionalProperties": true,
+      "description": "``{kind, id}`` echoed from the request that started the run (LD-83, provisional).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "title": "Recipient",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "Every admission, synchronous or not, in the shell's transaction (ASYNC-2, RUN-1, GEN-10).",
+  "properties": {
+    "artefact_id": {
+      "title": "Artefact Id",
+      "type": "string"
+    },
+    "capability": {
+      "title": "Capability",
+      "type": "string"
+    },
+    "clamp_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Clamp Reason"
+    },
+    "clamped": {
+      "title": "Clamped",
+      "type": "boolean"
+    },
+    "domain_profile_version": {
+      "title": "Domain Profile Version",
+      "type": "string"
+    },
+    "effective_mode": {
+      "$ref": "#/$defs/GenerationMode"
+    },
+    "eligibility_state": {
+      "$ref": "#/$defs/EligibilityState"
+    },
+    "generation_id": {
+      "title": "Generation Id",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/ArtefactKind"
+    },
+    "language_pack_version": {
+      "title": "Language Pack Version",
+      "type": "string"
+    },
+    "principal_id": {
+      "title": "Principal Id",
+      "type": "string"
+    },
+    "recipients": {
+      "items": {
+        "$ref": "#/$defs/Recipient"
+      },
+      "title": "Recipients",
+      "type": "array"
+    },
+    "requested_mode": {
+      "$ref": "#/$defs/GenerationMode"
+    },
+    "synchronous": {
+      "title": "Synchronous",
+      "type": "boolean"
+    },
+    "target_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Ref"
+    },
+    "tender_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tender Id"
+    }
+  },
+  "required": [
+    "artefact_id",
+    "generation_id",
+    "principal_id",
+    "kind",
+    "capability",
+    "synchronous",
+    "requested_mode",
+    "effective_mode",
+    "eligibility_state",
+    "clamped",
+    "domain_profile_version",
+    "language_pack_version"
+  ],
+  "title": "GenerationStarted",
+  "type": "object"
+}

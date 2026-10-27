@@ -1,0 +1,14 @@
+# Default: every file requires review from the LLM team.
+* @BCBP-SOLUTIONS-FZC-LLC/llm-team
+
+# Workflow and release automation changes require explicit sign-off.
+.github/workflows/ @BCBP-SOLUTIONS-FZC-LLC/llm-team
+
+# Event contract — changes affect all downstream consumers.
+schemas/events/ @BCBP-SOLUTIONS-FZC-LLC/llm-team
+
+# Domain model — structural changes ripple through every layer.
+src/rag/domain/ @BCBP-SOLUTIONS-FZC-LLC/llm-team
+
+# Database migrations affect all replicas and are irreversible in production.
+migrations/ @BCBP-SOLUTIONS-FZC-LLC/llm-team

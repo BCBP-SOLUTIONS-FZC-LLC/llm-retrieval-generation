@@ -1,0 +1,52 @@
+{
+  "additionalProperties": true,
+  "description": "An operational signal about this service's own pack cache (\u00a712.3).",
+  "properties": {
+    "concern": {
+      "title": "Concern",
+      "type": "string"
+    },
+    "domain": {
+      "title": "Domain",
+      "type": "string"
+    },
+    "from_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "From Version"
+    },
+    "language": {
+      "title": "Language",
+      "type": "string"
+    },
+    "profile_ref": {
+      "title": "Profile Ref",
+      "type": "string"
+    },
+    "to_version": {
+      "title": "To Version",
+      "type": "string"
+    },
+    "triggered_by_event_id": {
+      "title": "Triggered By Event Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile_ref",
+    "domain",
+    "language",
+    "concern",
+    "to_version",
+    "triggered_by_event_id"
+  ],
+  "title": "ProfileCacheRefreshed",
+  "type": "object"
+}

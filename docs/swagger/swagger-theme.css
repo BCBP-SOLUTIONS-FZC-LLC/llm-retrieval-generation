@@ -1,0 +1,499 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+body, .swagger-ui { background: #000 !important; font-family: "Poppins", sans-serif !important; }
+.swagger-ui * { box-sizing: border-box; }
+
+/* ── Topbar ───────────────────────────────────────────────────────────────── */
+.swagger-ui .topbar {
+  background: #000 !important;
+  border-bottom: 2px solid;
+  border-image: linear-gradient(to right, #8426b0 3%, #bd0283 47%, #ec4b3c 98%) 1;
+  padding: .75rem 0;
+}
+.swagger-ui .topbar a, .swagger-ui .topbar .topbar-wrapper span { color: #fff !important; }
+.swagger-ui .topbar .download-url-wrapper input[type=text] {
+  background: #0d0d0d !important; border-color: rgba(132,38,176,.4) !important; color: #fff !important;
+}
+.swagger-ui .topbar .download-url-wrapper .download-url-button {
+  background: linear-gradient(to right, #8426b0, #bd0283) !important; border: none !important; color: #fff !important;
+}
+
+/* ── Info section ─────────────────────────────────────────────────────────── */
+.swagger-ui .information-container {
+  background: #0d0d0d !important;
+  border-bottom: 2px solid !important;
+  border-image: linear-gradient(to right,#8426b0 3%,#bd0283 47%,#ec4b3c 98%) 1 !important;
+  padding: 1.5rem 0 !important;
+}
+.swagger-ui .info .title {
+  font-family: "Poppins", sans-serif !important;
+  font-weight: 700 !important;
+  background: linear-gradient(to right,#8426b0 3%,#bd0283 47%,#ec4b3c 98%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* Base URL strip */
+.swagger-ui .info .base-url, .swagger-ui .base-url {
+  background: #000 !important;
+  border: 1px solid rgba(132,38,176,.4) !important;
+  border-radius: 6px !important;
+  color: #e879f9 !important;
+  -webkit-text-fill-color: #e879f9 !important;
+  display: inline-block !important;
+  font-family: monospace !important;
+  font-size: .85rem !important;
+  padding: 3px 10px !important;
+  margin: .5rem 0 !important;
+}
+
+/* doc.json URL */
+.swagger-ui .info .url { color: #9ca3af !important; font-size: .8rem !important; }
+
+/* Contact & license */
+.swagger-ui .info__contact, .swagger-ui .info__license { margin-top: .5rem !important; }
+.swagger-ui .info__contact a {
+  background: linear-gradient(to right,#8426b0,#bd0283);
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  font-weight: 600 !important;
+}
+.swagger-ui .info__license a { color: #9ca3af !important; -webkit-text-fill-color: #9ca3af !important; }
+.swagger-ui .info p, .swagger-ui .info li, .swagger-ui .info h1, .swagger-ui .info h3 { color: #d1d5db !important; }
+.swagger-ui .info a { color: #bd0283 !important; }
+.swagger-ui .info code { background: #0d0d0d !important; color: #e879f9 !important; }
+
+/* ── Scheme / auth bar ────────────────────────────────────────────────────── */
+.swagger-ui .scheme-container {
+  background: #050505 !important; box-shadow: none !important;
+  border-bottom: 1px solid rgba(132,38,176,.25) !important;
+}
+.swagger-ui .schemes > label { color: #9ca3af !important; }
+
+/* ── Operation tags ───────────────────────────────────────────────────────── */
+.swagger-ui .opblock-tag {
+  color: #fff !important; border-bottom: 1px solid rgba(132,38,176,.25) !important;
+  font-family: "Poppins", sans-serif !important; font-weight: 600 !important;
+}
+.swagger-ui .opblock-tag:hover { background: rgba(132,38,176,.08) !important; }
+.swagger-ui .opblock-tag-section h3 { color: #fff !important; }
+
+/* ── Operation blocks (shared) ────────────────────────────────────────────── */
+.swagger-ui .opblock {
+  background: #0d0d0d !important; border-color: rgba(132,38,176,.3) !important;
+  border-radius: 8px !important; margin-bottom: .5rem !important;
+}
+.swagger-ui .opblock .opblock-summary { border-color: rgba(132,38,176,.3) !important; }
+.swagger-ui .opblock .opblock-summary-path,
+.swagger-ui .opblock .opblock-summary-path__deprecated { color: #fff !important; font-family: monospace !important; }
+.swagger-ui .opblock .opblock-summary-description { color: #9ca3af !important; }
+.swagger-ui .opblock-body { background: #0a0a0a !important; }
+.swagger-ui .opblock-description-wrapper p,
+.swagger-ui .opblock-external-docs-wrapper p,
+.swagger-ui .opblock-title_normal p { color: #d1d5db !important; }
+
+/* ── Method colours ───────────────────────────────────────────────────────── */
+.swagger-ui .opblock.opblock-get  { border-color: #1e3a5f !important; background: rgba(30,58,95,.08) !important; }
+.swagger-ui .opblock.opblock-get  .opblock-summary-method { background: #1e3a5f !important; color: #60a5fa !important; }
+.swagger-ui .opblock.opblock-post { border-color: #1a3028 !important; background: rgba(26,48,40,.08) !important; }
+.swagger-ui .opblock.opblock-post .opblock-summary-method { background: #1a3028 !important; color: #4ade80 !important; }
+.swagger-ui .opblock.opblock-put  { border-color: rgba(132,38,176,.5) !important; background: rgba(132,38,176,.06) !important; }
+.swagger-ui .opblock.opblock-put  .opblock-summary-method { background: linear-gradient(to right,#8426b0,#bd0283) !important; color: #fff !important; }
+.swagger-ui .opblock.opblock-patch { border-color: rgba(189,2,131,.5) !important; background: rgba(189,2,131,.06) !important; }
+.swagger-ui .opblock.opblock-patch .opblock-summary-method { background: linear-gradient(to right,#bd0283,#ec4b3c) !important; color: #fff !important; }
+.swagger-ui .opblock.opblock-delete { border-color: #ec4b3c !important; background: rgba(236,75,60,.06) !important; }
+.swagger-ui .opblock.opblock-delete .opblock-summary-method { background: #ec4b3c !important; color: #fff !important; }
+
+/* ── Parameters & tables ──────────────────────────────────────────────────── */
+.swagger-ui .opblock .opblock-section-header {
+  background: rgba(132,38,176,.08) !important;
+  border-bottom: 1px solid rgba(132,38,176,.2) !important;
+  box-shadow: none !important;
+  padding: 12px 16px !important;
+}
+.swagger-ui .opblock .opblock-section-header h4 {
+  color: #fff !important;
+  font-family: "Poppins", sans-serif !important;
+  font-weight: 600 !important;
+}
+.swagger-ui .opblock .opblock-section-header .btn.try-out__btn {
+  background: transparent !important;
+  border: 1px solid rgba(132,38,176,.45) !important;
+  color: #e879f9 !important;
+}
+.swagger-ui .opblock .opblock-section-header .btn.try-out__btn:hover {
+  background: rgba(132,38,176,.14) !important;
+  border-color: #8426b0 !important;
+  color: #fff !important;
+}
+.swagger-ui .opblock .opblock-section { background: transparent !important; }
+.swagger-ui .parameters-container,
+.swagger-ui .opblock-section .table-container {
+  background: #0a0a0a !important;
+  padding: 8px 16px 16px !important;
+}
+.swagger-ui .parameters-col_description input[type=text],
+.swagger-ui .parameters-col_description textarea {
+  background: #111 !important;
+  border: 1px solid rgba(132,38,176,.35) !important;
+  color: #fff !important;
+}
+.swagger-ui .parameters-container .parameter__name { color: #fff !important; font-weight: 600 !important; }
+.swagger-ui .parameters-container .parameter__type { color: #e879f9 !important; font-family: monospace !important; }
+.swagger-ui .parameters-container .parameter__in { color: #9ca3af !important; font-style: italic !important; }
+.swagger-ui .parameters-container .parameter__deprecated { color: #ec4b3c !important; }
+.swagger-ui table thead tr td, .swagger-ui table thead tr th { color: #9ca3af !important; border-bottom: 1px solid rgba(132,38,176,.25) !important; }
+.swagger-ui table tbody tr td { color: #d1d5db !important; border-bottom: 1px solid rgba(132,38,176,.12) !important; }
+
+/* ── Inputs ───────────────────────────────────────────────────────────────── */
+.swagger-ui input[type=text], .swagger-ui input[type=password],
+.swagger-ui input[type=search], .swagger-ui input[type=email],
+.swagger-ui textarea, .swagger-ui select {
+  background: #0d0d0d !important; border: 1px solid rgba(132,38,176,.4) !important; color: #fff !important;
+}
+.swagger-ui input:focus, .swagger-ui textarea:focus {
+  border-color: #8426b0 !important; outline: none !important;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.swagger-ui .btn { font-family: "Poppins", sans-serif !important; font-weight: 500 !important; border-radius: 6px !important; }
+.swagger-ui .btn.authorize {
+  background: linear-gradient(to right, #8426b0, #bd0283) !important;
+  border-color: transparent !important; color: #fff !important;
+}
+.swagger-ui .btn.execute {
+  background: linear-gradient(to right, #8426b0, #bd0283, #ec4b3c) !important;
+  border-color: transparent !important; color: #fff !important;
+}
+.swagger-ui .btn.cancel { background: #ec4b3c !important; border-color: #ec4b3c !important; color: #fff !important; }
+.swagger-ui .btn-clear { color: #ec4b3c !important; border-color: #ec4b3c !important; }
+
+/* ── Responses ────────────────────────────────────────────────────────────── */
+.swagger-ui .responses-wrapper { background: #0a0a0a !important; }
+.swagger-ui .responses-inner { background: #0a0a0a !important; padding: 0 16px 16px !important; }
+.swagger-ui .response-controls,
+.swagger-ui .response-control-media-type {
+  background: rgba(132,38,176,.06) !important;
+  border-bottom: 1px solid rgba(132,38,176,.15) !important;
+  padding: 10px 16px !important;
+}
+.swagger-ui .response-control-media-type__title,
+.swagger-ui .response-control-media-type__accept-message { color: #9ca3af !important; }
+.swagger-ui .response-col_status { color: #22c55e !important; font-weight: 700 !important; }
+.swagger-ui .response-col_links { color: #bd0283 !important; }
+.swagger-ui table.responses-table .response-col_status { background: transparent !important; }
+
+/* ── Code / highlight ─────────────────────────────────────────────────────── */
+.swagger-ui .microlight, .swagger-ui .highlight-code { background: #0d0d0d !important; color: #e879f9 !important; }
+.swagger-ui pre:not(.version) { background: #0d0d0d !important; color: #e879f9 !important; border: 1px solid rgba(132,38,176,.25) !important; border-radius: 6px !important; }
+.swagger-ui code { background: #0d0d0d !important; color: #e879f9 !important; }
+
+/* ── Models section ───────────────────────────────────────────────────────── */
+.swagger-ui section.models {
+  border: 1px solid rgba(132,38,176,.25) !important; background: #0d0d0d !important; border-radius: 8px !important;
+}
+.swagger-ui section.models h4 { color: #fff !important; }
+.swagger-ui section.models h4 span { color: #9ca3af !important; }
+.swagger-ui .model-container { background: #111 !important; border-radius: 6px !important; margin: .5rem 0 !important; overflow: visible !important; }
+.swagger-ui .model-box { background: #111 !important; overflow: visible !important; }
+.swagger-ui .model { color: #d1d5db !important; overflow: visible !important; }
+.swagger-ui table.model { overflow: visible !important; }
+.swagger-ui table.model tr.property-row td { overflow: visible !important; vertical-align: top !important; }
+.swagger-ui .model .property.primitive { color: #e879f9 !important; }
+.swagger-ui .model-title { color: #fff !important; font-weight: 600 !important; }
+.swagger-ui span.model-title__text { color: #fff !important; }
+.swagger-ui .prop-format { color: #f59e0b !important; }
+.swagger-ui .required { color: #ec4b3c !important; font-weight: 600 !important; }
+
+/* ── Auth modal ───────────────────────────────────────────────────────────── */
+.swagger-ui .dialog-ux .modal-ux {
+  background: #0d0d0d !important;
+  border: 1px solid rgba(132,38,176,.4) !important;
+  border-radius: 8px !important;
+  max-width: 560px !important;
+  width: 92% !important;
+}
+.swagger-ui .dialog-ux .modal-ux-header {
+  background: #000 !important;
+  border-bottom: 1px solid rgba(132,38,176,.25) !important;
+  padding: 14px 20px !important;
+}
+.swagger-ui .dialog-ux .modal-ux-header h3 {
+  color: #fff !important;
+  font-family: "Poppins", sans-serif !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  margin: 0 !important;
+}
+.swagger-ui .dialog-ux .modal-ux-header .close-modal {
+  color: #9ca3af !important;
+  cursor: pointer !important;
+}
+.swagger-ui .dialog-ux .modal-ux-header .close-modal:hover { color: #fff !important; }
+
+.swagger-ui .dialog-ux .modal-ux-inner { padding: 16px 20px !important; }
+
+/* Each scheme block (UserID / TenantID / TenantRoles) — clean vertical rhythm */
+.swagger-ui .dialog-ux .modal-ux-content .auth-container {
+  border-bottom: 1px solid rgba(132,38,176,.15) !important;
+  padding: 14px 0 !important;
+}
+.swagger-ui .dialog-ux .modal-ux-content .auth-container:first-of-type { padding-top: 0 !important; }
+.swagger-ui .dialog-ux .modal-ux-content .auth-container:last-of-type {
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+}
+
+/* Scheme title — "TenantID (apiKey)" */
+.swagger-ui .dialog-ux .modal-ux-content h4 {
+  color: #fff !important;
+  font-family: "Poppins", sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  margin: 0 0 8px 0 !important;
+}
+
+/* Description paragraph — the sentence users said was unreadable */
+.swagger-ui .dialog-ux .modal-ux-content p {
+  color: #e5e7eb !important;
+  font-family: "Poppins", sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.6 !important;
+  margin: 6px 0 !important;
+}
+
+/* Inline code inside descriptions (platform_operator, iam-system) */
+.swagger-ui .dialog-ux .modal-ux-content p code,
+.swagger-ui .dialog-ux .modal-ux-content code {
+  background: #1a1a1a !important;
+  border: 1px solid rgba(132,38,176,.2) !important;
+  border-radius: 3px !important;
+  color: #e879f9 !important;
+  font-family: monospace !important;
+  font-size: 13px !important;
+  padding: 1px 5px !important;
+}
+
+/* "Name:" / "In:" / "Value:" labels */
+.swagger-ui .dialog-ux .modal-ux-content label {
+  color: #9ca3af !important;
+  display: inline-block !important;
+  font-family: "Poppins", sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  letter-spacing: .02em !important;
+  margin: 4px 8px 4px 0 !important;
+  text-transform: none !important;
+}
+
+/* API-key input box */
+.swagger-ui .dialog-ux .modal-ux-content input[type=text] {
+  background: #0d0d0d !important;
+  border: 1px solid rgba(132,38,176,.4) !important;
+  border-radius: 6px !important;
+  color: #fff !important;
+  font-family: "Poppins", sans-serif !important;
+  font-size: 14px !important;
+  max-width: 340px !important;
+  padding: 6px 10px !important;
+  width: 100% !important;
+}
+.swagger-ui .dialog-ux .modal-ux-content input[type=text]:focus {
+  border-color: #8426b0 !important;
+  outline: none !important;
+}
+
+/* Authorize / Close buttons inside a scheme block */
+.swagger-ui .dialog-ux .modal-ux-content .auth-btn-wrapper {
+  display: flex !important;
+  gap: 10px !important;
+  padding-top: 12px !important;
+}
+.swagger-ui .dialog-ux .modal-ux-content .auth-btn-wrapper .btn {
+  font-family: "Poppins", sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 6px 16px !important;
+}
+
+/* ── Misc text / icons ────────────────────────────────────────────────────── */
+.swagger-ui p, .swagger-ui h1, .swagger-ui h3,
+.swagger-ui h4, .swagger-ui h5, .swagger-ui h6 { color: #fff !important; }
+.swagger-ui h2:not(.title) { color: #fff !important; }
+.swagger-ui span, .swagger-ui label { color: #d1d5db !important; }
+.swagger-ui a { color: #bd0283 !important; }
+.swagger-ui a:hover { color: #ec4b3c !important; }
+/* ── SVG icons (default — expand rules below override) ───────────────────── */
+.swagger-ui svg { fill: #d1d5db !important; }
+
+/* ── API version badge (must be last — overrides global pre/h2/span rules) ─ */
+.swagger-ui .info .title small,
+.swagger-ui .info .title small.version-stamp {
+  background: linear-gradient(to right, #8426b0, #bd0283) !important;
+  -webkit-background-clip: padding-box !important;
+  background-clip: padding-box !important;
+  -webkit-text-fill-color: initial !important;
+  border-radius: 4px !important;
+  display: inline-block !important;
+  margin: 0 0 0 .5rem !important;
+  padding: 2px 8px !important;
+  vertical-align: middle !important;
+}
+.swagger-ui .info pre.version,
+.swagger-ui .info .title small pre,
+.swagger-ui .info .title small.version-stamp pre.version {
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  font-family: "Poppins", sans-serif !important;
+  font-size: .75rem !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* ── Expand / collapse chevrons (must be last — overrides global svg fill) ─ */
+
+/* schema list rows — full-width flex so chevrons align in a column */
+.swagger-ui .model-container .model-box {
+  display: block !important;
+  width: 100% !important;
+}
+.swagger-ui .model-container .model-box-control {
+  all: unset !important;
+  align-items: center !important;
+  cursor: pointer !important;
+  display: flex !important;
+  gap: 8px !important;
+  overflow: visible !important;
+  width: 100% !important;
+}
+.swagger-ui .model-container .model-box-control > .pointer {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+.swagger-ui .model-container .model-box-control .model-title,
+.swagger-ui .model-container .model-box-control .model-title__text {
+  line-height: 1.4 !important;
+  vertical-align: middle !important;
+}
+.swagger-ui .model-container .model-box-control > .model-toggle {
+  flex: 0 0 20px !important;
+  margin: 0 !important;
+  vertical-align: middle !important;
+}
+
+/* nested property rows — block layout prevents ref titles overlapping siblings */
+.swagger-ui table.model td .model > span {
+  display: block !important;
+  width: 100% !important;
+}
+.swagger-ui table.model .model-box-control {
+  all: unset !important;
+  align-items: flex-start !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  margin: 0 4px 0 0 !important;
+  min-height: 20px !important;
+  min-width: 20px !important;
+  overflow: visible !important;
+  vertical-align: top !important;
+}
+.swagger-ui table.model .model-box-control + .prop,
+.swagger-ui table.model .model-box-control + .model,
+.swagger-ui table.model td .model > span > .model {
+  display: block !important;
+  margin-top: 4px !important;
+  width: 100% !important;
+}
+.swagger-ui table.model td .model .model-title {
+  display: block !important;
+  margin: 0 0 6px 0 !important;
+  position: static !important;
+}
+.swagger-ui table.model td .model .model {
+  display: block !important;
+  margin-left: 12px !important;
+  padding-left: 10px !important;
+  border-left: 1px solid rgba(132,38,176,.25) !important;
+}
+.swagger-ui table.model .model > .prop {
+  display: inline !important;
+}
+.swagger-ui .models-control,
+.swagger-ui .expand-operation,
+.swagger-ui .expand-methods { cursor: pointer !important; }
+
+/* model tree toggle — distinct icons (no rotate — avoids clipping in table cells) */
+.swagger-ui .model-toggle {
+  cursor: pointer !important;
+  display: inline-block !important;
+  flex-shrink: 0 !important;
+  height: 20px !important;
+  margin: 0 4px 0 0 !important;
+  min-height: 20px !important;
+  min-width: 20px !important;
+  overflow: visible !important;
+  position: static !important;
+  top: auto !important;
+  transform: none !important;
+  vertical-align: middle !important;
+  width: 20px !important;
+}
+.swagger-ui table.model .model-toggle {
+  margin: 0 4px 0 0 !important;
+  vertical-align: top !important;
+}
+.swagger-ui .model-toggle.collapsed { transform: none !important; }
+.swagger-ui .model-toggle:after {
+  background: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23e879f9' d='M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z'/%3E%3C/svg%3E") 50% no-repeat !important;
+  background-size: 100% !important;
+  content: "" !important;
+  display: block !important;
+  height: 20px !important;
+  width: 20px !important;
+}
+.swagger-ui .model-toggle:not(.collapsed):after {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23e879f9' d='M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z'/%3E%3C/svg%3E") !important;
+}
+.swagger-ui .model-toggle:hover:after {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z'/%3E%3C/svg%3E") !important;
+}
+.swagger-ui .model-toggle:not(.collapsed):hover:after {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z'/%3E%3C/svg%3E") !important;
+}
+
+/* tag, operation, and schema section arrows (SVG <use> symbols) */
+.swagger-ui .expand-operation svg,
+.swagger-ui .expand-methods svg,
+.swagger-ui .models-control svg,
+.swagger-ui .opblock-summary-control svg,
+.swagger-ui .model-box-control svg,
+.swagger-ui svg.arrow,
+.swagger-ui .opblock-tag .expand-operation svg {
+  fill: #e879f9 !important;
+  color: #e879f9 !important;
+}
+.swagger-ui .expand-operation:hover svg,
+.swagger-ui .expand-methods:hover svg,
+.swagger-ui .models-control:hover svg,
+.swagger-ui .model-box-control:hover svg,
+.swagger-ui svg.arrow:hover,
+.swagger-ui .opblock-tag:hover .expand-operation svg {
+  fill: #fff !important;
+  color: #fff !important;
+}
+
+.swagger-ui .loading-container .loading::after { border-color: #8426b0 transparent transparent !important; }

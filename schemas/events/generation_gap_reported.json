@@ -1,0 +1,95 @@
+{
+  "$defs": {
+    "Recipient": {
+      "additionalProperties": true,
+      "description": "``{kind, id}`` echoed from the request that started the run (LD-83, provisional).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "title": "Recipient",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "A blocking required-input failure (\u00a76.9). Entity *keys* only, never values.",
+  "properties": {
+    "artefact_id": {
+      "title": "Artefact Id",
+      "type": "string"
+    },
+    "blocking": {
+      "title": "Blocking",
+      "type": "boolean"
+    },
+    "empty_collections": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Empty Collections",
+      "type": "array"
+    },
+    "missing_roles": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Missing Roles",
+      "type": "array"
+    },
+    "principal_id": {
+      "title": "Principal Id",
+      "type": "string"
+    },
+    "recipients": {
+      "items": {
+        "$ref": "#/$defs/Recipient"
+      },
+      "title": "Recipients",
+      "type": "array"
+    },
+    "section_ref": {
+      "title": "Section Ref",
+      "type": "string"
+    },
+    "tender_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tender Id"
+    },
+    "unresolved_entities": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Unresolved Entities",
+      "type": "array"
+    }
+  },
+  "required": [
+    "artefact_id",
+    "principal_id",
+    "section_ref",
+    "missing_roles",
+    "unresolved_entities",
+    "empty_collections",
+    "blocking"
+  ],
+  "title": "GenerationGapReported",
+  "type": "object"
+}

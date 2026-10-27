@@ -1,0 +1,76 @@
+{
+  "$defs": {
+    "Recipient": {
+      "additionalProperties": true,
+      "description": "``{kind, id}`` echoed from the request that started the run (LD-83, provisional).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "title": "Recipient",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "The workflow suspends on the human gate (\u00a79.4).",
+  "properties": {
+    "artefact_id": {
+      "title": "Artefact Id",
+      "type": "string"
+    },
+    "gate_expires_at": {
+      "title": "Gate Expires At",
+      "type": "string"
+    },
+    "outline_version": {
+      "title": "Outline Version",
+      "type": "integer"
+    },
+    "principal_id": {
+      "title": "Principal Id",
+      "type": "string"
+    },
+    "recipients": {
+      "items": {
+        "$ref": "#/$defs/Recipient"
+      },
+      "title": "Recipients",
+      "type": "array"
+    },
+    "section_count": {
+      "title": "Section Count",
+      "type": "integer"
+    },
+    "tender_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tender Id"
+    }
+  },
+  "required": [
+    "artefact_id",
+    "principal_id",
+    "outline_version",
+    "section_count",
+    "gate_expires_at"
+  ],
+  "title": "OutlineReady",
+  "type": "object"
+}

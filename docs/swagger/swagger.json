@@ -1,0 +1,5459 @@
+{
+  "components": {
+    "schemas": {
+      "ActivateRequest": {
+        "description": "C-I4: the collection's ``record_version``.",
+        "properties": {
+          "record_version": {
+            "minimum": 1.0,
+            "title": "Record Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "record_version"
+        ],
+        "title": "ActivateRequest",
+        "type": "object"
+      },
+      "ActivateResponse": {
+        "description": "C-I4 body; ``previous`` is always present and null on a first activation.",
+        "properties": {
+          "active_index_generation": {
+            "title": "Active Index Generation",
+            "type": "integer"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous"
+          },
+          "record_version": {
+            "title": "Record Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "active_index_generation",
+          "previous",
+          "record_version"
+        ],
+        "title": "ActivateResponse",
+        "type": "object"
+      },
+      "AnswerRequest": {
+        "description": "R-2 body. ``scope.tender_id`` is optional: an answer may stand free of a tender.",
+        "properties": {
+          "prior_refinement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriorRefinementBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "question": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          },
+          "requested_mode": {
+            "default": "assistance",
+            "enum": [
+              "assistance",
+              "automation"
+            ],
+            "title": "Requested Mode",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ScopeBody"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "AnswerRequest",
+        "type": "object"
+      },
+      "AppliedProfile": {
+        "description": "``applied_profile`` of R-1.",
+        "properties": {
+          "candidate_depth": {
+            "title": "Candidate Depth",
+            "type": "integer"
+          },
+          "rerank_in": {
+            "title": "Rerank In",
+            "type": "integer"
+          },
+          "rerank_out": {
+            "title": "Rerank Out",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "values_provisional": {
+            "title": "Values Provisional",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "source",
+          "values_provisional",
+          "candidate_depth",
+          "rerank_in",
+          "rerank_out"
+        ],
+        "title": "AppliedProfile",
+        "type": "object"
+      },
+      "ApproveRequest": {
+        "description": "W-3 body.",
+        "properties": {
+          "outline_version": {
+            "minimum": 1.0,
+            "title": "Outline Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "outline_version"
+        ],
+        "title": "ApproveRequest",
+        "type": "object"
+      },
+      "ArtefactResponse": {
+        "description": "A-1.",
+        "properties": {
+          "archive_state": {
+            "title": "Archive State",
+            "type": "string"
+          },
+          "archived_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
+          "capability": {
+            "title": "Capability",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "format": "uuid",
+            "title": "Created By",
+            "type": "string"
+          },
+          "current_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Run Id"
+          },
+          "current_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "record_version": {
+            "title": "Record Version",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Ref"
+          },
+          "tender_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tender Id"
+          },
+          "tender_section_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tender Section Ref"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "tender_id",
+          "kind",
+          "capability",
+          "tender_section_ref",
+          "target_ref",
+          "status",
+          "archive_state",
+          "archived_at",
+          "created_by",
+          "current_run_id",
+          "record_version",
+          "created_at",
+          "updated_at",
+          "current_version"
+        ],
+        "title": "ArtefactResponse",
+        "type": "object"
+      },
+      "CancelRequest": {
+        "description": "W-5 body: free text, at most 256 characters.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "CancelRequest",
+        "type": "object"
+      },
+      "Chunk": {
+        "description": "``Chunk``.",
+        "properties": {
+          "chunk_id": {
+            "title": "Chunk Id",
+            "type": "string"
+          },
+          "clause_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clause Ref"
+          },
+          "collection_id": {
+            "format": "uuid",
+            "title": "Collection Id",
+            "type": "string"
+          },
+          "collection_weight": {
+            "title": "Collection Weight",
+            "type": "number"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "document_role": {
+            "title": "Document Role",
+            "type": "string"
+          },
+          "document_title": {
+            "title": "Document Title",
+            "type": "string"
+          },
+          "document_version": {
+            "title": "Document Version",
+            "type": "integer"
+          },
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "excerpt_is_translation": {
+            "title": "Excerpt Is Translation",
+            "type": "boolean"
+          },
+          "fused_score": {
+            "title": "Fused Score",
+            "type": "number"
+          },
+          "heading_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heading Path"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "parent_chunk_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Chunk Id"
+          },
+          "purged": {
+            "title": "Purged",
+            "type": "boolean"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "rerank_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rerank Score"
+          },
+          "source_half": {
+            "title": "Source Half",
+            "type": "string"
+          },
+          "source_span": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Span"
+          }
+        },
+        "required": [
+          "rank",
+          "chunk_id",
+          "parent_chunk_id",
+          "document_id",
+          "document_version",
+          "document_title",
+          "heading_path",
+          "clause_ref",
+          "document_role",
+          "language",
+          "collection_id",
+          "collection_weight",
+          "fused_score",
+          "rerank_score",
+          "source_half",
+          "excerpt",
+          "excerpt_is_translation",
+          "source_span",
+          "purged"
+        ],
+        "title": "Chunk",
+        "type": "object"
+      },
+      "Citation": {
+        "description": "``Citation``.",
+        "properties": {
+          "cited_chunk_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cited Chunk Ids",
+            "type": "array"
+          },
+          "claim_ordinal": {
+            "title": "Claim Ordinal",
+            "type": "integer"
+          },
+          "corrected_chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corrected Chunk Ids"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "tier_decided": {
+            "title": "Tier Decided",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "claim_ordinal",
+          "outcome",
+          "cited_chunk_ids",
+          "corrected_chunk_ids",
+          "tier_decided"
+        ],
+        "title": "Citation",
+        "type": "object"
+      },
+      "ClassifyRequest": {
+        "description": "R-6 body: 1 MB of caller-supplied content (\u00a75.2).",
+        "properties": {
+          "content": {
+            "maxLength": 1000000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "domain_profile_ref": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain Profile Ref"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "title": "ClassifyRequest",
+        "type": "object"
+      },
+      "ClassifyResponse": {
+        "description": "R-6: stateless proposal (MD-21).",
+        "properties": {
+          "alternatives": {
+            "items": {
+              "$ref": "#/components/schemas/RoleAlternativeBody"
+            },
+            "title": "Alternatives",
+            "type": "array"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "proposed_role": {
+            "title": "Proposed Role",
+            "type": "string"
+          },
+          "taxonomy_version": {
+            "title": "Taxonomy Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "proposed_role",
+          "confidence",
+          "alternatives",
+          "taxonomy_version"
+        ],
+        "title": "ClassifyResponse",
+        "type": "object"
+      },
+      "Coherence": {
+        "description": "The coherence verdict.",
+        "properties": {
+          "computed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computed At"
+          },
+          "verdict": {
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "verdict",
+          "computed_at"
+        ],
+        "title": "Coherence",
+        "type": "object"
+      },
+      "CollectionListResponse": {
+        "description": "P-1 body.",
+        "properties": {
+          "collections": {
+            "items": {
+              "$ref": "#/components/schemas/CollectionResponse"
+            },
+            "title": "Collections",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "collections",
+          "limit",
+          "offset"
+        ],
+        "title": "CollectionListResponse",
+        "type": "object"
+      },
+      "CollectionResponse": {
+        "description": "P-2 body and a P-1 entry: placement without the physical collection name.",
+        "properties": {
+          "active_index_generation": {
+            "title": "Active Index Generation",
+            "type": "integer"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "knowledge_level": {
+            "title": "Knowledge Level",
+            "type": "string"
+          },
+          "promoted_from": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promoted From"
+          },
+          "record_version": {
+            "title": "Record Version",
+            "type": "integer"
+          },
+          "restricted": {
+            "title": "Restricted",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tender_closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tender Closed At"
+          },
+          "tender_id": {
+            "format": "uuid",
+            "title": "Tender Id",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "weight_override": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Override"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "knowledge_level",
+          "tender_id",
+          "status",
+          "restricted",
+          "active_index_generation",
+          "weight_override",
+          "promoted_from",
+          "tender_closed_at",
+          "record_version",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CollectionResponse",
+        "type": "object"
+      },
+      "CompletenessDetail": {
+        "description": "Per-section completeness.",
+        "properties": {
+          "items_addressed": {
+            "title": "Items Addressed",
+            "type": "integer"
+          },
+          "items_total": {
+            "title": "Items Total",
+            "type": "integer"
+          },
+          "missed_items": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missed Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items_total",
+          "items_addressed",
+          "missed_items"
+        ],
+        "title": "CompletenessDetail",
+        "type": "object"
+      },
+      "DraftRequest": {
+        "description": "R-3 body. ``tender_id`` is required; ``tender_section_ref`` is opaque (ART-4).",
+        "properties": {
+          "prior_refinement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriorRefinementBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requested_mode": {
+            "default": "assistance",
+            "enum": [
+              "assistance",
+              "automation"
+            ],
+            "title": "Requested Mode",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ScopeBody"
+          },
+          "section_type": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Section Type",
+            "type": "string"
+          },
+          "tender_id": {
+            "format": "uuid",
+            "title": "Tender Id",
+            "type": "string"
+          },
+          "tender_section_ref": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Tender Section Ref",
+            "type": "string"
+          },
+          "user_prompt": {
+            "default": "",
+            "maxLength": 8000,
+            "title": "User Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tender_id",
+          "tender_section_ref",
+          "section_type"
+        ],
+        "title": "DraftRequest",
+        "type": "object"
+      },
+      "Eligibility": {
+        "description": "``EligibilityVerdict``.",
+        "properties": {
+          "clamp_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clamp Reason"
+          },
+          "clamped": {
+            "title": "Clamped",
+            "type": "boolean"
+          },
+          "effective_mode": {
+            "title": "Effective Mode",
+            "type": "string"
+          },
+          "profile_version": {
+            "title": "Profile Version",
+            "type": "string"
+          },
+          "requested_mode": {
+            "title": "Requested Mode",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "requested_mode",
+          "effective_mode",
+          "clamped",
+          "clamp_reason",
+          "profile_version"
+        ],
+        "title": "Eligibility",
+        "type": "object"
+      },
+      "EligibilityBody": {
+        "description": "``EligibilityVerdict`` (\u00a75.5, API-5).",
+        "properties": {
+          "clamp_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clamp Reason"
+          },
+          "clamped": {
+            "title": "Clamped",
+            "type": "boolean"
+          },
+          "effective_mode": {
+            "title": "Effective Mode",
+            "type": "string"
+          },
+          "profile_version": {
+            "title": "Profile Version",
+            "type": "string"
+          },
+          "requested_mode": {
+            "title": "Requested Mode",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "requested_mode",
+          "effective_mode",
+          "clamped",
+          "clamp_reason",
+          "profile_version"
+        ],
+        "title": "EligibilityBody",
+        "type": "object"
+      },
+      "ExtractRequest": {
+        "description": "R-4 body.",
+        "properties": {
+          "document_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Document Ids",
+            "type": "array"
+          },
+          "schema_ref": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Schema Ref",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ScopeBody"
+          },
+          "tender_id": {
+            "format": "uuid",
+            "title": "Tender Id",
+            "type": "string"
+          },
+          "trigger_document_version_id": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Document Version Id"
+          }
+        },
+        "required": [
+          "tender_id",
+          "schema_ref"
+        ],
+        "title": "ExtractRequest",
+        "type": "object"
+      },
+      "ExtractionResponse": {
+        "description": "R-4: ``200``, or ``206`` where ``degradation_markers`` is non-empty (\u00a75.7.4).",
+        "properties": {
+          "artefact_id": {
+            "format": "uuid",
+            "title": "Artefact Id",
+            "type": "string"
+          },
+          "artefact_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artefact Version Id"
+          },
+          "degradation_markers": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Degradation Markers",
+            "type": "array"
+          },
+          "eligibility": {
+            "$ref": "#/components/schemas/EligibilityBody"
+          },
+          "evidence_tier": {
+            "title": "Evidence Tier",
+            "type": "string"
+          },
+          "fields": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Fields",
+            "type": "object"
+          },
+          "generation_id": {
+            "format": "uuid",
+            "title": "Generation Id",
+            "type": "string"
+          },
+          "refusal": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refusal"
+          },
+          "retrieval_set_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieval Set Id"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "artefact_id",
+          "generation_id",
+          "artefact_version_id",
+          "retrieval_set_id",
+          "schema_version",
+          "fields",
+          "evidence_tier",
+          "eligibility",
+          "degradation_markers"
+        ],
+        "title": "ExtractionResponse",
+        "type": "object"
+      },
+      "FactConflictResolutionRequest": {
+        "description": "A-7 body.",
+        "properties": {
+          "conflict_id": {
+            "format": "uuid",
+            "title": "Conflict Id",
+            "type": "string"
+          },
+          "resolution": {
+            "enum": [
+              "keep_established",
+              "update_fact",
+              "dismiss"
+            ],
+            "title": "Resolution",
+            "type": "string"
+          }
+        },
+        "required": [
+          "conflict_id",
+          "resolution"
+        ],
+        "title": "FactConflictResolutionRequest",
+        "type": "object"
+      },
+      "FactConflictResolutionResponse": {
+        "description": "A-7's ``200``: nothing regenerates here; ``proceeds`` says the client may re-issue A-6.",
+        "properties": {
+          "conflict_id": {
+            "format": "uuid",
+            "title": "Conflict Id",
+            "type": "string"
+          },
+          "flagged_section_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Flagged Section Ids",
+            "type": "array"
+          },
+          "proceeds": {
+            "title": "Proceeds",
+            "type": "boolean"
+          },
+          "resolution": {
+            "title": "Resolution",
+            "type": "string"
+          }
+        },
+        "required": [
+          "conflict_id",
+          "resolution",
+          "proceeds",
+          "flagged_section_ids"
+        ],
+        "title": "FactConflictResolutionResponse",
+        "type": "object"
+      },
+      "GapReportBody": {
+        "description": "``GapReport`` (\u00a75.5).",
+        "properties": {
+          "blocking": {
+            "title": "Blocking",
+            "type": "boolean"
+          },
+          "empty_collections": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Empty Collections",
+            "type": "array"
+          },
+          "missing_roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Roles",
+            "type": "array"
+          },
+          "unresolved_entities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unresolved Entities",
+            "type": "array"
+          }
+        },
+        "required": [
+          "missing_roles",
+          "unresolved_entities",
+          "empty_collections",
+          "blocking"
+        ],
+        "title": "GapReportBody",
+        "type": "object"
+      },
+      "GenerationStateResponse": {
+        "description": "W-2.",
+        "properties": {
+          "artefact_id": {
+            "format": "uuid",
+            "title": "Artefact Id",
+            "type": "string"
+          },
+          "coherence": {
+            "$ref": "#/components/schemas/Coherence"
+          },
+          "current_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Stage"
+          },
+          "established_facts": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Established Facts",
+            "type": "object"
+          },
+          "failed_at_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed At Stage"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "generation_id": {
+            "format": "uuid",
+            "title": "Generation Id",
+            "type": "string"
+          },
+          "origin": {
+            "default": "original",
+            "title": "Origin",
+            "type": "string"
+          },
+          "outline": {
+            "$ref": "#/components/schemas/Outline"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/Progress"
+          },
+          "scope_narrowed": {
+            "title": "Scope Narrowed",
+            "type": "boolean"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/SectionProgress"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "generation_id",
+          "artefact_id",
+          "status",
+          "outline",
+          "sections",
+          "established_facts",
+          "coherence",
+          "scope_narrowed",
+          "progress"
+        ],
+        "title": "GenerationStateResponse",
+        "type": "object"
+      },
+      "GrantEntryResponse": {
+        "description": "One P-3 entry.",
+        "properties": {
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "projected_at": {
+            "format": "date-time",
+            "title": "Projected At",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "subject_type": {
+            "title": "Subject Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_type",
+          "subject_id",
+          "level",
+          "projected_at",
+          "expires_at",
+          "source"
+        ],
+        "title": "GrantEntryResponse",
+        "type": "object"
+      },
+      "GrantListResponse": {
+        "description": "P-3 body. ``authoritative`` is a literal false: this service mints no grant (CG-2).",
+        "properties": {
+          "authoritative": {
+            "const": false,
+            "default": false,
+            "title": "Authoritative",
+            "type": "boolean"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/GrantEntryResponse"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "projection_freshness": {
+            "$ref": "#/components/schemas/ProjectionFreshness"
+          }
+        },
+        "required": [
+          "entries",
+          "limit",
+          "offset",
+          "projection_freshness"
+        ],
+        "title": "GrantListResponse",
+        "type": "object"
+      },
+      "Groundedness": {
+        "description": "Per-section groundedness.",
+        "properties": {
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "title": "Claims",
+            "type": "array"
+          },
+          "gaps": {
+            "title": "Gaps",
+            "type": "integer"
+          },
+          "miscited": {
+            "title": "Miscited",
+            "type": "integer"
+          },
+          "supported": {
+            "title": "Supported",
+            "type": "integer"
+          },
+          "tiers_run": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Tiers Run",
+            "type": "array"
+          },
+          "unsupported": {
+            "title": "Unsupported",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "supported",
+          "unsupported",
+          "miscited",
+          "gaps",
+          "tiers_run",
+          "claims"
+        ],
+        "title": "Groundedness",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "MigrationResultRequest": {
+        "description": "C-I8: ``points_copied`` on ``complete``, ``reason`` on ``failed``.",
+        "properties": {
+          "migration_id": {
+            "format": "uuid",
+            "title": "Migration Id",
+            "type": "string"
+          },
+          "points_copied": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points Copied"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "result": {
+            "enum": [
+              "complete",
+              "failed"
+            ],
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "migration_id",
+          "result"
+        ],
+        "title": "MigrationResultRequest",
+        "type": "object"
+      },
+      "MigrationResultResponse": {
+        "description": "C-I8 body.",
+        "properties": {
+          "collection_id": {
+            "format": "uuid",
+            "title": "Collection Id",
+            "type": "string"
+          },
+          "record_version": {
+            "title": "Record Version",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "collection_id",
+          "status",
+          "record_version"
+        ],
+        "title": "MigrationResultResponse",
+        "type": "object"
+      },
+      "ModelCatalogueResponse": {
+        "description": "C-M1 body.",
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelResponse"
+            },
+            "title": "Models",
+            "type": "array"
+          }
+        },
+        "required": [
+          "models",
+          "as_of"
+        ],
+        "title": "ModelCatalogueResponse",
+        "type": "object"
+      },
+      "ModelResponse": {
+        "description": "One C-M1 model.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "plans": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Plans",
+            "type": "array"
+          },
+          "residency": {
+            "title": "Residency",
+            "type": "string"
+          },
+          "task_classes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Task Classes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "residency",
+          "task_classes",
+          "plans"
+        ],
+        "title": "ModelResponse",
+        "type": "object"
+      },
+      "Outline": {
+        "description": "Outline state and version.",
+        "properties": {
+          "gate_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gate Expires At"
+          },
+          "ready_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ready At"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/OutlineSection"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "state",
+          "version",
+          "sections",
+          "ready_at",
+          "gate_expires_at"
+        ],
+        "title": "Outline",
+        "type": "object"
+      },
+      "OutlineEntryBody": {
+        "description": "One section of an edited outline: a reference and a type, never content.",
+        "properties": {
+          "ref": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Ref",
+            "type": "string"
+          },
+          "type": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "type"
+        ],
+        "title": "OutlineEntryBody",
+        "type": "object"
+      },
+      "OutlineSection": {
+        "description": "One outline entry.",
+        "properties": {
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "type"
+        ],
+        "title": "OutlineSection",
+        "type": "object"
+      },
+      "PlacementResponse": {
+        "description": "C-I1 / C-I2 body (200 and 201 carry the same one).",
+        "properties": {
+          "active_index_generation": {
+            "title": "Active Index Generation",
+            "type": "integer"
+          },
+          "collection_id": {
+            "format": "uuid",
+            "title": "Collection Id",
+            "type": "string"
+          },
+          "knowledge_level": {
+            "title": "Knowledge Level",
+            "type": "string"
+          },
+          "physical_collection": {
+            "title": "Physical Collection",
+            "type": "string"
+          },
+          "purge_epoch": {
+            "title": "Purge Epoch",
+            "type": "integer"
+          },
+          "record_version": {
+            "title": "Record Version",
+            "type": "integer"
+          },
+          "restricted": {
+            "title": "Restricted",
+            "type": "boolean"
+          },
+          "shard_key": {
+            "title": "Shard Key",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "collection_id",
+          "physical_collection",
+          "shard_key",
+          "type",
+          "knowledge_level",
+          "status",
+          "active_index_generation",
+          "purge_epoch",
+          "restricted",
+          "record_version"
+        ],
+        "title": "PlacementResponse",
+        "type": "object"
+      },
+      "PriorRefinementBody": {
+        "description": "``PriorRefinement`` (\u00a75.5). Accepted; ``user_action`` capture is not built (\u00a720 OQ-22).",
+        "properties": {
+          "action": {
+            "enum": [
+              "accepted",
+              "edited",
+              "discarded"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "refinement_id": {
+            "format": "uuid",
+            "title": "Refinement Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refinement_id",
+          "action"
+        ],
+        "title": "PriorRefinementBody",
+        "type": "object"
+      },
+      "Progress": {
+        "description": "A count over the section rows.",
+        "properties": {
+          "complete": {
+            "title": "Complete",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "gap": {
+            "title": "Gap",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "complete",
+          "gap",
+          "failed"
+        ],
+        "title": "Progress",
+        "type": "object"
+      },
+      "ProjectionFreshness": {
+        "description": "Age of the newest recorded overlay answer, and the bound the live path guarantees.",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "bound_seconds": {
+            "title": "Bound Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "as_of",
+          "bound_seconds"
+        ],
+        "title": "ProjectionFreshness",
+        "type": "object"
+      },
+      "Purge": {
+        "description": "A purge marker (RSP-2).",
+        "properties": {
+          "chunk_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Chunk Ids",
+            "type": "array"
+          },
+          "purged_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purged At"
+          },
+          "purged_document_id": {
+            "format": "uuid",
+            "title": "Purged Document Id",
+            "type": "string"
+          },
+          "purged_version": {
+            "title": "Purged Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "purged_document_id",
+          "purged_version",
+          "chunk_ids",
+          "purged_at"
+        ],
+        "title": "Purge",
+        "type": "object"
+      },
+      "PurgeEpochResponse": {
+        "description": "C-I6 body.",
+        "properties": {
+          "purge_epoch": {
+            "title": "Purge Epoch",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "purge_epoch"
+        ],
+        "title": "PurgeEpochResponse",
+        "type": "object"
+      },
+      "PutRetentionRequest": {
+        "description": "P-6. No ``record_version`` creates the policy (LD-76).",
+        "properties": {
+          "legal_hold": {
+            "default": false,
+            "title": "Legal Hold",
+            "type": "boolean"
+          },
+          "record_version": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Version"
+          },
+          "retain_days": {
+            "exclusiveMinimum": 0.0,
+            "title": "Retain Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "retain_days"
+        ],
+        "title": "PutRetentionRequest",
+        "type": "object"
+      },
+      "PutRetentionResponse": {
+        "description": "P-6 body. ``applied`` is false until the retention sweep exists (rev 2.67).",
+        "properties": {
+          "applied": {
+            "const": false,
+            "default": false,
+            "title": "Applied",
+            "type": "boolean"
+          },
+          "collection_id": {
+            "format": "uuid",
+            "title": "Collection Id",
+            "type": "string"
+          },
+          "legal_hold": {
+            "title": "Legal Hold",
+            "type": "boolean"
+          },
+          "record_version": {
+            "title": "Record Version",
+            "type": "integer"
+          },
+          "retain_days": {
+            "title": "Retain Days",
+            "type": "integer"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "collection_id",
+          "retain_days",
+          "legal_hold",
+          "record_version",
+          "updated_at"
+        ],
+        "title": "PutRetentionResponse",
+        "type": "object"
+      },
+      "RecipientBody": {
+        "description": "``{kind, id}`` echoed on the run's events (LD-83, provisional).",
+        "properties": {
+          "id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "RecipientBody",
+        "type": "object"
+      },
+      "RefinementBlock": {
+        "description": "The ``refinement`` block of R-1; absent when the flag is off (REF-2).",
+        "properties": {
+          "exact_terms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Exact Terms",
+            "type": "array"
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent"
+          },
+          "original_query": {
+            "title": "Original Query",
+            "type": "string"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "refined_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refined Query"
+          },
+          "refinement_id": {
+            "format": "uuid",
+            "title": "Refinement Id",
+            "type": "string"
+          },
+          "refiner_version": {
+            "title": "Refiner Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refinement_id",
+          "intent",
+          "refined_query",
+          "exact_terms",
+          "original_query",
+          "refiner_version",
+          "outcome"
+        ],
+        "title": "RefinementBlock",
+        "type": "object"
+      },
+      "RegenerateDocumentRequest": {
+        "additionalProperties": false,
+        "description": "A-5 body. ``review_context`` is not accepted: the run's input is stored (REGEN-3).",
+        "properties": {
+          "base_version_id": {
+            "format": "uuid",
+            "title": "Base Version Id",
+            "type": "string"
+          },
+          "instruction": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instruction"
+          },
+          "recipients": {
+            "items": {
+              "$ref": "#/components/schemas/RecipientBody"
+            },
+            "maxItems": 50,
+            "title": "Recipients",
+            "type": "array"
+          }
+        },
+        "required": [
+          "base_version_id"
+        ],
+        "title": "RegenerateDocumentRequest",
+        "type": "object"
+      },
+      "RegenerateSectionRequest": {
+        "description": "A-6 body (\u00a75.7.9). ``review_context`` is prompt input for this request only (REGEN-3).",
+        "properties": {
+          "base_version_id": {
+            "format": "uuid",
+            "title": "Base Version Id",
+            "type": "string"
+          },
+          "instruction": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instruction"
+          },
+          "recipients": {
+            "items": {
+              "$ref": "#/components/schemas/RecipientBody"
+            },
+            "maxItems": 50,
+            "title": "Recipients",
+            "type": "array"
+          },
+          "review_context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Context"
+          }
+        },
+        "required": [
+          "base_version_id"
+        ],
+        "title": "RegenerateSectionRequest",
+        "type": "object"
+      },
+      "RematerialiseRequest": {
+        "description": "W-8 body: ``ticket_ref`` is required and at most 128 characters.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "ticket_ref": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Ticket Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticket_ref"
+        ],
+        "title": "RematerialiseRequest",
+        "type": "object"
+      },
+      "RematerialiseResponse": {
+        "description": "W-8's ``202``.",
+        "properties": {
+          "artefact_id": {
+            "format": "uuid",
+            "title": "Artefact Id",
+            "type": "string"
+          },
+          "generation_id": {
+            "format": "uuid",
+            "title": "Generation Id",
+            "type": "string"
+          },
+          "rematerialised_at": {
+            "format": "date-time",
+            "title": "Rematerialised At",
+            "type": "string"
+          },
+          "workflow_id": {
+            "title": "Workflow Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "generation_id",
+          "artefact_id",
+          "workflow_id",
+          "rematerialised_at"
+        ],
+        "title": "RematerialiseResponse",
+        "type": "object"
+      },
+      "RequiredInputRequest": {
+        "description": "R-7 body.",
+        "properties": {
+          "capability": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capability"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ScopeBody"
+          },
+          "section_types": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Section Types",
+            "type": "array"
+          },
+          "tender_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tender Id"
+          }
+        },
+        "required": [
+          "section_types"
+        ],
+        "title": "RequiredInputRequest",
+        "type": "object"
+      },
+      "RequiredInputResponse": {
+        "description": "R-7: ``200`` on every outcome, a blocking gap included (\u00a75.7.7).",
+        "properties": {
+          "per_section": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/GapReportBody"
+            },
+            "title": "Per Section",
+            "type": "object"
+          },
+          "profile_version": {
+            "title": "Profile Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "per_section",
+          "profile_version"
+        ],
+        "title": "RequiredInputResponse",
+        "type": "object"
+      },
+      "ResolveRequest": {
+        "description": "C-I1. ``tender_id`` is required; ``tender_restricted`` is optional and advisory.",
+        "properties": {
+          "tender_id": {
+            "format": "uuid",
+            "title": "Tender Id",
+            "type": "string"
+          },
+          "tender_restricted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tender Restricted"
+          }
+        },
+        "required": [
+          "tender_id"
+        ],
+        "title": "ResolveRequest",
+        "type": "object"
+      },
+      "ResumeRequest": {
+        "additionalProperties": false,
+        "description": "W-7 body: ``{}``.",
+        "properties": {},
+        "title": "ResumeRequest",
+        "type": "object"
+      },
+      "RetentionResponse": {
+        "description": "C-I5 body.",
+        "properties": {
+          "collection_id": {
+            "format": "uuid",
+            "title": "Collection Id",
+            "type": "string"
+          },
+          "legal_hold": {
+            "title": "Legal Hold",
+            "type": "boolean"
+          },
+          "record_version": {
+            "title": "Record Version",
+            "type": "integer"
+          },
+          "retain_days": {
+            "title": "Retain Days",
+            "type": "integer"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "collection_id",
+          "retain_days",
+          "legal_hold",
+          "record_version",
+          "updated_at"
+        ],
+        "title": "RetentionResponse",
+        "type": "object"
+      },
+      "RetrievalSetResponse": {
+        "description": "R-5.",
+        "properties": {
+          "applied_profile": {
+            "additionalProperties": true,
+            "title": "Applied Profile",
+            "type": "object"
+          },
+          "artefact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artefact Id"
+          },
+          "budget_allocation": {
+            "additionalProperties": true,
+            "title": "Budget Allocation",
+            "type": "object"
+          },
+          "chunks": {
+            "items": {
+              "$ref": "#/components/schemas/Chunk"
+            },
+            "title": "Chunks",
+            "type": "array"
+          },
+          "domain_profile_version": {
+            "title": "Domain Profile Version",
+            "type": "string"
+          },
+          "filter_set": {
+            "additionalProperties": true,
+            "title": "Filter Set",
+            "type": "object"
+          },
+          "grant_level_applied": {
+            "title": "Grant Level Applied",
+            "type": "string"
+          },
+          "grant_level_clamped": {
+            "title": "Grant Level Clamped",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "index_generations": {
+            "additionalProperties": true,
+            "title": "Index Generations",
+            "type": "object"
+          },
+          "language_pack_version": {
+            "title": "Language Pack Version",
+            "type": "string"
+          },
+          "profile_source": {
+            "title": "Profile Source",
+            "type": "string"
+          },
+          "purges": {
+            "items": {
+              "$ref": "#/components/schemas/Purge"
+            },
+            "title": "Purges",
+            "type": "array"
+          },
+          "query_refinement_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query Refinement Id"
+          },
+          "reranker_ran": {
+            "title": "Reranker Ran",
+            "type": "boolean"
+          },
+          "scope_resolution_hash": {
+            "title": "Scope Resolution Hash",
+            "type": "string"
+          },
+          "tender_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tender Id"
+          },
+          "verdict": {
+            "$ref": "#/components/schemas/RetrievalVerdict"
+          }
+        },
+        "required": [
+          "id",
+          "artefact_id",
+          "tender_id",
+          "verdict",
+          "scope_resolution_hash",
+          "grant_level_applied",
+          "grant_level_clamped",
+          "filter_set",
+          "index_generations",
+          "applied_profile",
+          "profile_source",
+          "budget_allocation",
+          "reranker_ran",
+          "domain_profile_version",
+          "language_pack_version",
+          "query_refinement_id",
+          "chunks",
+          "purges"
+        ],
+        "title": "RetrievalSetResponse",
+        "type": "object"
+      },
+      "RetrievalVerdict": {
+        "description": "``RetrievalVerdict``.",
+        "properties": {
+          "degradation_markers": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Degradation Markers",
+            "type": "array"
+          },
+          "retrieval_set_id": {
+            "format": "uuid",
+            "title": "Retrieval Set Id",
+            "type": "string"
+          },
+          "values_provisional": {
+            "title": "Values Provisional",
+            "type": "boolean"
+          },
+          "verdict": {
+            "title": "Verdict",
+            "type": "string"
+          },
+          "verdict_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict Reason"
+          },
+          "widened_retry_of": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Widened Retry Of"
+          }
+        },
+        "required": [
+          "retrieval_set_id",
+          "verdict",
+          "verdict_reason",
+          "widened_retry_of",
+          "values_provisional",
+          "degradation_markers"
+        ],
+        "title": "RetrievalVerdict",
+        "type": "object"
+      },
+      "ReviseRequest": {
+        "description": "W-4 body.",
+        "properties": {
+          "outline_version": {
+            "minimum": 1.0,
+            "title": "Outline Version",
+            "type": "integer"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/OutlineEntryBody"
+            },
+            "maxItems": 200,
+            "title": "Sections",
+            "type": "array"
+          }
+        },
+        "required": [
+          "outline_version"
+        ],
+        "title": "ReviseRequest",
+        "type": "object"
+      },
+      "RoleAlternativeBody": {
+        "description": "One alternative.",
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "confidence"
+        ],
+        "title": "RoleAlternativeBody",
+        "type": "object"
+      },
+      "RunHandleResponse": {
+        "description": "The ``202`` body of W-1, W-6 and A-5 (``200`` on a replay).",
+        "properties": {
+          "artefact_id": {
+            "format": "uuid",
+            "title": "Artefact Id",
+            "type": "string"
+          },
+          "domain_profile_version": {
+            "title": "Domain Profile Version",
+            "type": "string"
+          },
+          "eligibility": {
+            "$ref": "#/components/schemas/EligibilityBody"
+          },
+          "generation_id": {
+            "format": "uuid",
+            "title": "Generation Id",
+            "type": "string"
+          },
+          "language_pack_version": {
+            "title": "Language Pack Version",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "generation_id",
+          "artefact_id",
+          "status",
+          "eligibility",
+          "domain_profile_version",
+          "language_pack_version"
+        ],
+        "title": "RunHandleResponse",
+        "type": "object"
+      },
+      "ScopeBody": {
+        "description": "``ScopeRequest`` (\u00a75.5). ``tender_id`` routes and filters, never authorizes (API-3).",
+        "properties": {
+          "collection_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Collection Ids",
+            "type": "array"
+          },
+          "collection_types": {
+            "items": {
+              "enum": [
+                "tender",
+                "tenant",
+                "reference"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Collection Types",
+            "type": "array"
+          },
+          "tender_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tender Id"
+          }
+        },
+        "title": "ScopeBody",
+        "type": "object"
+      },
+      "SearchRequest": {
+        "description": "R-1 body.",
+        "properties": {
+          "limit": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "prior_refinement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriorRefinementBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "query": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ScopeBody"
+          },
+          "section_type": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Type"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SearchRequest",
+        "type": "object"
+      },
+      "SearchResponse": {
+        "description": "R-1: ``200``, or ``206`` where ``degradation_markers`` is non-empty.",
+        "properties": {
+          "applied_profile": {
+            "$ref": "#/components/schemas/AppliedProfile"
+          },
+          "chunks": {
+            "items": {
+              "$ref": "#/components/schemas/Chunk"
+            },
+            "title": "Chunks",
+            "type": "array"
+          },
+          "refinement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RefinementBlock"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "verdict": {
+            "$ref": "#/components/schemas/RetrievalVerdict"
+          }
+        },
+        "required": [
+          "verdict",
+          "chunks",
+          "refinement",
+          "applied_profile"
+        ],
+        "title": "SearchResponse",
+        "type": "object"
+      },
+      "SectionContentResponse": {
+        "description": "A-9.",
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "evidence_tier": {
+            "title": "Evidence Tier",
+            "type": "string"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "retrieval_set_id": {
+            "format": "uuid",
+            "title": "Retrieval Set Id",
+            "type": "string"
+          },
+          "section_version_id": {
+            "format": "uuid",
+            "title": "Section Version Id",
+            "type": "string"
+          },
+          "version_no": {
+            "title": "Version No",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "section_version_id",
+          "version_no",
+          "origin",
+          "content_type",
+          "content",
+          "retrieval_set_id",
+          "evidence_tier"
+        ],
+        "title": "SectionContentResponse",
+        "type": "object"
+      },
+      "SectionPage": {
+        "description": "A-4.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SectionState"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "SectionPage",
+        "type": "object"
+      },
+      "SectionProgress": {
+        "description": "A section, with the reason for its state.",
+        "properties": {
+          "evidence_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Tier"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "flagged_for_review": {
+            "default": false,
+            "title": "Flagged For Review",
+            "type": "boolean"
+          },
+          "gap_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap Reason"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "retrieval_set_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieval Set Id"
+          },
+          "section_id": {
+            "format": "uuid",
+            "title": "Section Id",
+            "type": "string"
+          },
+          "section_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Version Id"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "state",
+          "section_id"
+        ],
+        "title": "SectionProgress",
+        "type": "object"
+      },
+      "SectionState": {
+        "description": "A-4 item.",
+        "properties": {
+          "evidence_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Tier"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "flagged_for_review": {
+            "title": "Flagged For Review",
+            "type": "boolean"
+          },
+          "flagged_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flagged Reason"
+          },
+          "gap_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap Reason"
+          },
+          "is_foundation": {
+            "title": "Is Foundation",
+            "type": "boolean"
+          },
+          "ordinal": {
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "section_id": {
+            "format": "uuid",
+            "title": "Section Id",
+            "type": "string"
+          },
+          "section_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Ref"
+          },
+          "section_type": {
+            "title": "Section Type",
+            "type": "string"
+          },
+          "section_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Version Id"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "section_id",
+          "section_ref",
+          "ordinal",
+          "section_type",
+          "is_foundation",
+          "state",
+          "gap_reason",
+          "failure_reason",
+          "section_version_id",
+          "evidence_tier",
+          "flagged_for_review",
+          "flagged_reason"
+        ],
+        "title": "SectionState",
+        "type": "object"
+      },
+      "SignalResponse": {
+        "description": "The ``202`` body of W-3, W-4, W-5 and W-7: the resulting workflow status.",
+        "properties": {
+          "artefact_id": {
+            "format": "uuid",
+            "title": "Artefact Id",
+            "type": "string"
+          },
+          "generation_id": {
+            "format": "uuid",
+            "title": "Generation Id",
+            "type": "string"
+          },
+          "outline_state": {
+            "title": "Outline State",
+            "type": "string"
+          },
+          "outline_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outline Version"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "generation_id",
+          "artefact_id",
+          "status",
+          "outline_state",
+          "outline_version"
+        ],
+        "title": "SignalResponse",
+        "type": "object"
+      },
+      "StartExtractionRequest": {
+        "description": "W-6 body: W-1's shape with ``schema_ref`` in place of ``capability``.",
+        "properties": {
+          "recipients": {
+            "items": {
+              "$ref": "#/components/schemas/RecipientBody"
+            },
+            "maxItems": 50,
+            "title": "Recipients",
+            "type": "array"
+          },
+          "schema_ref": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Schema Ref",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ScopeBody"
+          },
+          "target_ref": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Ref"
+          },
+          "tender_id": {
+            "format": "uuid",
+            "title": "Tender Id",
+            "type": "string"
+          },
+          "trigger_document_version_id": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Document Version Id"
+          }
+        },
+        "required": [
+          "tender_id",
+          "schema_ref"
+        ],
+        "title": "StartExtractionRequest",
+        "type": "object"
+      },
+      "StartGenerationRequest": {
+        "description": "W-1 body.",
+        "properties": {
+          "capability": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Capability",
+            "type": "string"
+          },
+          "outline_gate": {
+            "default": true,
+            "title": "Outline Gate",
+            "type": "boolean"
+          },
+          "recipients": {
+            "items": {
+              "$ref": "#/components/schemas/RecipientBody"
+            },
+            "maxItems": 50,
+            "title": "Recipients",
+            "type": "array"
+          },
+          "requested_mode": {
+            "default": "assistance",
+            "enum": [
+              "assistance",
+              "automation"
+            ],
+            "title": "Requested Mode",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ScopeBody"
+          },
+          "target_ref": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Ref"
+          },
+          "tender_id": {
+            "format": "uuid",
+            "title": "Tender Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tender_id",
+          "capability"
+        ],
+        "title": "StartGenerationRequest",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VersionDetailResponse": {
+        "description": "A-3.",
+        "properties": {
+          "chunker_version": {
+            "title": "Chunker Version",
+            "type": "string"
+          },
+          "completeness": {
+            "title": "Completeness",
+            "type": "string"
+          },
+          "degradation_markers": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Degradation Markers",
+            "type": "array"
+          },
+          "delivery": {
+            "title": "Delivery",
+            "type": "string"
+          },
+          "disclaimer_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disclaimer Ref"
+          },
+          "domain_profile_version": {
+            "title": "Domain Profile Version",
+            "type": "string"
+          },
+          "eligibility": {
+            "$ref": "#/components/schemas/Eligibility"
+          },
+          "evidence_tier": {
+            "title": "Evidence Tier",
+            "type": "string"
+          },
+          "generation_run_id": {
+            "format": "uuid",
+            "title": "Generation Run Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "instruction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instruction"
+          },
+          "instruction_refinement_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instruction Refinement Id"
+          },
+          "language_pack_version": {
+            "title": "Language Pack Version",
+            "type": "string"
+          },
+          "model_profile_id": {
+            "title": "Model Profile Id",
+            "type": "string"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "parser_version": {
+            "title": "Parser Version",
+            "type": "string"
+          },
+          "prompt_hash": {
+            "title": "Prompt Hash",
+            "type": "string"
+          },
+          "review_context_read": {
+            "title": "Review Context Read",
+            "type": "boolean"
+          },
+          "review_context_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Context Ref"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/VersionSection"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "superseded_by_section_edit": {
+            "title": "Superseded By Section Edit",
+            "type": "boolean"
+          },
+          "version_no": {
+            "title": "Version No",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version_no",
+          "origin",
+          "generation_run_id",
+          "evidence_tier",
+          "completeness",
+          "sections",
+          "model_profile_id",
+          "prompt_hash",
+          "domain_profile_version",
+          "language_pack_version",
+          "parser_version",
+          "chunker_version",
+          "instruction",
+          "instruction_refinement_id",
+          "review_context_read",
+          "review_context_ref",
+          "degradation_markers",
+          "delivery",
+          "eligibility",
+          "superseded_by_section_edit",
+          "disclaimer_ref"
+        ],
+        "title": "VersionDetailResponse",
+        "type": "object"
+      },
+      "VersionPage": {
+        "description": "A-2.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VersionSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "VersionPage",
+        "type": "object"
+      },
+      "VersionSection": {
+        "description": "One section of a document version.",
+        "properties": {
+          "completeness": {
+            "title": "Completeness",
+            "type": "string"
+          },
+          "completeness_detail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompletenessDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_tier": {
+            "title": "Evidence Tier",
+            "type": "string"
+          },
+          "groundedness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Groundedness"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "retrieval_set_id": {
+            "format": "uuid",
+            "title": "Retrieval Set Id",
+            "type": "string"
+          },
+          "section_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Ref"
+          },
+          "section_version_id": {
+            "format": "uuid",
+            "title": "Section Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "section_ref",
+          "section_version_id",
+          "evidence_tier",
+          "completeness",
+          "retrieval_set_id",
+          "groundedness",
+          "completeness_detail"
+        ],
+        "title": "VersionSection",
+        "type": "object"
+      },
+      "VersionSummary": {
+        "description": "A version without verification records (API-8).",
+        "properties": {
+          "completeness": {
+            "title": "Completeness",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "delivery": {
+            "title": "Delivery",
+            "type": "string"
+          },
+          "eligibility": {
+            "$ref": "#/components/schemas/Eligibility"
+          },
+          "evidence_tier": {
+            "title": "Evidence Tier",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "minted_reason": {
+            "title": "Minted Reason",
+            "type": "string"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "superseded_by_section_edit": {
+            "title": "Superseded By Section Edit",
+            "type": "boolean"
+          },
+          "version_no": {
+            "title": "Version No",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version_no",
+          "minted_reason",
+          "origin",
+          "evidence_tier",
+          "completeness",
+          "delivery",
+          "eligibility",
+          "superseded_by_section_edit",
+          "created_at"
+        ],
+        "title": "VersionSummary",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "TenantID": {
+        "description": "Tenant UUID injected by the API gateway; sets the RLS scope.",
+        "in": "header",
+        "name": "x-tenant-id",
+        "type": "apiKey"
+      },
+      "TenantRoles": {
+        "description": "Comma-separated tenant roles injected by the gateway.",
+        "in": "header",
+        "name": "x-tenant-roles",
+        "type": "apiKey"
+      },
+      "UserID": {
+        "description": "Authenticated user UUID injected by the API gateway.",
+        "in": "header",
+        "name": "x-user-id",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "title": "retrieval-generation",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/internal/models": {
+      "get": {
+        "description": "C-M1: model ids a tenant may select; 503 INFERENCE_UNAVAILABLE where unreadable.",
+        "operationId": "list_models_api_internal_models_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelCatalogueResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Models",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/api/v1/answers": {
+      "post": {
+        "description": "R-2: a grounded answer streamed as ``draft`` frames then one ``verdict`` (\u00a75.7.2).",
+        "operationId": "answers_api_v1_answers_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 255,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Answers",
+        "tags": [
+          "generation"
+        ]
+      }
+    },
+    "/api/v1/artefacts/{artefact_id}": {
+      "get": {
+        "description": "A-1: the artefact with its current version, tier and eligibility verdict.",
+        "operationId": "get_artefact_api_v1_artefacts__artefact_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artefact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Artefact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtefactResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Artefact",
+        "tags": [
+          "artefacts"
+        ]
+      }
+    },
+    "/api/v1/artefacts/{artefact_id}/regenerate": {
+      "post": {
+        "description": "A-5: document scope. ``202`` and a handle resolved through W-2.\n\nA repeat from the same base version answers with the existing handle (``200``).",
+        "operationId": "regenerate_document_api_v1_artefacts__artefact_id__regenerate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artefact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Artefact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 255,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegenerateDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunHandleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regenerate Document",
+        "tags": [
+          "regeneration"
+        ]
+      }
+    },
+    "/api/v1/artefacts/{artefact_id}/render": {
+      "get": {
+        "description": "A-8: reserved. ``503 RENDERER_UNAVAILABLE`` after scope and artefact checks (S-6).",
+        "operationId": "render_artefact_api_v1_artefacts__artefact_id__render_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artefact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Artefact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version_no",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version No"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Format"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Render Artefact",
+        "tags": [
+          "artefacts"
+        ]
+      }
+    },
+    "/api/v1/artefacts/{artefact_id}/sections": {
+      "get": {
+        "description": "A-4: section states and per-section evidence tiers.",
+        "operationId": "list_sections_api_v1_artefacts__artefact_id__sections_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artefact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Artefact Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Default 100; above 500 is clamped.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Default 100; above 500 is clamped.",
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Sections",
+        "tags": [
+          "artefacts"
+        ]
+      }
+    },
+    "/api/v1/artefacts/{artefact_id}/sections/{section_ref}/fact-conflict-resolution": {
+      "post": {
+        "description": "A-7: resolve a surfaced conflict once; the regeneration proceeds as a new request.",
+        "operationId": "resolve_fact_conflict_api_v1_artefacts__artefact_id__sections__section_ref__fact_conflict_resolution_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artefact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Artefact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section_ref",
+            "required": true,
+            "schema": {
+              "maxLength": 256,
+              "minLength": 1,
+              "title": "Section Ref",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FactConflictResolutionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactConflictResolutionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Fact Conflict",
+        "tags": [
+          "regeneration"
+        ]
+      }
+    },
+    "/api/v1/artefacts/{artefact_id}/sections/{section_ref}/regenerate": {
+      "post": {
+        "description": "A-6: section scope, streamed like R-3; the verdict frame names the new and prior versions.",
+        "operationId": "regenerate_section_api_v1_artefacts__artefact_id__sections__section_ref__regenerate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artefact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Artefact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section_ref",
+            "required": true,
+            "schema": {
+              "maxLength": 256,
+              "minLength": 1,
+              "title": "Section Ref",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 255,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegenerateSectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regenerate Section",
+        "tags": [
+          "regeneration"
+        ]
+      }
+    },
+    "/api/v1/artefacts/{artefact_id}/sections/{section_ref}/versions/{version_no}/content": {
+      "get": {
+        "description": "A-9: the generated text of one section version.",
+        "operationId": "get_section_content_api_v1_artefacts__artefact_id__sections__section_ref__versions__version_no__content_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artefact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Artefact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section_ref",
+            "required": true,
+            "schema": {
+              "maxLength": 256,
+              "title": "Section Ref",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_no",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Version No",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionContentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Section Content",
+        "tags": [
+          "artefacts"
+        ]
+      }
+    },
+    "/api/v1/artefacts/{artefact_id}/versions": {
+      "get": {
+        "description": "A-2: version history, newest first.",
+        "operationId": "list_versions_api_v1_artefacts__artefact_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artefact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Artefact Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Default 100; above 500 is clamped.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Default 100; above 500 is clamped.",
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Versions",
+        "tags": [
+          "artefacts"
+        ]
+      }
+    },
+    "/api/v1/artefacts/{artefact_id}/versions/{version_no}": {
+      "get": {
+        "description": "A-3: one version with per-section groundedness, completeness and retrieval set refs.",
+        "operationId": "get_version_api_v1_artefacts__artefact_id__versions__version_no__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artefact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Artefact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_no",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Version No",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Version",
+        "tags": [
+          "artefacts"
+        ]
+      }
+    },
+    "/api/v1/classification/propose": {
+      "post": {
+        "description": "R-6: stateless role proposal. No collection scope is resolved (\u00a75.7.6).",
+        "operationId": "propose_classification_api_v1_classification_propose_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassifyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Propose Classification",
+        "tags": [
+          "retrieval"
+        ]
+      }
+    },
+    "/api/v1/collections": {
+      "get": {
+        "description": "P-1: collections in the caller's resolved scope; an empty scope is an empty list.",
+        "operationId": "list_collections_api_v1_collections_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Collections",
+        "tags": [
+          "collections"
+        ]
+      }
+    },
+    "/api/v1/collections/{collection_id}": {
+      "get": {
+        "description": "P-2: one collection; absent and ungranted are both 404 (CG-8).",
+        "operationId": "get_collection_api_v1_collections__collection_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "collection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Collection",
+        "tags": [
+          "collections"
+        ]
+      }
+    },
+    "/api/v1/collections/{collection_id}/grants": {
+      "get": {
+        "description": "P-3: the last recorded overlay answer, for diagnosis. Never authoritative (CG-2).",
+        "operationId": "list_grants_api_v1_collections__collection_id__grants_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "collection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collection Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Grants",
+        "tags": [
+          "collections"
+        ]
+      }
+    },
+    "/api/v1/collections/{collection_id}/retention": {
+      "put": {
+        "description": "P-6: no ``record_version`` creates (201); one updates (200); anything else is 409.",
+        "operationId": "put_retention_api_v1_collections__collection_id__retention_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "collection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutRetentionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PutRetentionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Retention",
+        "tags": [
+          "collections"
+        ]
+      }
+    },
+    "/api/v1/extractions": {
+      "post": {
+        "description": "R-4: structured extraction, synchronous, never streamed. ``206`` where degraded.",
+        "operationId": "extractions_api_v1_extractions_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 255,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtractRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Extractions",
+        "tags": [
+          "generation"
+        ]
+      }
+    },
+    "/api/v1/extractions/async": {
+      "post": {
+        "description": "W-6: an extraction beyond R-4's synchronous budget, as a workflow.",
+        "operationId": "start_async_extraction_api_v1_extractions_async_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartExtractionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunHandleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Async Extraction",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/generations": {
+      "post": {
+        "description": "W-1: ``202`` with the handle; ``200`` where the key replays the same body (\u00a75.7.12).",
+        "operationId": "start_generation_api_v1_generations_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartGenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunHandleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Generation",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/generations/{generation_id}": {
+      "get": {
+        "description": "W-2: state, outline, per-section progress, facts, coherence (never from Temporal).",
+        "operationId": "get_generation_api_v1_generations__generation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "generation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Generation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationStateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Generation",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/generations/{generation_id}/cancel": {
+      "post": {
+        "description": "W-5: cancel; completed sections remain durable and readable.",
+        "operationId": "cancel_generation_api_v1_generations__generation_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "generation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Generation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CancelRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Generation",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/generations/{generation_id}/outline": {
+      "post": {
+        "description": "W-4: submit an edited outline; the workflow loops back to outline construction.",
+        "operationId": "revise_outline_api_v1_generations__generation_id__outline_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "generation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Generation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revise Outline",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/generations/{generation_id}/outline/approve": {
+      "post": {
+        "description": "W-3: approve the outline; stage 1 begins when the signal lands.",
+        "operationId": "approve_outline_api_v1_generations__generation_id__outline_approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "generation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Generation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Outline",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/generations/{generation_id}/resume": {
+      "post": {
+        "description": "W-7: resume a run suspended on quota.",
+        "operationId": "resume_generation_api_v1_generations__generation_id__resume_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "generation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Generation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ResumeRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resume Generation",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/internal/collections/resolve": {
+      "post": {
+        "description": "C-I1: resolve or create. 201 where this call created the row, 200 otherwise.",
+        "operationId": "resolve_collection_api_v1_internal_collections_resolve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacementResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Collection",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/api/v1/internal/collections/{collection_id}": {
+      "get": {
+        "description": "C-I2: placement and generation metadata, in every status (COL-13).",
+        "operationId": "get_placement_api_v1_internal_collections__collection_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "collection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacementResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Placement",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/api/v1/internal/collections/{collection_id}/index-generations/{generation}/activate": {
+      "post": {
+        "description": "C-I4: atomic cutover of a verified generation; idempotent for an active one (LD-37).",
+        "operationId": "activate_generation_api_v1_internal_collections__collection_id__index_generations__generation__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "collection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collection Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "generation",
+            "required": true,
+            "schema": {
+              "title": "Generation",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Activate Generation",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/api/v1/internal/collections/{collection_id}/migration-result": {
+      "post": {
+        "description": "C-I8: the promotion copy result; ``complete`` triggers the cutover.",
+        "operationId": "migration_result_api_v1_internal_collections__collection_id__migration_result_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "collection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MigrationResultRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrationResultResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Migration Result",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/api/v1/internal/collections/{collection_id}/purge-epoch": {
+      "post": {
+        "description": "C-I6: atomic increment; takes no ``record_version`` (LD-98).",
+        "operationId": "bump_purge_epoch_api_v1_internal_collections__collection_id__purge_epoch_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "collection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurgeEpochResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bump Purge Epoch",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/api/v1/internal/collections/{collection_id}/retention": {
+      "get": {
+        "description": "C-I5: the policy the retention sweep applies (no v1 caller).",
+        "operationId": "get_retention_api_v1_internal_collections__collection_id__retention_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "collection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Retention",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/api/v1/operator/generations/{generation_id}/rematerialise": {
+      "post": {
+        "description": "W-8: start a lost run's workflow again from the run row; audited, ticket required.",
+        "operationId": "rematerialise_api_v1_operator_generations__generation_id__rematerialise_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "generation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Generation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RematerialiseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RematerialiseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rematerialise",
+        "tags": [
+          "operator"
+        ]
+      }
+    },
+    "/api/v1/required-input-checks": {
+      "post": {
+        "description": "R-7: the pack's required-input rules against the resolved scope; ``200`` always.",
+        "operationId": "required_input_checks_api_v1_required_input_checks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequiredInputRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequiredInputResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Required Input Checks",
+        "tags": [
+          "retrieval"
+        ]
+      }
+    },
+    "/api/v1/retrieval-sets/{retrieval_set_id}": {
+      "get": {
+        "description": "R-5: the recorded set, its chunks (purged ones flagged, excerpts intact) and purge rows.",
+        "operationId": "get_retrieval_set_api_v1_retrieval_sets__retrieval_set_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "retrieval_set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Retrieval Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetrievalSetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Retrieval Set",
+        "tags": [
+          "retrieval"
+        ]
+      }
+    },
+    "/api/v1/search": {
+      "post": {
+        "description": "R-1: hybrid retrieval, results only. ``206`` where any stage degraded (\u00a75.7.1).",
+        "operationId": "search_api_v1_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search",
+        "tags": [
+          "retrieval"
+        ]
+      }
+    },
+    "/api/v1/sections/drafts": {
+      "post": {
+        "description": "R-3: an interactive section draft, same transport as R-2 (\u00a75.7.3).",
+        "operationId": "section_drafts_api_v1_sections_drafts_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 255,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Section Drafts",
+        "tags": [
+          "generation"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "TenantID": [],
+      "TenantRoles": [],
+      "UserID": []
+    }
+  ]
+}

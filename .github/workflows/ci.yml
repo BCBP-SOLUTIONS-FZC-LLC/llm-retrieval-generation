@@ -1,0 +1,71 @@
+# CI for https://github.com/BCBP-SOLUTIONS-FZC-LLC/llm-retrieval-generation
+#
+#   validate-test ────┐
+#                     ├──► pr-summary (PR events only)
+#   validate-quality ─┘
+#
+# Mirrors iam-org-membership's ci.yml minus the image jobs (build-image, trivy,
+# smoke, push) — this repo has no Dockerfile yet. Add them when one lands.
+#
+# paths-ignore skips the pipeline for commits that only touch Markdown docs.
+name: CI
+
+"on":
+  push:
+    branches: [main, master]
+    paths-ignore: ['**.md', 'docs/**']
+  pull_request:
+    branches: [main, master]
+    paths-ignore: ['**.md', 'docs/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  validate-test:
+    name: Validate / Test
+    uses: ./.github/workflows/validate-test.yml
+    secrets:
+      CI_REPO_READ_TOKEN: ${{ secrets.CI_REPO_READ_TOKEN }}
+
+  validate-quality:
+    name: Validate / Quality
+    uses: ./.github/workflows/validate-quality.yml
+    secrets:
+      CI_REPO_READ_TOKEN: ${{ secrets.CI_REPO_READ_TOKEN }}
+
+  pr-summary:
+    name: PR summary
+    runs-on: ubuntu-latest
+    needs: [validate-test, validate-quality]
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ secrets.CI_REPO_READ_TOKEN || github.token }}
+
+      - name: Post or update summary comment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        with:
+          script: |
+            const fs = require('fs')
+            const code = fs.readFileSync('.github/scripts/pr-summary.js', 'utf8')
+            const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
+            const run = new AsyncFunction('github', 'context', 'core', 'require', 'process', code)
+            await run(github, context, core, require, process)

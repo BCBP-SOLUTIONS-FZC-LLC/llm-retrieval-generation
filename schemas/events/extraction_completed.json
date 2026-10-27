@@ -1,0 +1,96 @@
+{
+  "$defs": {
+    "EvidenceTier": {
+      "description": "Evidence tier; ``NOT_COMPUTED`` sorts lowest so the roll-up is ``min()`` (MD-24, LD-56).",
+      "enum": [
+        "NOT_COMPUTED",
+        "INSUFFICIENT",
+        "PARTIAL",
+        "SUPPORTED"
+      ],
+      "title": "EvidenceTier",
+      "type": "string"
+    },
+    "Recipient": {
+      "additionalProperties": true,
+      "description": "``{kind, id}`` echoed from the request that started the run (LD-83, provisional).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "title": "Recipient",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "R-4's and W-6's write transaction (LD-84).",
+  "properties": {
+    "artefact_id": {
+      "title": "Artefact Id",
+      "type": "string"
+    },
+    "artefact_version_id": {
+      "title": "Artefact Version Id",
+      "type": "string"
+    },
+    "evidence_tier": {
+      "$ref": "#/$defs/EvidenceTier"
+    },
+    "generation_id": {
+      "title": "Generation Id",
+      "type": "string"
+    },
+    "principal_id": {
+      "title": "Principal Id",
+      "type": "string"
+    },
+    "recipients": {
+      "items": {
+        "$ref": "#/$defs/Recipient"
+      },
+      "title": "Recipients",
+      "type": "array"
+    },
+    "schema_version": {
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "tender_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tender Id"
+    },
+    "trigger_document_version_id": {
+      "title": "Trigger Document Version Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "artefact_id",
+    "artefact_version_id",
+    "generation_id",
+    "principal_id",
+    "trigger_document_version_id",
+    "schema_version",
+    "evidence_tier"
+  ],
+  "title": "ExtractionCompleted",
+  "type": "object"
+}

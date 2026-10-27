@@ -1,0 +1,47 @@
+{
+  "additionalProperties": true,
+  "description": "C-I1 and the ``TenderRestricted`` consumer's creation.",
+  "properties": {
+    "collection_id": {
+      "title": "Collection Id",
+      "type": "string"
+    },
+    "promoted_from": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Promoted From"
+    },
+    "restricted": {
+      "title": "Restricted",
+      "type": "boolean"
+    },
+    "status": {
+      "title": "Status",
+      "type": "string"
+    },
+    "tender_id": {
+      "title": "Tender Id",
+      "type": "string"
+    },
+    "type": {
+      "title": "Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "collection_id",
+    "tender_id",
+    "type",
+    "restricted",
+    "status"
+  ],
+  "title": "CollectionProvisioned",
+  "type": "object"
+}

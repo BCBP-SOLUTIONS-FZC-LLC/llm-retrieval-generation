@@ -1,0 +1,37 @@
+# Pre-merge CHANGELOG check.
+# Fails if a PR modifies src/, migrations/ or schemas/ without also updating CHANGELOG.md.
+name: Changelog check
+
+"on":
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'migrations/**'
+      - 'schemas/**'
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  changelog:
+    name: changelog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: CHANGELOG updated in this PR
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          if git diff --name-only "$BASE" "$HEAD" | grep -q '^CHANGELOG\.md$'; then
+            echo "CHANGELOG.md updated in this PR — OK."
+          else
+            echo "::error file=CHANGELOG.md,title=CHANGELOG not updated::This PR changes src/, migrations/ or schemas/ but does not update CHANGELOG.md. Add an entry under the Unreleased section before merging."
+            exit 1
+          fi

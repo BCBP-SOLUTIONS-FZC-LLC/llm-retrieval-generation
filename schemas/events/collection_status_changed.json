@@ -1,0 +1,40 @@
+{
+  "additionalProperties": true,
+  "description": "Every status change but creation (LD-78); ``reason`` is the \u00a712.3 five.",
+  "properties": {
+    "collection_id": {
+      "title": "Collection Id",
+      "type": "string"
+    },
+    "from_status": {
+      "title": "From Status",
+      "type": "string"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    },
+    "tender_id": {
+      "title": "Tender Id",
+      "type": "string"
+    },
+    "to_status": {
+      "title": "To Status",
+      "type": "string"
+    },
+    "type": {
+      "title": "Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "collection_id",
+    "tender_id",
+    "type",
+    "from_status",
+    "to_status",
+    "reason"
+  ],
+  "title": "CollectionStatusChanged",
+  "type": "object"
+}

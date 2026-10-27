@@ -1,0 +1,86 @@
+# Reusable workflow — test gate.
+# Unit + integration tests (testcontainers Postgres) in one coverage run +
+# 95% gate. Called by ci.yml.
+name: Validate / Test
+
+"on":
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to check out (leave empty to use the caller ref)'
+        type: string
+        required: false
+        default: ''
+    secrets:
+      # Only secret read here (github.token is the fallback). Callers pass it
+      # explicitly — no `secrets: inherit`, so PR test code never runs with
+      # other secrets in scope.
+      CI_REPO_READ_TOKEN:
+        required: false
+    outputs:
+      pct:
+        description: 'Total statement coverage percentage'
+        value: ${{ jobs.test.outputs.pct }}
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      pct: ${{ steps.gate.outputs.pct }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+          token: ${{ secrets.CI_REPO_READ_TOKEN || github.token }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: '0.13.1'
+          python-version: '3.12'
+
+      # All deps (incl. platform-* packages) come from public PyPI — no private
+      # credential, which PR test code could otherwise read.
+      - name: Install dependencies (uv sync from uv.lock)
+        run: uv sync --locked
+
+      # Blocking gate: unit + integration (testcontainers Postgres) in ONE coverage
+      # run — the persistence layer is only exercised by the integration tier.
+      - name: Tests — unit · integration (coverage)
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: 'true'
+        run: make test-ci
+
+      - name: Coverage threshold gate (≥ 95%)
+        id: gate
+        env:
+          COVERAGE_THRESHOLD: 95  # combined suite is ~95.3%; do not lower
+        run: bash .github/scripts/coverage-gate.sh
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: coverage-report-${{ github.sha }}
+          path: coverage.xml
+          if-no-files-found: ignore
+          retention-days: 30
+
+      # Blocking gate: the real app (lifespan, RLS-bound pools, outbox) over a
+      # real Postgres, driven over HTTP with gateway-style identity headers.
+      # Kept out of the coverage run above — it checks behaviour, not statements.
+      - name: Tests — e2e (real app + Postgres)
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: 'true'
+        run: make test-e2e

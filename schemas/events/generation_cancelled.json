@@ -1,0 +1,86 @@
+{
+  "$defs": {
+    "Recipient": {
+      "additionalProperties": true,
+      "description": "``{kind, id}`` echoed from the request that started the run (LD-83, provisional).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "title": "Recipient",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "W-5. A cancellation is not a failure, so no ``run_failure_reason``.",
+  "properties": {
+    "artefact_id": {
+      "title": "Artefact Id",
+      "type": "string"
+    },
+    "generation_id": {
+      "title": "Generation Id",
+      "type": "string"
+    },
+    "principal_id": {
+      "title": "Principal Id",
+      "type": "string"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    },
+    "recipients": {
+      "items": {
+        "$ref": "#/$defs/Recipient"
+      },
+      "title": "Recipients",
+      "type": "array"
+    },
+    "sections_complete": {
+      "title": "Sections Complete",
+      "type": "integer"
+    },
+    "sections_durable": {
+      "title": "Sections Durable",
+      "type": "boolean"
+    },
+    "sections_total": {
+      "title": "Sections Total",
+      "type": "integer"
+    },
+    "tender_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tender Id"
+    }
+  },
+  "required": [
+    "artefact_id",
+    "generation_id",
+    "principal_id",
+    "reason",
+    "sections_complete",
+    "sections_total",
+    "sections_durable"
+  ],
+  "title": "GenerationCancelled",
+  "type": "object"
+}

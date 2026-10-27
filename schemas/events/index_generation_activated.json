@@ -1,0 +1,52 @@
+{
+  "additionalProperties": true,
+  "description": "C-I4's cutover transaction.",
+  "properties": {
+    "activated_at": {
+      "title": "Activated At",
+      "type": "string"
+    },
+    "chunker_version": {
+      "title": "Chunker Version",
+      "type": "string"
+    },
+    "collection_id": {
+      "title": "Collection Id",
+      "type": "string"
+    },
+    "embedding_profile": {
+      "title": "Embedding Profile",
+      "type": "string"
+    },
+    "generation": {
+      "title": "Generation",
+      "type": "integer"
+    },
+    "previous_generation": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Previous Generation"
+    },
+    "tender_id": {
+      "title": "Tender Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "collection_id",
+    "tender_id",
+    "generation",
+    "embedding_profile",
+    "chunker_version",
+    "activated_at"
+  ],
+  "title": "IndexGenerationActivated",
+  "type": "object"
+}

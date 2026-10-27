@@ -1,0 +1,1899 @@
+asyncapi: 3.0.0
+channels:
+  domainprofile-llm-invalidate-q:
+    address: domainprofile-llm-invalidate-q
+    description: SQS queue `domainprofile-llm-invalidate-q`.
+    messages:
+      DomainProfilePublished:
+        $ref: '#/components/messages/DomainProfilePublished'
+  iam-rag-membership-q:
+    address: iam-rag-membership-q
+    description: SQS queue `iam-rag-membership-q`.
+    messages:
+      TenantStateChanged:
+        $ref: '#/components/messages/TenantStateChanged'
+  iam-rag-purge-q:
+    address: iam-rag-purge-q
+    description: SQS queue `iam-rag-purge-q`.
+    messages:
+      TenantMembershipsPurged:
+        $ref: '#/components/messages/TenantMembershipsPurged'
+  llm-document-rag-q:
+    address: llm-document-rag-q
+    description: SQS queue `llm-document-rag-q`.
+    messages:
+      DocumentPurged:
+        $ref: '#/components/messages/DocumentPurged'
+  llm-generation-events:
+    address: llm-generation-events
+    description: SNS topic `llm-generation-events` (Glue-framed JSON Schema payloads).
+    messages:
+      ArtefactRegenerated:
+        $ref: '#/components/messages/ArtefactRegenerated'
+      ExtractionCompleted:
+        $ref: '#/components/messages/ExtractionCompleted'
+      GenerationCancelled:
+        $ref: '#/components/messages/GenerationCancelled'
+      GenerationCompleted:
+        $ref: '#/components/messages/GenerationCompleted'
+      GenerationFailed:
+        $ref: '#/components/messages/GenerationFailed'
+      GenerationGapReported:
+        $ref: '#/components/messages/GenerationGapReported'
+      GenerationProgressed:
+        $ref: '#/components/messages/GenerationProgressed'
+      GenerationStarted:
+        $ref: '#/components/messages/GenerationStarted'
+      OutlineReady:
+        $ref: '#/components/messages/OutlineReady'
+      SectionCompleted:
+        $ref: '#/components/messages/SectionCompleted'
+  llm-index-events:
+    address: llm-index-events
+    description: SNS topic `llm-index-events` (Glue-framed JSON Schema payloads).
+    messages:
+      CollectionPromoted:
+        $ref: '#/components/messages/CollectionPromoted'
+      CollectionProvisioned:
+        $ref: '#/components/messages/CollectionProvisioned'
+      CollectionStatusChanged:
+        $ref: '#/components/messages/CollectionStatusChanged'
+      CorpusConflictDetected:
+        $ref: '#/components/messages/CorpusConflictDetected'
+      IndexGenerationActivated:
+        $ref: '#/components/messages/IndexGenerationActivated'
+      IndexGenerationFailed:
+        $ref: '#/components/messages/IndexGenerationFailed'
+      ProfileCacheRefreshed:
+        $ref: '#/components/messages/ProfileCacheRefreshed'
+  tender-rag-q:
+    address: tender-rag-q
+    description: SQS queue `tender-rag-q`.
+    messages:
+      TenderDeclined:
+        $ref: '#/components/messages/TenderDeclined'
+      TenderLost:
+        $ref: '#/components/messages/TenderLost'
+      TenderPurged:
+        $ref: '#/components/messages/TenderPurged'
+      TenderRestricted:
+        $ref: '#/components/messages/TenderRestricted'
+      TenderWithdrawn:
+        $ref: '#/components/messages/TenderWithdrawn'
+      TenderWon:
+        $ref: '#/components/messages/TenderWon'
+  usage-rag-q:
+    address: usage-rag-q
+    description: SQS queue `usage-rag-q`.
+    messages:
+      TenantQuotaRestored:
+        $ref: '#/components/messages/TenantQuotaRestored'
+components:
+  messages:
+    ArtefactRegenerated:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: ArtefactRegenerated
+      contentType: application/json
+      name: ArtefactRegenerated
+      payload:
+        $ref: '#/components/schemas/ArtefactRegenerated'
+      summary: A regeneration minted a *document* version (a section one is ``SectionCompleted``).
+      tags:
+      - $ref: '#/components/tags/published'
+      title: ArtefactRegenerated
+    CollectionPromoted:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: CollectionPromoted
+      contentType: application/json
+      name: CollectionPromoted
+      payload:
+        $ref: '#/components/schemas/CollectionPromoted'
+      summary: A promotion target; always names the collection the tender moved out of.
+      tags:
+      - $ref: '#/components/tags/published'
+      title: CollectionPromoted
+    CollectionProvisioned:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: CollectionProvisioned
+      contentType: application/json
+      name: CollectionProvisioned
+      payload:
+        $ref: '#/components/schemas/CollectionProvisioned'
+      summary: C-I1 and the ``TenderRestricted`` consumer's creation.
+      tags:
+      - $ref: '#/components/tags/published'
+      title: CollectionProvisioned
+    CollectionStatusChanged:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: CollectionStatusChanged
+      contentType: application/json
+      name: CollectionStatusChanged
+      payload:
+        $ref: '#/components/schemas/CollectionStatusChanged'
+      summary: Every status change but creation (LD-78); ``reason`` is the §12.3 five.
+      tags:
+      - $ref: '#/components/tags/published'
+      title: CollectionStatusChanged
+    CorpusConflictDetected:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: CorpusConflictDetected
+      contentType: application/json
+      name: CorpusConflictDetected
+      payload:
+        $ref: '#/components/schemas/CorpusConflictDetected'
+      summary: Declared in the AsyncAPI file and **not published in v1** (LD-64, §9.8).
+      tags:
+      - $ref: '#/components/tags/published'
+      title: CorpusConflictDetected
+    DocumentPurged:
+      contentType: application/json
+      name: DocumentPurged
+      payload:
+        $ref: '#/components/schemas/DocumentPurged'
+      summary: 'Ingestion''s erasure of a document: all four fields are in the match (EVT-1).'
+      tags:
+      - $ref: '#/components/tags/consumed'
+      title: DocumentPurged
+    DomainProfilePublished:
+      contentType: application/json
+      name: DomainProfilePublished
+      payload:
+        $ref: '#/components/schemas/DomainProfilePublished'
+      summary: 'A republished profile: clears this service''s cache, never a pinned workflow (EVT-4).'
+      tags:
+      - $ref: '#/components/tags/consumed'
+      title: DomainProfilePublished
+    ExtractionCompleted:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: ExtractionCompleted
+      contentType: application/json
+      name: ExtractionCompleted
+      payload:
+        $ref: '#/components/schemas/ExtractionCompleted'
+      summary: R-4's and W-6's write transaction (LD-84).
+      tags:
+      - $ref: '#/components/tags/published'
+      title: ExtractionCompleted
+    GenerationCancelled:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: GenerationCancelled
+      contentType: application/json
+      name: GenerationCancelled
+      payload:
+        $ref: '#/components/schemas/GenerationCancelled'
+      summary: W-5. A cancellation is not a failure, so no ``run_failure_reason``.
+      tags:
+      - $ref: '#/components/tags/published'
+      title: GenerationCancelled
+    GenerationCompleted:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: GenerationCompleted
+      contentType: application/json
+      name: GenerationCompleted
+      payload:
+        $ref: '#/components/schemas/GenerationCompleted'
+      summary: A version was written; short-form included (GEN-10). No approval state (AOB-1, EVT-11).
+      tags:
+      - $ref: '#/components/tags/published'
+      title: GenerationCompleted
+    GenerationFailed:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: GenerationFailed
+      contentType: application/json
+      name: GenerationFailed
+      payload:
+        $ref: '#/components/schemas/GenerationFailed'
+      summary: A workflow ended without a version. ``reason`` is ``run_failure_reason`` exactly.
+      tags:
+      - $ref: '#/components/tags/published'
+      title: GenerationFailed
+    GenerationGapReported:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: GenerationGapReported
+      contentType: application/json
+      name: GenerationGapReported
+      payload:
+        $ref: '#/components/schemas/GenerationGapReported'
+      summary: A blocking required-input failure (§6.9). Entity *keys* only, never values.
+      tags:
+      - $ref: '#/components/tags/published'
+      title: GenerationGapReported
+    GenerationProgressed:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: GenerationProgressed
+      contentType: application/json
+      name: GenerationProgressed
+      payload:
+        $ref: '#/components/schemas/GenerationProgressed'
+      summary: Every stage transition of an async run (LD-51); ``progress_seq`` orders it (EVT-13).
+      tags:
+      - $ref: '#/components/tags/published'
+      title: GenerationProgressed
+    GenerationStarted:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: GenerationStarted
+      contentType: application/json
+      name: GenerationStarted
+      payload:
+        $ref: '#/components/schemas/GenerationStarted'
+      summary: Every admission, synchronous or not, in the shell's transaction (ASYNC-2, RUN-1, GEN-10).
+      tags:
+      - $ref: '#/components/tags/published'
+      title: GenerationStarted
+    IndexGenerationActivated:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: IndexGenerationActivated
+      contentType: application/json
+      name: IndexGenerationActivated
+      payload:
+        $ref: '#/components/schemas/IndexGenerationActivated'
+      summary: C-I4's cutover transaction.
+      tags:
+      - $ref: '#/components/tags/published'
+      title: IndexGenerationActivated
+    IndexGenerationFailed:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: IndexGenerationFailed
+      contentType: application/json
+      name: IndexGenerationFailed
+      payload:
+        $ref: '#/components/schemas/IndexGenerationFailed'
+      summary: The ``failed`` row's transaction (LD-67). Nothing writes one in v1.
+      tags:
+      - $ref: '#/components/tags/published'
+      title: IndexGenerationFailed
+    OutlineReady:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: OutlineReady
+      contentType: application/json
+      name: OutlineReady
+      payload:
+        $ref: '#/components/schemas/OutlineReady'
+      summary: The workflow suspends on the human gate (§9.4).
+      tags:
+      - $ref: '#/components/tags/published'
+      title: OutlineReady
+    ProfileCacheRefreshed:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: ProfileCacheRefreshed
+      contentType: application/json
+      name: ProfileCacheRefreshed
+      payload:
+        $ref: '#/components/schemas/ProfileCacheRefreshed'
+      summary: An operational signal about this service's own pack cache (§12.3).
+      tags:
+      - $ref: '#/components/tags/published'
+      title: ProfileCacheRefreshed
+    SectionCompleted:
+      bindings:
+        sns:
+          messageAttributes:
+            EventType:
+              value: SectionCompleted
+      contentType: application/json
+      name: SectionCompleted
+      payload:
+        $ref: '#/components/schemas/SectionCompleted'
+      summary: Once per section. A gap or failure has no version, so those fields are absent (AS-7).
+      tags:
+      - $ref: '#/components/tags/published'
+      title: SectionCompleted
+    TenantMembershipsPurged:
+      contentType: application/json
+      name: TenantMembershipsPurged
+      payload:
+        $ref: '#/components/schemas/TenantMembershipsPurged'
+      summary: IAM's tenant-offboarding cascade signal; ``actor_id`` is optional.
+      tags:
+      - $ref: '#/components/tags/consumed'
+      title: TenantMembershipsPurged
+    TenantQuotaRestored:
+      contentType: application/json
+      name: TenantQuotaRestored
+      payload:
+        $ref: '#/components/schemas/TenantQuotaRestored'
+      summary: Only ``resource = tokens`` acts, because only a token quota suspends a run (LD-70).
+      tags:
+      - $ref: '#/components/tags/consumed'
+      title: TenantQuotaRestored
+    TenantStateChanged:
+      contentType: application/json
+      name: TenantStateChanged
+      payload:
+        $ref: '#/components/schemas/TenantStateChanged'
+      summary: IAM's relay of one of seven statuses; ``cause`` is free text, never branched on.
+      tags:
+      - $ref: '#/components/tags/consumed'
+      title: TenantStateChanged
+    TenderDeclined:
+      contentType: application/json
+      name: TenderDeclined
+      payload:
+        $ref: '#/components/schemas/TenderDeclined'
+      summary: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      tags:
+      - $ref: '#/components/tags/consumed'
+      title: TenderDeclined
+    TenderLost:
+      contentType: application/json
+      name: TenderLost
+      payload:
+        $ref: '#/components/schemas/TenderLost'
+      summary: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      tags:
+      - $ref: '#/components/tags/consumed'
+      title: TenderLost
+    TenderPurged:
+      contentType: application/json
+      name: TenderPurged
+      payload:
+        $ref: '#/components/schemas/TenderPurged'
+      summary: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      tags:
+      - $ref: '#/components/tags/consumed'
+      title: TenderPurged
+    TenderRestricted:
+      contentType: application/json
+      name: TenderRestricted
+      payload:
+        $ref: '#/components/schemas/TenderRestricted'
+      summary: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      tags:
+      - $ref: '#/components/tags/consumed'
+      title: TenderRestricted
+    TenderWithdrawn:
+      contentType: application/json
+      name: TenderWithdrawn
+      payload:
+        $ref: '#/components/schemas/TenderWithdrawn'
+      summary: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      tags:
+      - $ref: '#/components/tags/consumed'
+      title: TenderWithdrawn
+    TenderWon:
+      contentType: application/json
+      name: TenderWon
+      payload:
+        $ref: '#/components/schemas/TenderWon'
+      summary: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      tags:
+      - $ref: '#/components/tags/consumed'
+      title: TenderWon
+  schemas:
+    ArtefactRegenerated:
+      additionalProperties: true
+      description: A regeneration minted a *document* version (a section one is ``SectionCompleted``).
+      properties:
+        artefact_id:
+          title: Artefact Id
+          type: string
+        artefact_version_id:
+          title: Artefact Version Id
+          type: string
+        base_version_id:
+          title: Base Version Id
+          type: string
+        completeness:
+          $ref: '#/components/schemas/ArtefactRegenerated_CompletenessVerdict'
+        evidence_tier:
+          $ref: '#/components/schemas/ArtefactRegenerated_EvidenceTier'
+        origin:
+          $ref: '#/components/schemas/ArtefactRegenerated_ArtefactOrigin'
+        principal_id:
+          title: Principal Id
+          type: string
+        recipients:
+          items:
+            $ref: '#/components/schemas/ArtefactRegenerated_Recipient'
+          title: Recipients
+          type: array
+        scope:
+          title: Scope
+          type: string
+        tender_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Tender Id
+        version_no:
+          title: Version No
+          type: integer
+      required:
+      - artefact_id
+      - artefact_version_id
+      - version_no
+      - base_version_id
+      - principal_id
+      - scope
+      - origin
+      - evidence_tier
+      - completeness
+      title: ArtefactRegenerated
+      type: object
+    ArtefactRegenerated_ArtefactOrigin:
+      description: How an artefact version came to exist.
+      enum:
+      - original
+      - regeneration
+      - coherence_repair
+      title: ArtefactOrigin
+      type: string
+    ArtefactRegenerated_CompletenessVerdict:
+      description: Completeness verdict (§8.2).
+      enum:
+      - complete
+      - partial
+      - insufficient
+      - not_computed
+      title: CompletenessVerdict
+      type: string
+    ArtefactRegenerated_EvidenceTier:
+      description: Evidence tier; ``NOT_COMPUTED`` sorts lowest so the roll-up is ``min()`` (MD-24, LD-56).
+      enum:
+      - NOT_COMPUTED
+      - INSUFFICIENT
+      - PARTIAL
+      - SUPPORTED
+      title: EvidenceTier
+      type: string
+    ArtefactRegenerated_Recipient:
+      additionalProperties: true
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      properties:
+        id:
+          title: Id
+          type: string
+        kind:
+          title: Kind
+          type: string
+      required:
+      - kind
+      - id
+      title: Recipient
+      type: object
+    CollectionPromoted:
+      additionalProperties: true
+      description: A promotion target; always names the collection the tender moved out of.
+      properties:
+        collection_id:
+          title: Collection Id
+          type: string
+        promoted_from:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Promoted From
+        restricted:
+          title: Restricted
+          type: boolean
+        status:
+          title: Status
+          type: string
+        tender_id:
+          title: Tender Id
+          type: string
+        type:
+          title: Type
+          type: string
+      required:
+      - collection_id
+      - tender_id
+      - type
+      - restricted
+      - status
+      title: CollectionPromoted
+      type: object
+    CollectionProvisioned:
+      additionalProperties: true
+      description: C-I1 and the ``TenderRestricted`` consumer's creation.
+      properties:
+        collection_id:
+          title: Collection Id
+          type: string
+        promoted_from:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Promoted From
+        restricted:
+          title: Restricted
+          type: boolean
+        status:
+          title: Status
+          type: string
+        tender_id:
+          title: Tender Id
+          type: string
+        type:
+          title: Type
+          type: string
+      required:
+      - collection_id
+      - tender_id
+      - type
+      - restricted
+      - status
+      title: CollectionProvisioned
+      type: object
+    CollectionStatusChanged:
+      additionalProperties: true
+      description: Every status change but creation (LD-78); ``reason`` is the §12.3 five.
+      properties:
+        collection_id:
+          title: Collection Id
+          type: string
+        from_status:
+          title: From Status
+          type: string
+        reason:
+          title: Reason
+          type: string
+        tender_id:
+          title: Tender Id
+          type: string
+        to_status:
+          title: To Status
+          type: string
+        type:
+          title: Type
+          type: string
+      required:
+      - collection_id
+      - tender_id
+      - type
+      - from_status
+      - to_status
+      - reason
+      title: CollectionStatusChanged
+      type: object
+    CorpusConflictDetected:
+      additionalProperties: true
+      description: Declared in the AsyncAPI file and **not published in v1** (LD-64, §9.8).
+      properties:
+        checked_at:
+          title: Checked At
+          type: string
+        collection_id:
+          title: Collection Id
+          type: string
+        conflict_count:
+          title: Conflict Count
+          type: integer
+        conflicts:
+          items:
+            $ref: '#/components/schemas/CorpusConflictDetected_ConflictEntry'
+          title: Conflicts
+          type: array
+        index_generation:
+          title: Index Generation
+          type: integer
+        tender_id:
+          title: Tender Id
+          type: string
+        truncated:
+          title: Truncated
+          type: boolean
+      required:
+      - collection_id
+      - tender_id
+      - index_generation
+      - checked_at
+      - conflicts
+      - conflict_count
+      - truncated
+      title: CorpusConflictDetected
+      type: object
+    CorpusConflictDetected_ConflictEntry:
+      additionalProperties: true
+      description: 'One disagreement: a fact key and the identifiers behind it, never the text (CONF-2).'
+      properties:
+        chunk_ids:
+          items:
+            type: string
+          title: Chunk Ids
+          type: array
+        document_ids:
+          items:
+            type: string
+          title: Document Ids
+          type: array
+        fact_key:
+          title: Fact Key
+          type: string
+        severity:
+          title: Severity
+          type: string
+      required:
+      - fact_key
+      - severity
+      - chunk_ids
+      - document_ids
+      title: ConflictEntry
+      type: object
+    DocumentPurged:
+      description: 'Ingestion''s erasure of a document: all four fields are in the match (EVT-1).'
+      properties:
+        collection_id:
+          format: uuid
+          title: Collection Id
+          type: string
+        document_id:
+          format: uuid
+          title: Document Id
+          type: string
+        document_version:
+          title: Document Version
+          type: integer
+        tenant_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          default: null
+          title: Tenant Id
+      required:
+      - document_id
+      - document_version
+      - collection_id
+      title: DocumentPurged
+      type: object
+    DomainProfilePublished:
+      description: 'A republished profile: clears this service''s cache, never a pinned workflow (EVT-4).'
+      properties:
+        concern:
+          title: Concern
+          type: string
+        domain:
+          title: Domain
+          type: string
+        language:
+          title: Language
+          type: string
+        tenant_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          default: null
+          title: Tenant Id
+        version:
+          title: Version
+          type: string
+      required:
+      - domain
+      - language
+      - concern
+      - version
+      title: DomainProfilePublished
+      type: object
+    ExtractionCompleted:
+      additionalProperties: true
+      description: R-4's and W-6's write transaction (LD-84).
+      properties:
+        artefact_id:
+          title: Artefact Id
+          type: string
+        artefact_version_id:
+          title: Artefact Version Id
+          type: string
+        evidence_tier:
+          $ref: '#/components/schemas/ExtractionCompleted_EvidenceTier'
+        generation_id:
+          title: Generation Id
+          type: string
+        principal_id:
+          title: Principal Id
+          type: string
+        recipients:
+          items:
+            $ref: '#/components/schemas/ExtractionCompleted_Recipient'
+          title: Recipients
+          type: array
+        schema_version:
+          title: Schema Version
+          type: string
+        tender_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Tender Id
+        trigger_document_version_id:
+          title: Trigger Document Version Id
+          type: string
+      required:
+      - artefact_id
+      - artefact_version_id
+      - generation_id
+      - principal_id
+      - trigger_document_version_id
+      - schema_version
+      - evidence_tier
+      title: ExtractionCompleted
+      type: object
+    ExtractionCompleted_EvidenceTier:
+      description: Evidence tier; ``NOT_COMPUTED`` sorts lowest so the roll-up is ``min()`` (MD-24, LD-56).
+      enum:
+      - NOT_COMPUTED
+      - INSUFFICIENT
+      - PARTIAL
+      - SUPPORTED
+      title: EvidenceTier
+      type: string
+    ExtractionCompleted_Recipient:
+      additionalProperties: true
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      properties:
+        id:
+          title: Id
+          type: string
+        kind:
+          title: Kind
+          type: string
+      required:
+      - kind
+      - id
+      title: Recipient
+      type: object
+    GenerationCancelled:
+      additionalProperties: true
+      description: W-5. A cancellation is not a failure, so no ``run_failure_reason``.
+      properties:
+        artefact_id:
+          title: Artefact Id
+          type: string
+        generation_id:
+          title: Generation Id
+          type: string
+        principal_id:
+          title: Principal Id
+          type: string
+        reason:
+          title: Reason
+          type: string
+        recipients:
+          items:
+            $ref: '#/components/schemas/GenerationCancelled_Recipient'
+          title: Recipients
+          type: array
+        sections_complete:
+          title: Sections Complete
+          type: integer
+        sections_durable:
+          title: Sections Durable
+          type: boolean
+        sections_total:
+          title: Sections Total
+          type: integer
+        tender_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Tender Id
+      required:
+      - artefact_id
+      - generation_id
+      - principal_id
+      - reason
+      - sections_complete
+      - sections_total
+      - sections_durable
+      title: GenerationCancelled
+      type: object
+    GenerationCancelled_Recipient:
+      additionalProperties: true
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      properties:
+        id:
+          title: Id
+          type: string
+        kind:
+          title: Kind
+          type: string
+      required:
+      - kind
+      - id
+      title: Recipient
+      type: object
+    GenerationCompleted:
+      additionalProperties: true
+      description: A version was written; short-form included (GEN-10). No approval state (AOB-1, EVT-11).
+      properties:
+        artefact_id:
+          title: Artefact Id
+          type: string
+        artefact_version_id:
+          title: Artefact Version Id
+          type: string
+        coherence_verdict:
+          anyOf:
+          - $ref: '#/components/schemas/GenerationCompleted_CoherenceVerdict'
+          - type: 'null'
+          default: null
+        completeness:
+          $ref: '#/components/schemas/GenerationCompleted_CompletenessVerdict'
+        delivery:
+          $ref: '#/components/schemas/GenerationCompleted_DeliveryState'
+        evidence_tier:
+          $ref: '#/components/schemas/GenerationCompleted_EvidenceTier'
+        generation_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Generation Id
+        kind:
+          $ref: '#/components/schemas/GenerationCompleted_ArtefactKind'
+        minted_reason:
+          title: Minted Reason
+          type: string
+        origin:
+          $ref: '#/components/schemas/GenerationCompleted_ArtefactOrigin'
+        principal_id:
+          title: Principal Id
+          type: string
+        recipients:
+          items:
+            $ref: '#/components/schemas/GenerationCompleted_Recipient'
+          title: Recipients
+          type: array
+        section_count:
+          title: Section Count
+          type: integer
+        tender_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Tender Id
+        version_no:
+          title: Version No
+          type: integer
+      required:
+      - artefact_id
+      - artefact_version_id
+      - version_no
+      - principal_id
+      - kind
+      - minted_reason
+      - origin
+      - evidence_tier
+      - completeness
+      - delivery
+      - section_count
+      title: GenerationCompleted
+      type: object
+    GenerationCompleted_ArtefactKind:
+      description: Kind of generated artefact.
+      enum:
+      - answer
+      - section_draft
+      - document
+      - extraction
+      title: ArtefactKind
+      type: string
+    GenerationCompleted_ArtefactOrigin:
+      description: How an artefact version came to exist.
+      enum:
+      - original
+      - regeneration
+      - coherence_repair
+      title: ArtefactOrigin
+      type: string
+    GenerationCompleted_CoherenceVerdict:
+      description: Document coherence verdict.
+      enum:
+      - not_computed
+      - consistent
+      - conflicted
+      title: CoherenceVerdict
+      type: string
+    GenerationCompleted_CompletenessVerdict:
+      description: Completeness verdict (§8.2).
+      enum:
+      - complete
+      - partial
+      - insufficient
+      - not_computed
+      title: CompletenessVerdict
+      type: string
+    GenerationCompleted_DeliveryState:
+      description: Whether generated text reached the client.
+      enum:
+      - delivered
+      - disconnected
+      - not_applicable
+      title: DeliveryState
+      type: string
+    GenerationCompleted_EvidenceTier:
+      description: Evidence tier; ``NOT_COMPUTED`` sorts lowest so the roll-up is ``min()`` (MD-24, LD-56).
+      enum:
+      - NOT_COMPUTED
+      - INSUFFICIENT
+      - PARTIAL
+      - SUPPORTED
+      title: EvidenceTier
+      type: string
+    GenerationCompleted_Recipient:
+      additionalProperties: true
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      properties:
+        id:
+          title: Id
+          type: string
+        kind:
+          title: Kind
+          type: string
+      required:
+      - kind
+      - id
+      title: Recipient
+      type: object
+    GenerationFailed:
+      additionalProperties: true
+      description: A workflow ended without a version. ``reason`` is ``run_failure_reason`` exactly.
+      properties:
+        artefact_id:
+          title: Artefact Id
+          type: string
+        failed_at_stage:
+          anyOf:
+          - $ref: '#/components/schemas/GenerationFailed_RunStage'
+          - type: 'null'
+          default: null
+        generation_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Generation Id
+        principal_id:
+          title: Principal Id
+          type: string
+        reason:
+          $ref: '#/components/schemas/GenerationFailed_RunFailureReason'
+        recipients:
+          items:
+            $ref: '#/components/schemas/GenerationFailed_Recipient'
+          title: Recipients
+          type: array
+        sections_complete:
+          title: Sections Complete
+          type: integer
+        sections_durable:
+          title: Sections Durable
+          type: boolean
+        sections_total:
+          title: Sections Total
+          type: integer
+        tender_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Tender Id
+      required:
+      - artefact_id
+      - principal_id
+      - reason
+      - sections_complete
+      - sections_total
+      - sections_durable
+      title: GenerationFailed
+      type: object
+    GenerationFailed_Recipient:
+      additionalProperties: true
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      properties:
+        id:
+          title: Id
+          type: string
+        kind:
+          title: Kind
+          type: string
+      required:
+      - kind
+      - id
+      title: Recipient
+      type: object
+    GenerationFailed_RunFailureReason:
+      description: Why a run failed (lower snake case, unlike error codes).
+      enum:
+      - scope_revoked
+      - quota_exhausted
+      - inference_unavailable
+      - residency_capacity
+      - artefact_store_unwritable
+      - gate_expired
+      - internal
+      title: RunFailureReason
+      type: string
+    GenerationFailed_RunStage:
+      description: The run workflow's phase names (LD-77).
+      enum:
+      - outline
+      - stage1
+      - stage2
+      - coherence
+      - extract
+      title: RunStage
+      type: string
+    GenerationGapReported:
+      additionalProperties: true
+      description: A blocking required-input failure (§6.9). Entity *keys* only, never values.
+      properties:
+        artefact_id:
+          title: Artefact Id
+          type: string
+        blocking:
+          title: Blocking
+          type: boolean
+        empty_collections:
+          items:
+            type: string
+          title: Empty Collections
+          type: array
+        missing_roles:
+          items:
+            type: string
+          title: Missing Roles
+          type: array
+        principal_id:
+          title: Principal Id
+          type: string
+        recipients:
+          items:
+            $ref: '#/components/schemas/GenerationGapReported_Recipient'
+          title: Recipients
+          type: array
+        section_ref:
+          title: Section Ref
+          type: string
+        tender_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Tender Id
+        unresolved_entities:
+          items:
+            type: string
+          title: Unresolved Entities
+          type: array
+      required:
+      - artefact_id
+      - principal_id
+      - section_ref
+      - missing_roles
+      - unresolved_entities
+      - empty_collections
+      - blocking
+      title: GenerationGapReported
+      type: object
+    GenerationGapReported_Recipient:
+      additionalProperties: true
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      properties:
+        id:
+          title: Id
+          type: string
+        kind:
+          title: Kind
+          type: string
+      required:
+      - kind
+      - id
+      title: Recipient
+      type: object
+    GenerationProgressed:
+      additionalProperties: true
+      description: Every stage transition of an async run (LD-51); ``progress_seq`` orders it (EVT-13).
+      properties:
+        artefact_id:
+          title: Artefact Id
+          type: string
+        generation_id:
+          title: Generation Id
+          type: string
+        observed_at:
+          title: Observed At
+          type: string
+        outline_state:
+          $ref: '#/components/schemas/GenerationProgressed_OutlineState'
+        principal_id:
+          title: Principal Id
+          type: string
+        progress_seq:
+          title: Progress Seq
+          type: integer
+        recipients:
+          items:
+            $ref: '#/components/schemas/GenerationProgressed_Recipient'
+          title: Recipients
+          type: array
+        run_status:
+          $ref: '#/components/schemas/GenerationProgressed_RunStatus'
+        sections_complete:
+          title: Sections Complete
+          type: integer
+        sections_total:
+          title: Sections Total
+          type: integer
+        stage:
+          anyOf:
+          - $ref: '#/components/schemas/GenerationProgressed_RunStage'
+          - type: 'null'
+          default: null
+        tender_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Tender Id
+      required:
+      - artefact_id
+      - generation_id
+      - principal_id
+      - progress_seq
+      - run_status
+      - sections_complete
+      - sections_total
+      - outline_state
+      - observed_at
+      title: GenerationProgressed
+      type: object
+    GenerationProgressed_OutlineState:
+      description: Outline state of a long-form run.
+      enum:
+      - none
+      - building
+      - ready
+      - approved
+      - revising
+      title: OutlineState
+      type: string
+    GenerationProgressed_Recipient:
+      additionalProperties: true
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      properties:
+        id:
+          title: Id
+          type: string
+        kind:
+          title: Kind
+          type: string
+      required:
+      - kind
+      - id
+      title: Recipient
+      type: object
+    GenerationProgressed_RunStage:
+      description: The run workflow's phase names (LD-77).
+      enum:
+      - outline
+      - stage1
+      - stage2
+      - coherence
+      - extract
+      title: RunStage
+      type: string
+    GenerationProgressed_RunStatus:
+      description: Generation run status.
+      enum:
+      - pending
+      - outline_building
+      - awaiting_outline_approval
+      - generating
+      - suspended
+      - complete
+      - failed
+      - cancelled
+      title: RunStatus
+      type: string
+    GenerationStarted:
+      additionalProperties: true
+      description: Every admission, synchronous or not, in the shell's transaction (ASYNC-2, RUN-1, GEN-10).
+      properties:
+        artefact_id:
+          title: Artefact Id
+          type: string
+        capability:
+          title: Capability
+          type: string
+        clamp_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Clamp Reason
+        clamped:
+          title: Clamped
+          type: boolean
+        domain_profile_version:
+          title: Domain Profile Version
+          type: string
+        effective_mode:
+          $ref: '#/components/schemas/GenerationStarted_GenerationMode'
+        eligibility_state:
+          $ref: '#/components/schemas/GenerationStarted_EligibilityState'
+        generation_id:
+          title: Generation Id
+          type: string
+        kind:
+          $ref: '#/components/schemas/GenerationStarted_ArtefactKind'
+        language_pack_version:
+          title: Language Pack Version
+          type: string
+        principal_id:
+          title: Principal Id
+          type: string
+        recipients:
+          items:
+            $ref: '#/components/schemas/GenerationStarted_Recipient'
+          title: Recipients
+          type: array
+        requested_mode:
+          $ref: '#/components/schemas/GenerationStarted_GenerationMode'
+        synchronous:
+          title: Synchronous
+          type: boolean
+        target_ref:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Target Ref
+        tender_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Tender Id
+      required:
+      - artefact_id
+      - generation_id
+      - principal_id
+      - kind
+      - capability
+      - synchronous
+      - requested_mode
+      - effective_mode
+      - eligibility_state
+      - clamped
+      - domain_profile_version
+      - language_pack_version
+      title: GenerationStarted
+      type: object
+    GenerationStarted_ArtefactKind:
+      description: Kind of generated artefact.
+      enum:
+      - answer
+      - section_draft
+      - document
+      - extraction
+      title: ArtefactKind
+      type: string
+    GenerationStarted_EligibilityState:
+      description: Domain Profile generation eligibility (§7.6).
+      enum:
+      - GENERATABLE
+      - PARTIALLY_GENERATABLE
+      - NOT_GENERATABLE
+      title: EligibilityState
+      type: string
+    GenerationStarted_GenerationMode:
+      description: Generation mode.
+      enum:
+      - assistance
+      - automation
+      title: GenerationMode
+      type: string
+    GenerationStarted_Recipient:
+      additionalProperties: true
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      properties:
+        id:
+          title: Id
+          type: string
+        kind:
+          title: Kind
+          type: string
+      required:
+      - kind
+      - id
+      title: Recipient
+      type: object
+    IndexGenerationActivated:
+      additionalProperties: true
+      description: C-I4's cutover transaction.
+      properties:
+        activated_at:
+          title: Activated At
+          type: string
+        chunker_version:
+          title: Chunker Version
+          type: string
+        collection_id:
+          title: Collection Id
+          type: string
+        embedding_profile:
+          title: Embedding Profile
+          type: string
+        generation:
+          title: Generation
+          type: integer
+        previous_generation:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: null
+          title: Previous Generation
+        tender_id:
+          title: Tender Id
+          type: string
+      required:
+      - collection_id
+      - tender_id
+      - generation
+      - embedding_profile
+      - chunker_version
+      - activated_at
+      title: IndexGenerationActivated
+      type: object
+    IndexGenerationFailed:
+      additionalProperties: true
+      description: The ``failed`` row's transaction (LD-67). Nothing writes one in v1.
+      properties:
+        collection_id:
+          title: Collection Id
+          type: string
+        failed_checks:
+          items: {}
+          title: Failed Checks
+          type: array
+        generation:
+          title: Generation
+          type: integer
+        serving_generation:
+          title: Serving Generation
+          type: integer
+        tender_id:
+          title: Tender Id
+          type: string
+      required:
+      - collection_id
+      - tender_id
+      - generation
+      - failed_checks
+      - serving_generation
+      title: IndexGenerationFailed
+      type: object
+    OutlineReady:
+      additionalProperties: true
+      description: The workflow suspends on the human gate (§9.4).
+      properties:
+        artefact_id:
+          title: Artefact Id
+          type: string
+        gate_expires_at:
+          title: Gate Expires At
+          type: string
+        outline_version:
+          title: Outline Version
+          type: integer
+        principal_id:
+          title: Principal Id
+          type: string
+        recipients:
+          items:
+            $ref: '#/components/schemas/OutlineReady_Recipient'
+          title: Recipients
+          type: array
+        section_count:
+          title: Section Count
+          type: integer
+        tender_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Tender Id
+      required:
+      - artefact_id
+      - principal_id
+      - outline_version
+      - section_count
+      - gate_expires_at
+      title: OutlineReady
+      type: object
+    OutlineReady_Recipient:
+      additionalProperties: true
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      properties:
+        id:
+          title: Id
+          type: string
+        kind:
+          title: Kind
+          type: string
+      required:
+      - kind
+      - id
+      title: Recipient
+      type: object
+    ProfileCacheRefreshed:
+      additionalProperties: true
+      description: An operational signal about this service's own pack cache (§12.3).
+      properties:
+        concern:
+          title: Concern
+          type: string
+        domain:
+          title: Domain
+          type: string
+        from_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: From Version
+        language:
+          title: Language
+          type: string
+        profile_ref:
+          title: Profile Ref
+          type: string
+        to_version:
+          title: To Version
+          type: string
+        triggered_by_event_id:
+          title: Triggered By Event Id
+          type: string
+      required:
+      - profile_ref
+      - domain
+      - language
+      - concern
+      - to_version
+      - triggered_by_event_id
+      title: ProfileCacheRefreshed
+      type: object
+    SectionCompleted:
+      additionalProperties: true
+      description: Once per section. A gap or failure has no version, so those fields are absent (AS-7).
+      properties:
+        artefact_id:
+          title: Artefact Id
+          type: string
+        completeness:
+          anyOf:
+          - $ref: '#/components/schemas/SectionCompleted_CompletenessVerdict'
+          - type: 'null'
+          default: null
+        evidence_tier:
+          anyOf:
+          - $ref: '#/components/schemas/SectionCompleted_EvidenceTier'
+          - type: 'null'
+          default: null
+        generation_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Generation Id
+        origin:
+          $ref: '#/components/schemas/SectionCompleted_ArtefactOrigin'
+        principal_id:
+          title: Principal Id
+          type: string
+        recipients:
+          items:
+            $ref: '#/components/schemas/SectionCompleted_Recipient'
+          title: Recipients
+          type: array
+        retrieval_set_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Retrieval Set Id
+        section_ref:
+          title: Section Ref
+          type: string
+        section_version_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Section Version Id
+        sections_complete:
+          title: Sections Complete
+          type: integer
+        sections_total:
+          title: Sections Total
+          type: integer
+        state:
+          $ref: '#/components/schemas/SectionCompleted_SectionState'
+        superseded_version_ids:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          default: null
+          title: Superseded Version Ids
+        tender_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Tender Id
+      required:
+      - artefact_id
+      - principal_id
+      - section_ref
+      - state
+      - origin
+      - sections_complete
+      - sections_total
+      title: SectionCompleted
+      type: object
+    SectionCompleted_ArtefactOrigin:
+      description: How an artefact version came to exist.
+      enum:
+      - original
+      - regeneration
+      - coherence_repair
+      title: ArtefactOrigin
+      type: string
+    SectionCompleted_CompletenessVerdict:
+      description: Completeness verdict (§8.2).
+      enum:
+      - complete
+      - partial
+      - insufficient
+      - not_computed
+      title: CompletenessVerdict
+      type: string
+    SectionCompleted_EvidenceTier:
+      description: Evidence tier; ``NOT_COMPUTED`` sorts lowest so the roll-up is ``min()`` (MD-24, LD-56).
+      enum:
+      - NOT_COMPUTED
+      - INSUFFICIENT
+      - PARTIAL
+      - SUPPORTED
+      title: EvidenceTier
+      type: string
+    SectionCompleted_Recipient:
+      additionalProperties: true
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      properties:
+        id:
+          title: Id
+          type: string
+        kind:
+          title: Kind
+          type: string
+      required:
+      - kind
+      - id
+      title: Recipient
+      type: object
+    SectionCompleted_SectionState:
+      description: Long-form section state.
+      enum:
+      - pending
+      - generating
+      - complete
+      - gap
+      - failed
+      title: SectionState
+      type: string
+    TenantMembershipsPurged:
+      description: IAM's tenant-offboarding cascade signal; ``actor_id`` is optional.
+      properties:
+        actor_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Actor Id
+        tenant_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          default: null
+          title: Tenant Id
+      title: TenantMembershipsPurged
+      type: object
+    TenantQuotaRestored:
+      description: Only ``resource = tokens`` acts, because only a token quota suspends a run (LD-70).
+      properties:
+        cause:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Cause
+        resource:
+          title: Resource
+          type: string
+        tenant_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          default: null
+          title: Tenant Id
+      required:
+      - resource
+      title: TenantQuotaRestored
+      type: object
+    TenantStateChanged:
+      description: IAM's relay of one of seven statuses; ``cause`` is free text, never branched on.
+      properties:
+        cause:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Cause
+        status:
+          title: Status
+          type: string
+        tenant_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          default: null
+          title: Tenant Id
+      required:
+      - status
+      title: TenantStateChanged
+      type: object
+    TenderDeclined:
+      description: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      properties:
+        tenant_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          default: null
+          title: Tenant Id
+        tender_id:
+          format: uuid
+          title: Tender Id
+          type: string
+      required:
+      - tender_id
+      title: TenderDeclined
+      type: object
+    TenderLost:
+      description: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      properties:
+        tenant_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          default: null
+          title: Tenant Id
+        tender_id:
+          format: uuid
+          title: Tender Id
+          type: string
+      required:
+      - tender_id
+      title: TenderLost
+      type: object
+    TenderPurged:
+      description: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      properties:
+        tenant_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          default: null
+          title: Tenant Id
+        tender_id:
+          format: uuid
+          title: Tender Id
+          type: string
+      required:
+      - tender_id
+      title: TenderPurged
+      type: object
+    TenderRestricted:
+      description: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      properties:
+        tenant_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          default: null
+          title: Tenant Id
+        tender_id:
+          format: uuid
+          title: Tender Id
+          type: string
+      required:
+      - tender_id
+      title: TenderRestricted
+      type: object
+    TenderWithdrawn:
+      description: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      properties:
+        tenant_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          default: null
+          title: Tenant Id
+        tender_id:
+          format: uuid
+          title: Tender Id
+          type: string
+      required:
+      - tender_id
+      title: TenderWithdrawn
+      type: object
+    TenderWon:
+      description: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      properties:
+        tenant_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          default: null
+          title: Tenant Id
+        tender_id:
+          format: uuid
+          title: Tender Id
+          type: string
+      required:
+      - tender_id
+      title: TenderWon
+      type: object
+  tags:
+    consumed:
+      description: Received by this service.
+      name: consumed
+    published:
+      description: Sent by this service (send).
+      name: published
+defaultContentType: application/json
+info:
+  description: 'Generated by scripts/gen_api_docs.py from rag.application.events.contracts — do not edit
+    by hand. Every event is an eventcommon Envelope with `source: llm-rag-service` and a PascalCase `type`
+    that is also the SNS `EventType` attribute. Payloads carry identifiers, versions and status only (EVT-7).'
+  title: LLM Retrieval & Generation Events
+  version: 1.0.0
+operations:
+  consume-domainprofile-llm-invalidate-q:
+    action: receive
+    channel:
+      $ref: '#/channels/domainprofile-llm-invalidate-q'
+    summary: Consume DomainProfilePublished.
+  consume-iam-rag-membership-q:
+    action: receive
+    channel:
+      $ref: '#/channels/iam-rag-membership-q'
+    summary: Consume TenantStateChanged.
+  consume-iam-rag-purge-q:
+    action: receive
+    channel:
+      $ref: '#/channels/iam-rag-purge-q'
+    summary: Consume TenantMembershipsPurged.
+  consume-llm-document-rag-q:
+    action: receive
+    channel:
+      $ref: '#/channels/llm-document-rag-q'
+    summary: Consume DocumentPurged.
+  consume-tender-rag-q:
+    action: receive
+    channel:
+      $ref: '#/channels/tender-rag-q'
+    summary: Consume TenderDeclined, TenderLost, TenderPurged, TenderRestricted, TenderWithdrawn, TenderWon.
+  consume-usage-rag-q:
+    action: receive
+    channel:
+      $ref: '#/channels/usage-rag-q'
+    summary: Consume TenantQuotaRestored.
+  publish-llm-generation-events:
+    action: send
+    channel:
+      $ref: '#/channels/llm-generation-events'
+    summary: Publish 10 event types to llm-generation-events.
+  publish-llm-index-events:
+    action: send
+    channel:
+      $ref: '#/channels/llm-index-events'
+    summary: Publish 7 event types to llm-index-events.
+servers:
+  sns:
+    description: Publishes to llm-generation-events and llm-index-events.
+    host: sns.eu-west-1.amazonaws.com
+    protocol: sns
+  sqs:
+    description: Consumes the six queues of §12.4 (each with its own DLQ).
+    host: sqs.eu-west-1.amazonaws.com
+    protocol: sqs

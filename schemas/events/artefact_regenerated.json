@@ -1,0 +1,125 @@
+{
+  "$defs": {
+    "ArtefactOrigin": {
+      "description": "How an artefact version came to exist.",
+      "enum": [
+        "original",
+        "regeneration",
+        "coherence_repair"
+      ],
+      "title": "ArtefactOrigin",
+      "type": "string"
+    },
+    "CompletenessVerdict": {
+      "description": "Completeness verdict (\u00a78.2).",
+      "enum": [
+        "complete",
+        "partial",
+        "insufficient",
+        "not_computed"
+      ],
+      "title": "CompletenessVerdict",
+      "type": "string"
+    },
+    "EvidenceTier": {
+      "description": "Evidence tier; ``NOT_COMPUTED`` sorts lowest so the roll-up is ``min()`` (MD-24, LD-56).",
+      "enum": [
+        "NOT_COMPUTED",
+        "INSUFFICIENT",
+        "PARTIAL",
+        "SUPPORTED"
+      ],
+      "title": "EvidenceTier",
+      "type": "string"
+    },
+    "Recipient": {
+      "additionalProperties": true,
+      "description": "``{kind, id}`` echoed from the request that started the run (LD-83, provisional).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "title": "Recipient",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "A regeneration minted a *document* version (a section one is ``SectionCompleted``).",
+  "properties": {
+    "artefact_id": {
+      "title": "Artefact Id",
+      "type": "string"
+    },
+    "artefact_version_id": {
+      "title": "Artefact Version Id",
+      "type": "string"
+    },
+    "base_version_id": {
+      "title": "Base Version Id",
+      "type": "string"
+    },
+    "completeness": {
+      "$ref": "#/$defs/CompletenessVerdict"
+    },
+    "evidence_tier": {
+      "$ref": "#/$defs/EvidenceTier"
+    },
+    "origin": {
+      "$ref": "#/$defs/ArtefactOrigin"
+    },
+    "principal_id": {
+      "title": "Principal Id",
+      "type": "string"
+    },
+    "recipients": {
+      "items": {
+        "$ref": "#/$defs/Recipient"
+      },
+      "title": "Recipients",
+      "type": "array"
+    },
+    "scope": {
+      "title": "Scope",
+      "type": "string"
+    },
+    "tender_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tender Id"
+    },
+    "version_no": {
+      "title": "Version No",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "artefact_id",
+    "artefact_version_id",
+    "version_no",
+    "base_version_id",
+    "principal_id",
+    "scope",
+    "origin",
+    "evidence_tier",
+    "completeness"
+  ],
+  "title": "ArtefactRegenerated",
+  "type": "object"
+}

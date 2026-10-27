@@ -1,0 +1,129 @@
+{
+  "$defs": {
+    "Recipient": {
+      "additionalProperties": true,
+      "description": "``{kind, id}`` echoed from the request that started the run (LD-83, provisional).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "title": "Recipient",
+      "type": "object"
+    },
+    "RunFailureReason": {
+      "description": "Why a run failed (lower snake case, unlike error codes).",
+      "enum": [
+        "scope_revoked",
+        "quota_exhausted",
+        "inference_unavailable",
+        "residency_capacity",
+        "artefact_store_unwritable",
+        "gate_expired",
+        "internal"
+      ],
+      "title": "RunFailureReason",
+      "type": "string"
+    },
+    "RunStage": {
+      "description": "The run workflow's phase names (LD-77).",
+      "enum": [
+        "outline",
+        "stage1",
+        "stage2",
+        "coherence",
+        "extract"
+      ],
+      "title": "RunStage",
+      "type": "string"
+    }
+  },
+  "additionalProperties": true,
+  "description": "A workflow ended without a version. ``reason`` is ``run_failure_reason`` exactly.",
+  "properties": {
+    "artefact_id": {
+      "title": "Artefact Id",
+      "type": "string"
+    },
+    "failed_at_stage": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RunStage"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "generation_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Generation Id"
+    },
+    "principal_id": {
+      "title": "Principal Id",
+      "type": "string"
+    },
+    "reason": {
+      "$ref": "#/$defs/RunFailureReason"
+    },
+    "recipients": {
+      "items": {
+        "$ref": "#/$defs/Recipient"
+      },
+      "title": "Recipients",
+      "type": "array"
+    },
+    "sections_complete": {
+      "title": "Sections Complete",
+      "type": "integer"
+    },
+    "sections_durable": {
+      "title": "Sections Durable",
+      "type": "boolean"
+    },
+    "sections_total": {
+      "title": "Sections Total",
+      "type": "integer"
+    },
+    "tender_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tender Id"
+    }
+  },
+  "required": [
+    "artefact_id",
+    "principal_id",
+    "reason",
+    "sections_complete",
+    "sections_total",
+    "sections_durable"
+  ],
+  "title": "GenerationFailed",
+  "type": "object"
+}

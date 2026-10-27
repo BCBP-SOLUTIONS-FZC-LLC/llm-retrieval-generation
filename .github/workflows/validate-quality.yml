@@ -1,0 +1,97 @@
+# Reusable workflow — quality gate.
+# ruff format · ruff lint · mypy --strict · uv.lock drift  · pip-audit.
+# Called by ci.yml. Does NOT gate coverage (that is validate-test.yml).
+name: Validate / Quality
+
+"on":
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to check out (leave empty to use the caller ref)'
+        type: string
+        required: false
+        default: ''
+    secrets:
+      # Only secret read here (github.token is the fallback). Callers pass it
+      # explicitly — no `secrets: inherit`, so PR test code never runs with
+      # other secrets in scope.
+      CI_REPO_READ_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+          token: ${{ secrets.CI_REPO_READ_TOKEN || github.token }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: '0.13.1'
+          python-version: '3.12'
+
+      # uv.lock must match pyproject.toml.
+      - name: Lock check
+        run: |
+          if ! make lock-check; then
+            echo "::error file=uv.lock,title=Lock drift::uv.lock is stale for pyproject.toml — run 'make lock' and commit the result."
+            exit 1
+          fi
+
+      - name: Install dependencies (uv sync from uv.lock)
+        run: uv sync --locked
+
+      - name: Verify dependency resolution
+        run: uv pip check
+
+      # Workflow files must use literal operators, not HTML entity encodings.
+      - name: Reject HTML-escaped operators in workflow files
+        run: |
+          if grep -REn '&(gt|lt|amp)' .github/workflows/ .github/scripts/; then
+            echo "::error::Workflow or script files contain HTML entities. Use literal operators instead."
+            exit 1
+          fi
+
+      # RLS-6: the tenant GUC may only be bound with SET LOCAL / set_config(..., true)
+      # inside a transaction. A session-scoped SET leaks across pooled PgBouncer
+      # backends — the cross-tenant breach RLS-6 exists to prevent.
+      - name: Reject non-LOCAL SET app.tenant_id (RLS-6)
+        run: |
+          hits=$(grep -REn '\bSET[[:space:]]+("?app\.tenant_id"?)[[:space:]]*=' \
+                   --include='*.py' --include='*.sql' \
+                   src/ migrations/ | grep -v 'SET LOCAL' | grep -v 'set_config' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::Non-LOCAL SET app.tenant_id detected (RLS-6). Use SET LOCAL inside a transaction."
+            echo "$hits"
+            exit 1
+          fi
+          echo "RLS-6 non-LOCAL SET check passed."
+
+      - name: Format check
+        run: make fmt-check
+
+      - name: Lint
+        run: make lint
+
+      - name: Type check
+        run: make typecheck
+
+      - name: Vulnerability check
+        run: |
+          if ! make vuln-check; then
+            echo "::error file=pyproject.toml,title=Vulnerability found::pip-audit detected vulnerabilities — run 'make vuln-check' locally to view details."
+            exit 1
+          fi

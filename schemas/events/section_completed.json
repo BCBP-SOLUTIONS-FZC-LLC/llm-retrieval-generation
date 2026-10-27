@@ -1,0 +1,201 @@
+{
+  "$defs": {
+    "ArtefactOrigin": {
+      "description": "How an artefact version came to exist.",
+      "enum": [
+        "original",
+        "regeneration",
+        "coherence_repair"
+      ],
+      "title": "ArtefactOrigin",
+      "type": "string"
+    },
+    "CompletenessVerdict": {
+      "description": "Completeness verdict (\u00a78.2).",
+      "enum": [
+        "complete",
+        "partial",
+        "insufficient",
+        "not_computed"
+      ],
+      "title": "CompletenessVerdict",
+      "type": "string"
+    },
+    "EvidenceTier": {
+      "description": "Evidence tier; ``NOT_COMPUTED`` sorts lowest so the roll-up is ``min()`` (MD-24, LD-56).",
+      "enum": [
+        "NOT_COMPUTED",
+        "INSUFFICIENT",
+        "PARTIAL",
+        "SUPPORTED"
+      ],
+      "title": "EvidenceTier",
+      "type": "string"
+    },
+    "Recipient": {
+      "additionalProperties": true,
+      "description": "``{kind, id}`` echoed from the request that started the run (LD-83, provisional).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "title": "Recipient",
+      "type": "object"
+    },
+    "SectionState": {
+      "description": "Long-form section state.",
+      "enum": [
+        "pending",
+        "generating",
+        "complete",
+        "gap",
+        "failed"
+      ],
+      "title": "SectionState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": true,
+  "description": "Once per section. A gap or failure has no version, so those fields are absent (AS-7).",
+  "properties": {
+    "artefact_id": {
+      "title": "Artefact Id",
+      "type": "string"
+    },
+    "completeness": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CompletenessVerdict"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "evidence_tier": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EvidenceTier"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "generation_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Generation Id"
+    },
+    "origin": {
+      "$ref": "#/$defs/ArtefactOrigin"
+    },
+    "principal_id": {
+      "title": "Principal Id",
+      "type": "string"
+    },
+    "recipients": {
+      "items": {
+        "$ref": "#/$defs/Recipient"
+      },
+      "title": "Recipients",
+      "type": "array"
+    },
+    "retrieval_set_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Retrieval Set Id"
+    },
+    "section_ref": {
+      "title": "Section Ref",
+      "type": "string"
+    },
+    "section_version_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Section Version Id"
+    },
+    "sections_complete": {
+      "title": "Sections Complete",
+      "type": "integer"
+    },
+    "sections_total": {
+      "title": "Sections Total",
+      "type": "integer"
+    },
+    "state": {
+      "$ref": "#/$defs/SectionState"
+    },
+    "superseded_version_ids": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Superseded Version Ids"
+    },
+    "tender_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tender Id"
+    }
+  },
+  "required": [
+    "artefact_id",
+    "principal_id",
+    "section_ref",
+    "state",
+    "origin",
+    "sections_complete",
+    "sections_total"
+  ],
+  "title": "SectionCompleted",
+  "type": "object"
+}

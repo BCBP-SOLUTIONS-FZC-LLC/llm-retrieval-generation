@@ -1,0 +1,144 @@
+{
+  "$defs": {
+    "OutlineState": {
+      "description": "Outline state of a long-form run.",
+      "enum": [
+        "none",
+        "building",
+        "ready",
+        "approved",
+        "revising"
+      ],
+      "title": "OutlineState",
+      "type": "string"
+    },
+    "Recipient": {
+      "additionalProperties": true,
+      "description": "``{kind, id}`` echoed from the request that started the run (LD-83, provisional).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "title": "Recipient",
+      "type": "object"
+    },
+    "RunStage": {
+      "description": "The run workflow's phase names (LD-77).",
+      "enum": [
+        "outline",
+        "stage1",
+        "stage2",
+        "coherence",
+        "extract"
+      ],
+      "title": "RunStage",
+      "type": "string"
+    },
+    "RunStatus": {
+      "description": "Generation run status.",
+      "enum": [
+        "pending",
+        "outline_building",
+        "awaiting_outline_approval",
+        "generating",
+        "suspended",
+        "complete",
+        "failed",
+        "cancelled"
+      ],
+      "title": "RunStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": true,
+  "description": "Every stage transition of an async run (LD-51); ``progress_seq`` orders it (EVT-13).",
+  "properties": {
+    "artefact_id": {
+      "title": "Artefact Id",
+      "type": "string"
+    },
+    "generation_id": {
+      "title": "Generation Id",
+      "type": "string"
+    },
+    "observed_at": {
+      "title": "Observed At",
+      "type": "string"
+    },
+    "outline_state": {
+      "$ref": "#/$defs/OutlineState"
+    },
+    "principal_id": {
+      "title": "Principal Id",
+      "type": "string"
+    },
+    "progress_seq": {
+      "title": "Progress Seq",
+      "type": "integer"
+    },
+    "recipients": {
+      "items": {
+        "$ref": "#/$defs/Recipient"
+      },
+      "title": "Recipients",
+      "type": "array"
+    },
+    "run_status": {
+      "$ref": "#/$defs/RunStatus"
+    },
+    "sections_complete": {
+      "title": "Sections Complete",
+      "type": "integer"
+    },
+    "sections_total": {
+      "title": "Sections Total",
+      "type": "integer"
+    },
+    "stage": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RunStage"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "tender_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tender Id"
+    }
+  },
+  "required": [
+    "artefact_id",
+    "generation_id",
+    "principal_id",
+    "progress_seq",
+    "run_status",
+    "sections_complete",
+    "sections_total",
+    "outline_state",
+    "observed_at"
+  ],
+  "title": "GenerationProgressed",
+  "type": "object"
+}

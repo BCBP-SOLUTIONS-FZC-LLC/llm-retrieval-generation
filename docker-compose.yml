@@ -1,0 +1,112 @@
+# Local infrastructure for llm-retrieval-generation (`make docker-up`).
+#
+# Infra only — there is no `app` service because this repo has no Dockerfile yet. Run the API
+# on the host with `make run` against these containers (see .env-example).
+#
+# Host ports (incl. floci-ui on 4501) are chosen to sit beside the IAM services' stacks (5433/5434/5533/5534, 6379/6380,
+# 4566/4567, 4500) without colliding.
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: rag_admin          # superuser: migrations (DDL) connect as this, direct
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: llm_corpus           # llm_generation is created by scripts/init-db.sql
+    ports:
+      - "5535:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag_admin -d llm_corpus"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Transaction-mode pooler (LLD §18.2): the app's DSNs go through here, the migration DSNs do not
+  # (the migration runner's advisory lock is session-scoped).
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    ports:
+      - "5536:5432"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: rag_app_login
+      DB_PASSWORD: devpassword
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: "100"
+      DEFAULT_POOL_SIZE: "10"           # = PG_MAX_CONNS (§18.2)
+      AUTH_TYPE: scram-sha-256
+      IGNORE_STARTUP_PARAMETERS: extra_float_digits
+      SERVER_TLS_SSLMODE: disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 5432 -U rag_app_login || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: valkey/valkey:8-alpine
+    ports:
+      - "6381:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:v1.14.1
+    ports:
+      - "6335:6333"   # REST
+      - "6336:6334"   # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  # S3 + SNS + SQS emulator (same one the IAM services use). TEMPORAL_ADDRESS stays unset
+  # locally: the async workflow routes answer 503 WORKFLOW_ENGINE_UNAVAILABLE by design.
+  floci:
+    image: floci/floci:2.1.0-compat
+    ports:
+      - "4568:4566"
+    environment:
+      FLOCI_DEFAULT_REGION: eu-west-1
+      FLOCI_DEFAULT_ACCOUNT_ID: "000000000000"
+      # Host in the QueueUrl / TopicArn floci returns. Must resolve from inside floci-ui's
+      # container (it follows those URLs directly), else per-queue attributes come back empty.
+      # Host-side code uses the explicit URLs in .env, so this does not affect `make run`.
+      FLOCI_HOSTNAME: floci
+    volumes:
+      - floci_data:/app/data
+      - ./scripts/init-floci.sh:/etc/floci/init/ready.d/init-floci.sh:ro
+    healthcheck:
+      # The LAST resource init-floci.sh creates, so "healthy" means the script finished.
+      test: ["CMD", "aws", "--region", "eu-west-1", "sqs", "get-queue-url", "--queue-name", "usage-rag-q"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Web console for floci: browse S3 / SNS / SQS at http://localhost:4501 (message counts live).
+  floci-ui:
+    image: floci/floci-ui:0.5.0
+    ports:
+      - "4501:4500"   # 4500 is the IAM stacks' floci-ui
+    environment:
+      AWS_REGION: eu-west-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_ENDPOINT_URL: http://floci:4566
+      FLOCI_ENDPOINT: http://floci:4566   # the console's own connectivity probe reads this one
+      PORT: "4500"
+    depends_on:
+      floci:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  floci_data:

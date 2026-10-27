@@ -1,0 +1,12 @@
+SET ROLE rag_owner;
+DROP FUNCTION IF EXISTS bump_record_version();
+DROP FUNCTION IF EXISTS touch_updated_at();
+DROP FUNCTION IF EXISTS reject_always();
+DROP FUNCTION IF EXISTS reject_column_change();
+DROP FUNCTION IF EXISTS reject_update_except();
+DROP TYPE IF EXISTS grant_subject_type;
+DROP TYPE IF EXISTS index_generation_status;
+DROP TYPE IF EXISTS collection_status;
+DROP TYPE IF EXISTS collection_type;
+DROP TYPE IF EXISTS grant_level;
+RESET ROLE;

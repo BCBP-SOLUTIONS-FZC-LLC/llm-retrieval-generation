@@ -1,0 +1,36 @@
+{
+  "additionalProperties": true,
+  "description": "The ``failed`` row's transaction (LD-67). Nothing writes one in v1.",
+  "properties": {
+    "collection_id": {
+      "title": "Collection Id",
+      "type": "string"
+    },
+    "failed_checks": {
+      "items": {},
+      "title": "Failed Checks",
+      "type": "array"
+    },
+    "generation": {
+      "title": "Generation",
+      "type": "integer"
+    },
+    "serving_generation": {
+      "title": "Serving Generation",
+      "type": "integer"
+    },
+    "tender_id": {
+      "title": "Tender Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "collection_id",
+    "tender_id",
+    "generation",
+    "failed_checks",
+    "serving_generation"
+  ],
+  "title": "IndexGenerationFailed",
+  "type": "object"
+}
