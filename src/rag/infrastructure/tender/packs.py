@@ -109,7 +109,7 @@ class HttpPackResolver:
             for delay in (*self._backoff, None):
                 try:
                     return await once()
-                except (httpx.HTTPError, ValueError):
+                except httpx.HTTPError, ValueError:
                     if delay is None:
                         raise
                     await asyncio.sleep(delay)
@@ -143,7 +143,7 @@ class ValkeyPackCache:
             return None
         try:
             return bundle_from_dict(json.loads(raw))
-        except (ValueError, KeyError, TypeError, AttributeError):
+        except ValueError, KeyError, TypeError, AttributeError:
             return None
 
     async def put(

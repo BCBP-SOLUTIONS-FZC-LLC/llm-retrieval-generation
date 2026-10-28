@@ -84,3 +84,40 @@ def test_outbox_schema_applied_on_generation_when_flagged(
         "apply_inbox_schema generation",
         "apply_schema corpus",
     ]
+
+
+def _probe(app: FastAPI, path: str) -> int:
+    with TestClient(app) as client:
+        return client.get(path).status_code
+
+
+def test_ready_gates_on_the_relays_only_when_events_are_enabled(log: list[str]) -> None:
+    """Disabled events: nothing to wait for. Enabled: not ready until the relays report ready."""
+    assert _probe(create_app(Settings(events_enabled=False)), "/ready") == 200
+
+    app = create_app(Settings(events_enabled=True, generation_topic_arn="a", index_topic_arn="b"))
+    state = {"ready": False}
+
+    async def starter(application: FastAPI) -> Any:
+        application.state.relay_ready = lambda: state["ready"]
+
+        async def stop() -> None:
+            return None
+
+        return stop
+
+    app.state.worker_starters = [starter]
+    with TestClient(app) as client:
+        assert client.get("/ready").status_code == 503
+        assert client.get("/live").status_code == 200  # a stalled relay is not a restart
+        assert client.get("/health").status_code == 200
+        state["ready"] = True
+        assert client.get("/ready").status_code == 200
+        state["ready"] = False  # the relay stopped polling later
+        assert client.get("/ready").status_code == 503
+
+
+def test_ready_is_not_ready_when_the_relays_never_registered(log: list[str]) -> None:
+    app = create_app(Settings(events_enabled=True, generation_topic_arn="a", index_topic_arn="b"))
+    app.state.worker_starters = []  # no worker ever set relay_ready
+    assert _probe(app, "/ready") == 503

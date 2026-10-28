@@ -75,7 +75,7 @@ class TemporalWorkflowClient:
             try:
                 client = await asyncio.wait_for(self._get(), self._timeout)
                 return await asyncio.wait_for(call(client), self._timeout)
-            except (WorkflowAlreadyStartedError, DomainError):
+            except WorkflowAlreadyStartedError, DomainError:
                 raise
             except RPCError as exc:
                 if exc.status is RPCStatusCode.NOT_FOUND:

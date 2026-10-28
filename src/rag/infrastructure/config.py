@@ -29,6 +29,10 @@ class ConfigError(RuntimeError):
     """Raised at startup when a setting would silently weaken a control."""
 
 
+LOCAL_ENVIRONMENTS = ("local", "dev", "test")
+"""Environments where the migration DSN may fall back to the application DSN."""
+
+
 class Settings(PlatformSettings):
     """All configuration of the service. Defaults are LLD §17's design defaults (CFG-1)."""
 
@@ -257,11 +261,20 @@ class Settings(PlatformSettings):
         return self
 
     def migration_dsn(self, instance: str) -> str:
-        """The DDL DSN for ``"corpus"`` or ``"generation"``, else the application DSN."""
+        """The DDL DSN for ``"corpus"`` or ``"generation"``.
+
+        Outside ``local`` / ``dev`` / ``test`` it must be set: the application DSN goes through
+        PgBouncer, and the migration runner's advisory lock is session-scoped.
+        """
         app, migration = {
             "corpus": (self.corpus_database_url, self.corpus_migration_database_url),
             "generation": (self.generation_database_url, self.generation_migration_database_url),
         }[instance]
+        if not migration and self.environment not in LOCAL_ENVIRONMENTS:
+            raise ConfigError(
+                f"{instance.upper()}_MIGRATION_DATABASE_URL is required when APP_ENV is "
+                f"{self.environment!r}: the application DSN goes through PgBouncer"
+            )
         return migration or app
 
 

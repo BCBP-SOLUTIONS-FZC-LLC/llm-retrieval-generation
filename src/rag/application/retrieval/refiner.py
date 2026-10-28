@@ -141,7 +141,7 @@ class QueryRefiner:
                             preferred_roles=prefer,
                         )
                     )
-            except (ValueError, KeyError, TypeError):  # a bad entry is a miss
+            except ValueError, KeyError, TypeError:  # a bad entry is a miss
                 pass
         user = json.dumps(
             {

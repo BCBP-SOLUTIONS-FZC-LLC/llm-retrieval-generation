@@ -1,0 +1,38 @@
+{{- if and .Values.ingress.enabled (eq (.Values.ingress.type | default "HTTPRoute") "HTTPRoute") }}
+# Gateway API HTTPRoute: attach to the platform Gateway by setting ingress.gateway.name. TLS is
+# terminated on the Gateway listener. Only the public and operator surfaces are routed here;
+# /api/v1/internal/* is for in-cluster callers and is not exposed (the paths below are explicit).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "llm-retrieval-generation.fullname" . }}
+  labels:
+    {{- include "llm-retrieval-generation.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ required "ingress.gateway.name is required when ingress.type is HTTPRoute" .Values.ingress.gateway.name }}
+      {{- with .Values.ingress.gateway.namespace }}
+      namespace: {{ . }}
+      {{- end }}
+      {{- with .Values.ingress.gateway.sectionName }}
+      sectionName: {{ . }}
+      {{- end }}
+  {{- if .Values.ingress.hosts }}
+  hostnames:
+    {{- range .Values.ingress.hosts }}
+    - {{ .host | quote }}
+    {{- end }}
+  rules:
+    {{- range .Values.ingress.hosts }}
+    {{- range .paths }}
+    - matches:
+        - path:
+            type: {{ .pathType | default "PathPrefix" }}
+            value: {{ .path | quote }}
+      backendRefs:
+        - name: {{ include "llm-retrieval-generation.fullname" $ }}
+          port: {{ $.Values.service.port }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

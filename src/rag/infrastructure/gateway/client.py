@@ -52,7 +52,7 @@ def _refusal(response: httpx.Response) -> GatewayError:
         return GatewayQuotaRefused(int(retry) if retry.isdigit() else None)
     try:
         code = response.json()["error"]["code"]
-    except (ValueError, KeyError, TypeError):
+    except ValueError, KeyError, TypeError:
         code = None
     if code == "residency_capacity":
         return GatewayResidencyRefused("no in-region capacity")
@@ -153,7 +153,7 @@ class HttpModelGateway:
         async def with_retry() -> list[list[float]]:
             try:
                 return await once()
-            except (GatewayQuotaRefused, GatewayResidencyRefused):
+            except GatewayQuotaRefused, GatewayResidencyRefused:
                 raise  # a refusal is an answer; retrying it only spends budget
             except GatewayError:
                 return await once()
@@ -286,7 +286,7 @@ class HttpModelGateway:
                     TOKENIZE_TIMEOUT,
                 )
                 return int(data["count"])
-            except (GatewayError, KeyError, TypeError, ValueError):
+            except GatewayError, KeyError, TypeError, ValueError:
                 return math.ceil(len(text) / 3)
 
         return list(await asyncio.gather(*(one(t) for t in texts)))

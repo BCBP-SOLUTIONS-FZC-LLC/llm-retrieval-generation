@@ -40,10 +40,18 @@ class Relays:
     runners: dict[str, Runner]
     publishers: list[SNSPublisher]
     tasks: list[asyncio.Task[None]] = field(default_factory=list)
+    max_poll_age: float = 45.0
+    """Seconds a relay may go without a successful store round trip before it is not ready."""
 
     def ready(self) -> bool:
-        """Every relay has completed its first successful poll (feeds readiness, §18.1)."""
-        return all(r.ready.is_set() for r in self.runners.values())
+        """Every relay has polled successfully once and is still polling (feeds readiness, §18.1).
+
+        ``Runner.ready`` is a one-shot latch, so a relay that later dies or loses its database would
+        stay "ready" forever; ``healthy`` is false once the loop stopped or no store round trip
+        succeeded within ``max_poll_age``. A relay stuck inside a hung publish is not detected here:
+        the library bounds that by ``OUTBOX_PUBLISH_TIMEOUT``.
+        """
+        return all(r.ready.is_set() and r.healthy(self.max_poll_age) for r in self.runners.values())
 
     async def stop(self) -> None:
         """Drain in-flight publishes, wait for the loops, close the SNS clients."""
@@ -79,8 +87,11 @@ def start_relays(
         index = _sns(settings, settings.index_topic_arn)
         owned = [generation, index]
         router = RoutingPublisher(generation, index)
-    runners = {name: Runner(runner_config(pool, router)) for name, pool in pools.items()}
-    relays = Relays(runners, owned)
+    configs = {name: runner_config(pool, router) for name, pool in pools.items()}
+    runners = {name: Runner(config) for name, config in configs.items()}
+    # the library's own advice for a probe: 3 poll intervals plus 30 s
+    max_age = max(3 * config.poll_interval + 30 for config in configs.values())
+    relays = Relays(runners, owned, max_poll_age=max_age)
     relays.tasks = [
         asyncio.create_task(r.start(), name=f"outbox-relay-{name}") for name, r in runners.items()
     ]

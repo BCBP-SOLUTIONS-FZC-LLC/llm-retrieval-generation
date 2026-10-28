@@ -71,7 +71,7 @@ This service is **not** consumed via `pip install` — do not add it as a depend
 
 ### Pull and verify the image
 
-**Planned — there is no Dockerfile or image pipeline yet.** Once a tag exists:
+**Planned — the `Dockerfile` exists (`make docker-build`) but no pipeline builds, signs or publishes the image yet.** Once a tag exists:
 
 ```bash
 docker pull ghcr.io/bcbp-solutions-fzc-llc/llm-retrieval-generation:v0.1.0
@@ -108,7 +108,7 @@ Separately, pushes to `main` should publish git-SHA / branch tags — pin produc
 
 ### Run and migrate
 
-There is no Helm chart yet. Deployment needs, in order:
+The Helm chart is in `deploy/helm/` (`make helm-check` lints, renders every overlay and runs kubeconform; no pipeline deploys it yet). It runs, in order:
 
 1. **Migrations** from a one-shot job (not every replica), before the new image takes traffic: `python -m rag.infrastructure.persistence.migrate` with `CORPUS_MIGRATION_DATABASE_URL` / `GENERATION_MIGRATION_DATABASE_URL` set to a DDL-privileged role connecting **directly** to Postgres, never through PgBouncer (`make migrate` locally).
 2. **The API**: `uvicorn --factory rag.presentation.main:create_app`, application DSNs through PgBouncer in transaction mode with `PG_BOUNCER_MODE=true` (startup refuses any other value).
@@ -168,7 +168,7 @@ Both should match a `v[0-9]*.[0-9]*.[0-9]*-*` tag trigger and produce a signed, 
 
 | retrieval-generation | Python (`pyproject.toml`) | Shared platform libraries (`uv.lock`) | PostgreSQL | `platform-schemagov` |
 |---|---|---|---|---|
-| Unreleased (`main`) | `>=3.12` (ruff and mypy target 3.12) | `platform-fastapicommon` 0.4.1, `pgcommon` 0.4.1, `eventcommon` 0.4.0 (constraints `>=0.4,<0.5`) | 18 (`uuidv7()`; tests run `postgres:18`) | `0.4` (`SCHEMA_GOV_IMAGE` in the Makefile) |
+| Unreleased (`main`) | `>=3.15` (ruff and mypy target 3.15; the image runs 3.15.2) | `platform-fastapicommon` 0.4.1, `pgcommon` 0.4.1, `eventcommon` 0.4.0 (constraints `>=0.4,<0.5`) | 18 (`uuidv7()`; tests run `postgres:18`) | `0.4` (`SCHEMA_GOV_IMAGE` in the Makefile) |
 
 Other pinned tooling: `uv` 0.13.1 (Makefile and CI), `temporalio>=1.7`, `qdrant-client>=1.9`, `redis>=5.0`, `boto3>=1.40.61`. None of the platform libraries is re-exported — a consumer of this *service* never needs them as a dependency. Callers depend on the HTTP/event contract, not on any Python package here.
 
@@ -178,16 +178,16 @@ Anything in this document marked **Planned** is the intended design, kept here s
 
 | Item | What it will do | Where this document refers to it | Status |
 |------|-----------------|----------------------------------|--------|
-| `Dockerfile` | Build the service image. The `api/` and `docs/swagger/` files must ship alongside the package, because `/asyncapi` and `/swagger` read them from the repo root | Consume a release; Run and migrate | Planned |
+| `Dockerfile` | Build the service image. The `api/` and `docs/swagger/` files must ship alongside the package, because `/asyncapi` and `/swagger` read them from the repo root | Consume a release; Run and migrate | **Done** (`Dockerfile`, `.dockerignore`, `.docker-digests`; `make docker-build`, `make pin-base-images`; the image itself is not yet built or published by CI) |
 | Image jobs in `ci.yml` (build, scan, smoke, push) | Publish `main` images with git-SHA / branch tags | Image tag scheme | Planned |
-| Cosign keyless signing | Sign every pushed image; consumers verify before deploying | Pull and verify the image | Planned |
-| `.github/workflows/release.yml` | Tag-triggered validate → build → docker (CVE scan, SBOM, SLSA provenance, sign) → publish | Maintainer release process | Planned |
-| `verify-release-tag.sh` / `verify-changelog-entry.sh` | Fail a release if the tag is not at `HEAD` or `CHANGELOG.md` has no `[X.Y.Z]` section | Maintainer release process, step 2 | Planned (today only `changelog-check.yml` runs, on PRs) |
+| Cosign keyless signing | Sign every pushed image; consumers verify before deploying | Pull and verify the image | **Done** in `release.yml`, never run |
+| `.github/workflows/release.yml` | Tag-triggered validate → build and scan (CVE gate, nothing pushed before it passes) → smoke → push → SBOM → sign | Maintainer release process | **Done**, never run (no tag has been pushed; SLSA provenance export is not copied from IAM) |
+| `verify-release-tag.sh` / `verify-changelog-entry.sh` | Fail a release if the tag is not at `HEAD` or `CHANGELOG.md` has no `[X.Y.Z]` section | Maintainer release process, step 2 | **Done** (`.github/scripts/`, called by `release.yml`; `changelog-check.yml` still runs on PRs) |
 | Deploy gate | Live deploy, digest check, rollout status and an error-rate check with automatic rollback. Whether it is mandatory or skippable is a platform decision | Maintainer release process, step 6 | Planned, undecided |
-| Helm chart (`deploy/helm/`) | Deploy the API, the migrate job and the sweep CronJobs; chart `version` / `appVersion` bumped in step with the tag | Run and migrate | Planned |
+| Helm chart (`deploy/helm/`) | Deploy the API, the migrate job and the sweep CronJobs; chart `version` / `appVersion` bumped in step with the tag | Run and migrate | **Done** (chart, `values-{dev,staging,prod}.yaml`, `deploy/irsa/` policy, `make helm-check` in CI; never applied to a cluster; sweep schedules are proposed) |
 | `BUILD_VERSION` set from the tag at image build | Report the released version at runtime | Run and migrate | Planned (today set from `git describe` by `make run`) |
 | Support-window policy | How long a superseded major line gets security-only fixes | Supported releases | Planned (after the first `v1.0.0` ships) |
-| Readiness reflects the outbox relay | `/ready` fails when the relay is down | Supported releases | Planned (signal exists as `app.state.relay_ready`, route not wired) |
+| Readiness reflects the outbox relay | `/ready` fails when the relay is down | Supported releases | **Done** (`install_probes` in `presentation/main.py`; tested in `tests/api/test_lifespan.py`) |
 | Glue event encoder (LD-82) | Frame published events for the schema registry | Supported releases | Planned |
 | Production gateway route configuration (`deploy/model-gateway/`, Kubernetes) and the quota, Bedrock and self-hosted-rerank experiments | The local standalone gateway and its contract tests exist; the Kubernetes route config, per-tenant quota, fail-closed behaviour, real Bedrock streaming and a self-hosted reranker behind the gateway do not | Gateway, Consume a release | Planned |
 | Worker Pool | Execute long-form generation, outline, stage and coherence steps | Supported releases | Planned, separate service |

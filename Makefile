@@ -43,8 +43,11 @@ setup:
 	@command -v uv >/dev/null 2>&1 || test -x $(VENV)/bin/uv || { \
 	  test -x $(PY) || python3 -m venv $(VENV); \
 	  echo "uv not found — installing into $(VENV)"; \
-	  $(PY) -m pip install -q 'uv==0.13.1'; }
+	  $(PY) -m pip install -q 'uv==0.13.4'; }
 	$(UV) sync --locked
+	@# uv may have replaced the venv with one on the interpreter requires-python asks for (3.15), and that
+	@# venv has no uv in it: put the pinned one back so the other targets find it
+	@test -x $(VENV)/bin/uv || $(UV) pip install -q --python $(PY) 'uv==0.13.4'
 	@$(MAKE) --no-print-directory install-hooks
 	@echo "Environment ready ($(VENV))"
 
@@ -85,9 +88,16 @@ help:
 	@echo "  make ci              - lock-check + fmt-check + lint + typecheck + rls-check + swag-check + test-ci + build"
 	@echo "  make docker-up       - start local infra: postgres x2 DBs + pgbouncer + valkey + qdrant + floci + floci-ui (http://localhost:4501)"
 	@echo "  make gateway-up      - start the model gateway (Agent Router) + a model stub (opt-in, :1975)"
-	@echo "  make gateway-down    - stop them"
+	@echo "  make gateway-down    - stop them (and the chat UI)"
+	@echo "  make gateway-up-ollama - the gateway over real local models (Ollama; ~3 GB pull the first time)"
+	@echo "  make ollama-down     - stop Ollama and return the gateway to the stub"
+	@echo "  make chat-up         - Open WebUI wired to the gateway (needs gateway-up; http://localhost:3000)"
+	@echo "  make chat-down       - stop the chat UI only"
 	@echo "  make test-gateway    - our client against the gateway: contract tests (needs gateway-up)"
 	@echo "  make docker-down     - stop local containers"
+	@echo "  make helm-check      - helm lint + template (all overlays) + kubeconform"
+	@echo "  make docker-build    - build the service image (retrieval-generation:dev)"
+	@echo "  make pin-base-images - fetch and pin SHA digests for the Dockerfile base images"
 	@echo "  make vuln-check      - pip-audit on the locked deps"
 	@echo "  make clean           - remove build artefacts"
 	@echo ""
@@ -118,9 +128,32 @@ fmt-check:
 	$(PY) -m ruff format --check src tests
 	@echo "ruff format: all files formatted"
 
+# docker-build: the service image, tagged retrieval-generation:dev (BUILD_VERSION stamps the label).
+.PHONY: docker-build
+docker-build:
+	docker build --build-arg BUILD_VERSION=$(BUILD_VERSION) -t retrieval-generation:dev .
+
+# pin-base-images: fetch and pin the current SHA digests for the Dockerfile base images. Writes the
+# digests to the Dockerfile FROM lines and to .docker-digests (a checked-in provenance record).
+.PHONY: pin-base-images
+pin-base-images:
+	@set -e; \
+	 for img in python:3.15.2-slim-bookworm ghcr.io/astral-sh/uv:0.13.4; do \
+	   d=$$(docker buildx imagetools inspect $$img --format '{{.Manifest.Digest}}'); \
+	   sed -i.bak -E "s|$$img(@sha256:[0-9a-f]+)?|$$img@$$d|" Dockerfile && rm -f Dockerfile.bak; \
+	   echo "$$img $$d"; \
+	 done > .docker-digests; \
+	 echo "Digests written to .docker-digests: commit both Dockerfile and .docker-digests"
+
+# helm-check: helm lint --strict, helm template for the base values and each overlay, kubeconform.
+# Uses helm / kubeconform from PATH or the pinned Docker images. Run after any change to deploy/helm/.
+.PHONY: helm-check
+helm-check:
+	bash .github/scripts/helm-check.sh
+
 .PHONY: vuln-check
 vuln-check:
-	$(UV) run --with pip-audit pip-audit
+	$(UV) run --with pip-audit pip-audit --skip-editable
 
 # RLS-6: the tenant GUC may only be bound with SET LOCAL / set_config(..., true) inside a
 # transaction; a session-scoped SET leaks across pooled PgBouncer backends. CI calls this target.
@@ -212,14 +245,38 @@ events-peek:
 gateway-up:
 	docker compose --profile gateway up -d --build model-stub agent-router
 	@echo "gateway API on http://localhost:1975 (set GATEWAY_BASE_URL to use it)"
-	@echo "try all seven task classes in the browser: http://localhost:8090/console"
+	@echo "chat with the task classes: make chat-up (http://localhost:3000)"
+
+.PHONY: gateway-up-ollama
+gateway-up-ollama:  ## the gateway over real local models (Ollama); pulls ~3 GB of models the first time
+	docker compose --profile gateway --profile ollama up -d --build model-stub ollama
+	docker compose --profile ollama run --rm ollama-pull
+	AIGW_CONFIG=aigw-ollama.yaml docker compose --profile gateway up -d --force-recreate agent-router
+	@echo "gateway on :1975 now answers chat and embeddings from Ollama (rerank stays on the stub)"
+	@echo "chat with them: make chat-up (http://localhost:3000)"
+
+.PHONY: ollama-down
+ollama-down:  ## stop Ollama and put the gateway back on the stub (models stay in the ollama_data volume)
+	docker compose --profile ollama stop ollama
+	docker compose --profile gateway up -d --force-recreate agent-router
+
+.PHONY: chat-up
+chat-up:  ## Open WebUI over the gateway; pulls a large image the first time
+	docker compose --profile gateway up -d open-webui
+	@for i in $$(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/health && break; sleep 3; done
+	python3 scripts/open-webui/document_mode.py
+	@echo "chat UI on http://localhost:3000 - choose a task class (draft, judge, ...) as the model"
+
+.PHONY: chat-down
+chat-down:  ## stop only the chat UI (its chats are kept in the open_webui_data volume)
+	docker compose --profile gateway stop open-webui
 
 .PHONY: gateway-down
 gateway-down:
-	docker compose --profile gateway stop agent-router model-stub
+	docker compose --profile gateway stop open-webui agent-router model-stub
 
 .PHONY: test-gateway
-test-gateway:  ## our client against the real gateway image and the model stub (make gateway-up first)
+test-gateway:  ## our client against the real gateway image and the model stub (make gateway-up first; not with the Ollama config)
 	$(PY) -m pytest -m gateway tests/gateway
 
 .PHONY: docker-down

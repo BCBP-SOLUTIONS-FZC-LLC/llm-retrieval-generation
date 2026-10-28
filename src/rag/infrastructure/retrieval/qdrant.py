@@ -44,7 +44,7 @@ def to_candidate(hit: DenseHit, collection_id: UUID, weight: Any) -> Candidate |
             parent_chunk_id=p.get("parent_chunk_id"),
             source_half="dense",
         )
-    except (KeyError, ValueError, TypeError):
+    except KeyError, ValueError, TypeError:
         return None
 
 

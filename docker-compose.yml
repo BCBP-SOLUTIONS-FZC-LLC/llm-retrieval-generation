@@ -1,6 +1,6 @@
 # Local infrastructure for llm-retrieval-generation (`make docker-up`).
 #
-# Infra only — there is no `app` service because this repo has no Dockerfile yet. Run the API
+# Infra only — there is no `app` service. Run the API
 # on the host with `make run` against these containers (see .env-example).
 #
 # Host ports (incl. floci-ui on 4501) are chosen to sit beside the IAM services' stacks (5433/5434/5533/5534, 6379/6380,
@@ -112,8 +112,6 @@ services:
   model-stub:
     profiles: ["gateway"]
     build: ./scripts/model-stub
-    environment:
-      GATEWAY_URL: http://agent-router:1975   # the console (/console) sends its requests through it
     ports:
       - "8090:8000"
     healthcheck:
@@ -125,17 +123,74 @@ services:
   agent-router:
     profiles: ["gateway"]
     image: envoyproxy/ai-gateway-cli:v1.2.0
-    command: ["run", "/config/aigw.yaml"]
+    command: ["run", "/config/${AIGW_CONFIG:-aigw.yaml}"]   # aigw-ollama.yaml: `make gateway-up-ollama`
     ports:
       - "1975:1975"   # the gateway; point GATEWAY_BASE_URL at http://localhost:1975
       - "1064:1064"   # admin: /health, /metrics
     volumes:
-      - ./deploy/model-gateway/aigw.yaml:/config/aigw.yaml:ro
+      - ./deploy/model-gateway:/config:ro
     depends_on:
       model-stub:
         condition: service_healthy
 
+  # --- opt-in: `make gateway-up-ollama`: real local models behind the gateway --------------------
+  # Ollama serves the embedding and chat task classes (see deploy/model-gateway/aigw-ollama.yaml).
+  # CPU only, one model resident at a time so it fits the Docker VM.
+  ollama:
+    profiles: ["ollama"]
+    image: alpine/ollama:0.12.0
+    ports:
+      - "11434:11434"
+    environment:
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_KEEP_ALIVE: 2m
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # one-shot: fetch the three small models into the volume (a no-op once they are there)
+  ollama-pull:
+    profiles: ["ollama"]
+    image: alpine/ollama:0.12.0
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["sh", "-c", "ollama pull qwen2.5:1.5b && ollama pull llama3.2:1b && ollama pull nomic-embed-text"]
+    restart: "no"
+
+  # A chat UI over the gateway: pick a task class as the "model" and talk to it. Everything it
+  # sends goes through Agent Router, so it is the same path our service's client takes.
+  open-webui:
+    profiles: ["gateway"]
+    image: ghcr.io/open-webui/open-webui:v0.6.43
+    ports:
+      - "3000:8080"
+    environment:
+      WEBUI_AUTH: "False"                    # local single-user, no sign-up screen
+      ENABLE_PERSISTENT_CONFIG: "False"      # the variables below win over the saved settings
+      ENABLE_OLLAMA_API: "False"
+      OPENAI_API_BASE_URL: http://agent-router:1975/v1
+      OPENAI_API_KEY: not-used               # the gateway does not check it locally
+      # keep the stub's request log to what you type: no background title/tag/follow-up calls
+      ENABLE_TITLE_GENERATION: "False"
+      ENABLE_TAGS_GENERATION: "False"
+      ENABLE_FOLLOW_UP_GENERATION: "False"
+      ENABLE_AUTOCOMPLETE_GENERATION: "False"
+    volumes:
+      - open_webui_data:/app/backend/data
+    depends_on:
+      agent-router:
+        condition: service_started
+
 volumes:
   postgres_data:
+  open_webui_data:
+  ollama_data:
   qdrant_data:
   floci_data:

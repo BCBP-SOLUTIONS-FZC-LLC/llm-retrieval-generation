@@ -40,8 +40,8 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          version: '0.13.1'
-          python-version: '3.12'
+          version: '0.13.4'
+          python-version: '3.15.2'
 
       # uv.lock must match pyproject.toml.
       - name: Lock check
@@ -79,6 +79,27 @@ jobs:
 
       - name: Type check
         run: make typecheck
+
+      # Floating tags can be silently overwritten upstream, so every FROM must be digest-pinned
+      # ('make pin-base-images' updates them) and .docker-digests must agree with the Dockerfile.
+      - name: Dockerfile base image digest check
+        run: |
+          if grep -E '^FROM [^ @]+:[^ @]+( AS .+)?$' Dockerfile; then
+            echo "::error file=Dockerfile,title=Unpinned base image::Dockerfile FROM lines must use digest-pinned references. Run 'make pin-base-images'."
+            exit 1
+          fi
+          while read -r image digest; do
+            grep -q "${image}@${digest}" Dockerfile || {
+              echo "::error file=.docker-digests,title=Digest mismatch::${image} in .docker-digests does not match the Dockerfile. Run 'make pin-base-images'."
+              exit 1
+            }
+          done < .docker-digests
+          echo "Dockerfile base images are digest-pinned and match .docker-digests."
+
+      # helm lint --strict, helm template for the base values and each environment overlay, and
+      # kubeconform over every rendered manifest (CRD kinds are skipped: no schemas offline).
+      - name: Helm lint + template + kubeconform
+        run: make helm-check
 
       - name: Vulnerability check
         run: |

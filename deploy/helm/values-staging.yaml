@@ -1,0 +1,8 @@
+# Staging overrides: merge with values.yaml.
+autoscaling:
+  minReplicas: 2
+  maxReplicas: 4
+
+env:
+  APP_ENV: "staging"
+  LOG_LEVEL: "info"

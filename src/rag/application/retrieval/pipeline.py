@@ -464,7 +464,7 @@ class RetrievalPipeline:
             return None
         try:
             return outcome_from_json(raw, scope)
-        except (ValueError, KeyError, TypeError):
+        except ValueError, KeyError, TypeError:
             return None
 
     async def _cache_put(self, key: str, outcome: RetrievalOutcome) -> None:

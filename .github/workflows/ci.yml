@@ -4,8 +4,8 @@
 #                     ├──► pr-summary (PR events only)
 #   validate-quality ─┘
 #
-# Mirrors iam-org-membership's ci.yml minus the image jobs (build-image, trivy,
-# smoke, push) — this repo has no Dockerfile yet. Add them when one lands.
+# Mirrors iam-org-membership's ci.yml; the image is built and boot-tested here, and scanned,
+# signed and pushed by release.yml on a tag.
 #
 # paths-ignore skips the pipeline for commits that only touch Markdown docs.
 name: CI
@@ -43,10 +43,30 @@ jobs:
     secrets:
       CI_REPO_READ_TOKEN: ${{ secrets.CI_REPO_READ_TOKEN }}
 
+  image-boot:
+    name: Image boot
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          token: ${{ secrets.CI_REPO_READ_TOKEN || github.token }}
+
+      - name: Build image
+        run: docker build -t retrieval-generation:ci .
+
+      # Migrations, API start and /ready=200 against the compose Postgres + PgBouncer.
+      - name: Boot image
+        run: |
+          docker compose up -d --wait postgres pgbouncer redis qdrant
+          .github/scripts/image-boot-check.sh retrieval-generation:ci
+
   pr-summary:
     name: PR summary
     runs-on: ubuntu-latest
-    needs: [validate-test, validate-quality]
+    needs: [validate-test, validate-quality, image-boot]
     if: github.event_name == 'pull_request'
     timeout-minutes: 5
     permissions:

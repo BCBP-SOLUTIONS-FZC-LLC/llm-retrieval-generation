@@ -1,0 +1,13 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "llm-retrieval-generation.fullname" . }}
+  labels:
+    {{- include "llm-retrieval-generation.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "llm-retrieval-generation.selectorLabels" . | nindent 6 }}
+{{- end }}

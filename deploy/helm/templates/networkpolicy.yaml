@@ -1,0 +1,113 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "llm-retrieval-generation.fullname" . }}
+  labels:
+    {{- include "llm-retrieval-generation.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "llm-retrieval-generation.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # API traffic from the gateway namespace (identity headers are set there; this service trusts
+    # them, so only the gateway and the named in-cluster callers may reach the port).
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.ingressControllerNamespaceSelector | nindent 14 }}
+          {{- with .Values.networkPolicy.ingressControllerPodSelector }}
+          podSelector:
+            matchLabels:
+              {{- toYaml . | nindent 14 }}
+          {{- end }}
+      ports:
+        - port: {{ .Values.service.port }}
+          protocol: TCP
+
+    # Prometheus. /metrics shares the API port, so this rule grants that port to the monitoring
+    # namespace and is on only when the ServiceMonitor is.
+    {{- if and .Values.serviceMonitor.enabled .Values.networkPolicy.metricsIngress.enabled }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.metricsIngress.namespaceSelector | nindent 14 }}
+          podSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.metricsIngress.podSelector | nindent 14 }}
+      ports:
+        - port: {{ .Values.service.port }}
+          protocol: TCP
+    {{- end }}
+
+    # In-cluster callers of the internal routes (Ingestion's C-I calls, Tender, ...): one rule each,
+    # pod-level where a selector is given. An empty podSelector admits the whole namespace.
+    {{- range .Values.callers }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .namespaceSelector | nindent 14 }}
+          {{- with .podSelector }}
+          podSelector:
+            matchLabels:
+              {{- toYaml . | nindent 14 }}
+          {{- end }}
+      ports:
+        - port: {{ $.Values.service.port }}
+          protocol: TCP
+    {{- end }}
+
+    {{- with .Values.networkPolicy.additionalIngressRules }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+
+  egress:
+    # DNS
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # HTTPS: AWS regional endpoints (S3, SNS, SQS, KMS, STS) and any TLS peer
+    - ports:
+        - port: 443
+          protocol: TCP
+    # PostgreSQL / PgBouncer (both databases)
+    - ports:
+        - port: 5432
+          protocol: TCP
+        - port: 5433
+          protocol: TCP
+    # Valkey (Redis protocol): the profile, placement and retrieval caches
+    - ports:
+        - port: 6379
+          protocol: TCP
+    # Qdrant (REST 6333, gRPC 6334)
+    - ports:
+        - port: 6333
+          protocol: TCP
+        - port: 6334
+          protocol: TCP
+    # Temporal frontend
+    - ports:
+        - port: 7233
+          protocol: TCP
+    # OTLP gRPC to the collector
+    - ports:
+        - port: 4317
+          protocol: TCP
+    # HTTP to the Model Gateway, Tender and IAM through cluster DNS
+    - ports:
+        - port: 8080
+          protocol: TCP
+        - port: 1975
+          protocol: TCP
+
+    {{- with .Values.networkPolicy.additionalEgressRules }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

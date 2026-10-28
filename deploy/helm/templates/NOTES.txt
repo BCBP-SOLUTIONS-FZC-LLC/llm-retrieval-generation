@@ -1,0 +1,26 @@
+llm-retrieval-generation {{ .Chart.Version }} deployed.
+
+{{ if not .Values.existingSecret -}}
+WARNING: credentials are stored in Helm release history (base64, not encrypted). Move to External
+Secrets Operator or a Secrets Manager CSI driver:
+  existingSecret: "llm-retrieval-generation-secrets"
+and remove secretValues from your values file.
+
+{{ end -}}
+{{ if not .Values.networkPolicy.enabled -}}
+WARNING: networkPolicy.enabled is false. This service trusts the identity headers the gateway sets
+(x-tenant-id, x-user-id, x-tenant-roles), so any pod that can reach port {{ .Values.service.port }} can impersonate a
+tenant. Enable it in production.
+
+{{ end -}}
+{{ if not (index .Values.env "OBSERVABILITY_DOMAIN") -}}
+NOTE: metrics are off (OBSERVABILITY_DOMAIN unset). Set it and ENABLE_METRICS=true once the `llm`
+domain is registered in the Platform Observability Registry (OQ-103).
+
+{{ end -}}
+Verify:
+
+  kubectl rollout status deployment/{{ include "llm-retrieval-generation.fullname" . }} -n {{ .Release.Namespace }}
+  kubectl get cronjobs -l app.kubernetes.io/name={{ include "llm-retrieval-generation.name" . }} -n {{ .Release.Namespace }}
+
+Readiness: /ready (does not yet reflect the outbox relay; see docs/observability/runbooks.md).

@@ -1,0 +1,35 @@
+# Version control
+.git
+.gitignore
+.githooks/
+.github/
+
+# Environment files: never bake secrets into the image
+.env
+.env.*
+*.env
+!.env-example
+
+# Development tooling, notes and documentation
+.claude/
+.venv/
+.vscode/
+docs/*
+!docs/swagger/
+*.md
+docker-compose.yml
+deploy/
+scripts/
+Makefile
+
+# Tests and their artefacts
+tests/
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+__pycache__/
+*.pyc

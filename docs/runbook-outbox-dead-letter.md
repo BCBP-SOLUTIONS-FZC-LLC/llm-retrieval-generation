@@ -29,4 +29,4 @@
 
 ## Prevention
 - Keep `EVENTS_ENABLED=true` wherever events matter; with it false nothing is relayed and nothing alerts.
-- Wire the relay into `/ready` (`app.state.relay_ready`) — known gap.
+- `/ready` already reflects the relays (not ready before the first successful poll, or once one stops polling); a dead letter is a publish failure and does not fail readiness.

@@ -75,11 +75,20 @@ def test_problem_type_base_and_metrics_default() -> None:
     )
 
 
-def test_migration_dsn_falls_back_to_application_dsn() -> None:
-    """A DDL DSN is used when set, else the application DSN."""
-    s = Settings(corpus_migration_database_url="postgresql://ddl@h/llm_corpus")
+def test_migration_dsn_falls_back_to_application_dsn_in_dev() -> None:
+    """A DDL DSN is used when set; in dev the application DSN is the fallback."""
+    s = Settings(environment="dev", corpus_migration_database_url="postgresql://ddl@h/llm_corpus")
     assert s.migration_dsn("corpus") == "postgresql://ddl@h/llm_corpus"
     assert s.migration_dsn("generation") == s.generation_database_url
+
+
+@pytest.mark.parametrize("environment", ["staging", "prod"])
+def test_migration_dsn_is_required_outside_dev(environment: str) -> None:
+    """The application DSN is PgBouncer's, and the migration lock is session-scoped."""
+    s = Settings(environment=environment, corpus_migration_database_url="postgresql://ddl@h/c")
+    assert s.migration_dsn("corpus") == "postgresql://ddl@h/c"
+    with pytest.raises(ConfigError, match="GENERATION_MIGRATION_DATABASE_URL"):
+        s.migration_dsn("generation")
 
 
 def test_pgbouncer_mode_true_passes() -> None:

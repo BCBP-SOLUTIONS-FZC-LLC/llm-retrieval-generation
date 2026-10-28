@@ -2,7 +2,7 @@
 
 This document describes the internal structure, dependency rules, and runtime data flows of `llm-retrieval-generation`.
 
-`llm-retrieval-generation` is a **private Python service** (`github.com/BCBP-SOLUTIONS-FZC-LLC/llm-retrieval-generation`, Python 3.12+, FastAPI) deployed as a containerised microservice plus CronJob sweeps from one image (image pipeline planned — see [VERSIONING.md](VERSIONING.md)). It implements the LLD `docs/lld/llm-lld-retrieval-generation-service.md`, which refines the LLM HLD (where they disagree, the HLD is authoritative). Build status and per-slice deviations are in [`docs/implementation-plan.md`](docs/implementation-plan.md).
+`llm-retrieval-generation` is a **private Python service** (`github.com/BCBP-SOLUTIONS-FZC-LLC/llm-retrieval-generation`, Python 3.15+, FastAPI) deployed as a containerised microservice plus CronJob sweeps from one image (image pipeline planned — see [VERSIONING.md](VERSIONING.md)). It implements the LLD `docs/lld/llm-lld-retrieval-generation-service.md`, which refines the LLM HLD (where they disagree, the HLD is authoritative). Build status and per-slice deviations are in [`docs/implementation-plan.md`](docs/implementation-plan.md).
 
 It is one of four planned deployables of the LLM subsystem (HLD §5, MD-03): **Ingestion**, **Retrieval & Generation** (this repo), **Worker Pool** and **Model Gateway**. The Worker Pool and the Gateway's route configuration are not in this repo.
 
@@ -587,7 +587,7 @@ Every dependency failure has one defined behaviour; none is answered with a defa
 
 ## Deployment
 
-**Planned.** There is no `Dockerfile`, Helm chart or release workflow yet — see the *Planned* table in [VERSIONING.md](VERSIONING.md#planned-not-yet-in-place). The intended shape:
+**Partly planned.** A `Dockerfile` exists (`make docker-build`); the Helm chart is in `deploy/helm/` (never applied to a cluster) and there is no release workflow yet — see the *Planned* table in [VERSIONING.md](VERSIONING.md#planned-not-yet-in-place). The shape:
 
 - **One image, three entrypoints:** the API (`uvicorn --factory rag.presentation.main:create_app`), the migration job (`python -m rag.infrastructure.persistence.migrate`) and the sweep runner (`python -m rag.infrastructure.sweeps <name>|all`) as CronJobs.
 - **Migration safety:** migrations run from a one-shot job directly against Postgres (never PgBouncer: the advisory lock is session-scoped), before the new image takes traffic, and must be safe while the previous image still serves (additive first, destructive in a later release).
@@ -647,6 +647,31 @@ Event JSON Schemas are **derived, not authored**: the dataclasses in `applicatio
 | Content in logs and metrics | Bounded label vocabularies, no query or chunk text, no ids as message text |
 | Secret handling | No provider credential in this service; `.env` never committed; KMS encryption context carries the tenant |
 | Output content safety | **Not this service's** — Tender's (§15.3) |
+
+### Connection budget
+
+Every pool opens through PgBouncer except the migration job's, which connects directly (the migration lock is session-scoped, and `migration_dsn` refuses an empty migration DSN outside `local` / `dev` / `test`).
+
+| Client | Connections to PgBouncer (at most) |
+|---|---|
+| API pod (relays and consumers share its pools) | `2 x PG_MAX_CONNS` (corpus and generation; 20 at the default 10) |
+| Sweep pod, one per running CronJob | `2 x PG_MAX_CONNS` (tenant pools) `+ 2 x SWEEP_POOL_MAX_CONNS` (enumeration pools; 24 at the defaults) |
+
+Size from the peak: API pods at `maxReplicas` (8 in the base values, so 160) plus the sweep pods that can overlap (ten CronJobs, each `Forbid` against itself only). `MAX_CLIENT_CONN` must exceed that sum. `DEFAULT_POOL_SIZE` is per database and user pair and is shared by every client, so with several replicas it must cover the concurrent transactions of all of them, not one pod's `PG_MAX_CONNS`; the runbook's "`PG_MAX_CONNS` equals `pool_size`" holds for a single pod only. Postgres `max_connections` must cover `pool_size` for each pair, the direct migration and admin sessions, and headroom. These numbers are derived from the settings, not measured: confirm them under load.
+
+### Trust boundary
+
+Identity (`x-tenant-id`, `x-user-id`, `x-tenant-roles` and the four service-owned headers) is **trusted as received**: this service validates no token. That is correct only while nothing but the gateway and named in-cluster callers can reach the pod, so the boundary is the network, not the code.
+
+| Control | Where | State |
+|---|---|---|
+| The gateway strips client-supplied identity headers and sets its own from the verified token | Platform gateway (not this repo) | Assumed; confirm with the platform team |
+| Only the gateway namespace, the listed `callers` and (when enabled) Prometheus may reach port 8080 | `deploy/helm/templates/networkpolicy.yaml`, `values.yaml` (`networkPolicy`, `callers`) | In the chart, never applied to a cluster |
+| `/api/v1/internal/*` is not routed through the ingress | `deploy/helm/templates/httproute.yaml` / `ingress.yaml` (explicit path list) | In the chart |
+| Service-to-service mTLS (mesh AuthorizationPolicy) so a pod in an allowed namespace still needs an identity | Platform mesh | **Not present**: the chart has no mesh policy, so an allowed namespace is trusted as a whole until pod-level `podSelector`s are set in `callers` |
+| Per-route ISO tests prove a request without the headers or with a mismatched tenant is refused | `tests/isolation/`, `tests/e2e/test_security.py` | Enforced in CI |
+
+Consequences: do not expose the pod on a `NodePort`/`LoadBalancer`; do not add a `callers` entry with an empty `podSelector` for a namespace you do not fully trust; and treat `networkPolicy.enabled=false` as a tenant-impersonation hole, not a convenience (the chart prints a warning).
 
 ---
 

@@ -12,7 +12,7 @@ Scope resolution depends on the collection tables (`llm_corpus`), the vector sto
 
 ## Triage
 1. Which dependency? Pool errors point at `llm_corpus` (or PgBouncer); `tac4_refused` at IAM; Qdrant errors at the vector store (`QDRANT_URL`).
-2. **PgBouncer:** `PG_MAX_CONNS` must equal PgBouncer's `pool_size` for the db/user pair; a smaller pool times out, a larger one queues behind PgBouncer.
+2. **PgBouncer:** `PG_MAX_CONNS` is per pod, while PgBouncer's `pool_size` is per db/user pair and shared by every pod; a pool smaller than the concurrent load times out, a larger one queues behind PgBouncer. Sizing across replicas: [Connection budget](../ARCHITECTURE.md#connection-budget).
 3. **Valkey** is *not* the cause: a cache outage is a miss and the source is read.
 4. **TAC-4:** `IAM_BASE_URL` set? A non-200 or non-string level refuses the request by design; `{"level": null}` is a successful no-access answer. The client budget is 100 ms with one retry, so a slow IAM looks like an outage.
 5. Is the replica starting at all? An unreachable database at the initial ping stops startup (`pgcommon: initial ping failed`).

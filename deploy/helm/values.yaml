@@ -1,0 +1,314 @@
+# Default values for llm-retrieval-generation.
+# One image, three entrypoints: the API (Deployment), the migration Job (pre-install / pre-upgrade
+# hook) and ten sweep CronJobs (`python -m rag.infrastructure.sweeps <name>`).
+# Anything marked "assumed" is a guess about a peer or the platform and must be confirmed
+# (docs/implementation-plan.md keeps the register).
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/bcbp-solutions-fzc-llc/llm-retrieval-generation
+  pullPolicy: IfNotPresent
+  tag: ""  # set by CI to the git SHA; falls back to the chart appVersion
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: true
+  name: llm-retrieval-generation
+  # IRSA on EKS (the policy is in deploy/irsa/); the pods carry no static AWS keys:
+  #   eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/llm-retrieval-generation
+  annotations: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    cpu: "1"
+    memory: "1Gi"
+
+# Non-secret environment: the upper-cased Settings fields (src/rag/infrastructure/config.py) and
+# the libraries' own variables. Anything environment-specific that is a URL, ARN or credential
+# lives in envFromSecret below.
+env:
+  APP_NAME: "retrieval-generation"
+  # The observability environment label: local | dev | test | staging | prod (no aliases).
+  APP_ENV: "prod"
+  LOG_LEVEL: "info"
+  # Metrics are off until the `llm` domain is registered (OQ-103); create_platform_app raises on an
+  # unregistered domain, so leave both unset until then.
+  ENABLE_METRICS: "false"
+  OBSERVABILITY_DOMAIN: ""
+  ENABLE_TRACING: "true"
+  OTLP_ENDPOINT: "otel-collector.observability.svc.cluster.local:4317"
+
+  # PgBouncer in transaction mode: the value must be exactly "true" or startup is refused (the
+  # tenant GUC would otherwise be session-scoped and leak across pooled backends).
+  PG_BOUNCER_MODE: "true"
+  PG_MAX_CONNS: "10"
+  # pgcommon's own tuning (durations carry a unit); a bad value becomes its default plus a warning.
+  PG_STATEMENT_TIMEOUT: "30s"
+  PG_LOCK_TIMEOUT: "5s"
+  PG_ACQUIRE_TIMEOUT: "10s"
+  PG_SLOW_QUERY_THRESHOLD: "200ms"
+
+  # Events. The relays and consumers start only when EVENTS_ENABLED is true and need the topic
+  # ARNs and queue URLs from the secret. Tuning is eventcommon's own (durations carry a unit).
+  EVENTS_ENABLED: "true"
+  AWS_REGION: "eu-west-1"
+  SQS_MAX_RECEIVE_COUNT: "3"
+  OUTBOX_POLL_INTERVAL: "1s"
+  OUTBOX_BATCH_SIZE: "50"
+  OUTBOX_MAX_ATTEMPTS: "5"
+  OUTBOX_DRAIN_TIMEOUT: "30s"
+  SQS_CONCURRENCY: "4"
+  SQS_HANDLER_TIMEOUT: "45s"
+  SQS_VISIBILITY_TIMEOUT: "60s"
+  SQS_DRAIN_TIMEOUT: "15s"
+
+  # Peers (assumed names): Qdrant, the Model Gateway (Agent Router), Tender, IAM, Temporal.
+  QDRANT_URL: "http://qdrant.llm.svc.cluster.local:6333"
+  GATEWAY_BASE_URL: "http://model-gateway.llm.svc.cluster.local:1975"
+  TENDER_BASE_URL: "http://tender.tender.svc.cluster.local:8080"
+  IAM_BASE_URL: "http://iam-org-membership.iam.svc.cluster.local:8080"
+  # Empty keeps async routes answering 503 WORKFLOW_ENGINE_UNAVAILABLE: the Worker Pool owns the
+  # workflow code and the engine address.
+  TEMPORAL_ADDRESS: ""
+  TEMPORAL_NAMESPACE: "llm-generation"
+
+  # Artefact content store (S3, SSE-KMS with the tenant in the encryption context).
+  S3_BUCKET: "rag-artefacts"
+  S3_REGION: "eu-west-1"
+  S3_KMS_KEY_ID: ""
+
+# Secret keys the pods require; each must be in .Values.existingSecret or .Values.secretValues.
+# The application DSNs go through PgBouncer as rag_app_login (RLS enforced). The migration DSNs go
+# direct to Postgres as the migration role (session-scoped advisory lock, DDL).
+envFromSecret:
+  - CORPUS_DATABASE_URL
+  - GENERATION_DATABASE_URL
+  - CORPUS_MIGRATION_DATABASE_URL
+  - GENERATION_MIGRATION_DATABASE_URL
+  - VALKEY_URL
+
+# Secret keys the pods read when present (secretKeyRef optional).
+envFromSecretOptional:
+  - QDRANT_API_KEY
+  - CORPUS_SWEEP_DATABASE_URL        # the sweep role's DSN; the sweeps refuse to start without both
+  - GENERATION_SWEEP_DATABASE_URL
+  - GENERATION_TOPIC_ARN             # required when EVENTS_ENABLED is true
+  - INDEX_TOPIC_ARN                  # required when EVENTS_ENABLED is true
+  - DOCUMENT_QUEUE_URL
+  - DOMAINPROFILE_QUEUE_URL
+  - IAM_PURGE_QUEUE_URL
+  - IAM_MEMBERSHIP_QUEUE_URL
+  - TENDER_QUEUE_URL
+  - USAGE_QUEUE_URL
+
+# existingSecret (preferred in production): a pre-provisioned Secret whose keys match the two lists
+# above. When set, the chart creates no Secret and secretValues is ignored.
+existingSecret: ""
+
+# Bump to roll the pods after an external secret rotates (helm upgrade --set rotationEpoch=$(date +%s)).
+rotationEpoch: "0"
+
+# Used ONLY when existingSecret is empty: pass with --set or a Helm secrets plugin, never commit
+# real values. Helm keeps them in the release history (base64, not encrypted).
+secretValues:
+  CORPUS_DATABASE_URL: ""
+  GENERATION_DATABASE_URL: ""
+  CORPUS_MIGRATION_DATABASE_URL: ""
+  GENERATION_MIGRATION_DATABASE_URL: ""
+  VALKEY_URL: ""
+  QDRANT_API_KEY: ""
+  CORPUS_SWEEP_DATABASE_URL: ""
+  GENERATION_SWEEP_DATABASE_URL: ""
+  GENERATION_TOPIC_ARN: ""
+  INDEX_TOPIC_ARN: ""
+  DOCUMENT_QUEUE_URL: ""
+  DOMAINPROFILE_QUEUE_URL: ""
+  IAM_PURGE_QUEUE_URL: ""
+  IAM_MEMBERSHIP_QUEUE_URL: ""
+  TENDER_QUEUE_URL: ""
+  USAGE_QUEUE_URL: ""
+
+# Shutdown order: stop accepting, drain the generation producers (bounded by REQUEST_TIMEOUT_SECONDS,
+# 120 s), stop the relays and consumers (OUTBOX_DRAIN_TIMEOUT 30 s in parallel), close the pools.
+terminationGracePeriodSeconds: 160
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+podAnnotations: {}
+podLabels: {}
+# The image's user is uid/gid 10001 (see the Dockerfile).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+nodeSelector: {}
+tolerations: []
+
+# startupProbe bounds a cold start (pools, container build, relays). 24 x 5 s = 120 s.
+startupProbe:
+  httpGet:
+    path: /live
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  failureThreshold: 24
+  timeoutSeconds: 3
+
+livenessProbe:
+  httpGet:
+    path: /live
+    port: 8080
+  periodSeconds: 15
+  failureThreshold: 3
+  timeoutSeconds: 3
+
+# /ready does not yet reflect the outbox relay (app.state.relay_ready is not wired); a stalled
+# relay will not fail readiness. See docs/observability/runbooks.md.
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  periodSeconds: 10
+  failureThreshold: 3
+  timeoutSeconds: 3
+
+# Schema migrations: a pre-install / pre-upgrade hook Job runs them once per release and the
+# Deployment skips the library schemas at startup (OUTBOX_APPLY_SCHEMA_ON_STARTUP=false).
+migrations:
+  job:
+    enabled: true
+    backoffLimit: 1
+    activeDeadlineSeconds: 900
+
+# The ten sweeps, one CronJob each. The schedules are PROPOSED: the LLD names the sweeps but not
+# their cadence, so tune them with the first week of data. Each sweep holds a per-sweep advisory
+# lock, so an overlapping run skips. Exit code 2 (an audit-chain break) must page.
+sweeps:
+  activeDeadlineSeconds: 1800
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+cronjobs:
+  orphan-artefacts:
+    schedule: "*/30 * * * *"
+    sweep: orphan-artefacts
+  stalled-generations:
+    schedule: "*/5 * * * *"
+    sweep: stalled-generations
+  idempotency-keys:
+    schedule: "0 * * * *"
+    sweep: idempotency-keys
+  retrieval-sets:
+    schedule: "0 3 * * *"
+    sweep: retrieval-sets
+  graph-checkpoints:
+    schedule: "30 3 * * *"
+    sweep: graph-checkpoints
+  outbox:
+    schedule: "0 4 * * *"
+    sweep: outbox
+  processed-events:
+    schedule: "30 4 * * *"
+    sweep: processed-events
+  audit-chain:
+    schedule: "0 5 * * *"
+    sweep: audit-chain
+  tenant-purge:
+    schedule: "*/15 * * * *"
+    sweep: tenant-purge
+  stalled-promotions:
+    schedule: "*/10 * * * *"
+    sweep: stalled-promotions
+
+# This service trusts the identity headers the gateway sets, so the NetworkPolicy is the boundary
+# that stops another pod from claiming a tenant. Keep it on.
+networkPolicy:
+  enabled: true
+  ingressControllerNamespaceSelector:
+    kubernetes.io/metadata.name: gateway
+  ingressControllerPodSelector: {}
+  metricsIngress:
+    enabled: true
+    namespaceSelector:
+      kubernetes.io/metadata.name: observability
+    podSelector:
+      app.kubernetes.io/name: prometheus
+  additionalIngressRules: []
+  additionalEgressRules: []
+
+# In-cluster callers of the internal routes (assumed namespaces and labels: confirm with each
+# team). Empty podSelector admits the whole namespace: set one wherever the callers are known.
+callers:
+  - name: ingestion        # the C-I routes
+    namespaceSelector:
+      kubernetes.io/metadata.name: ingestion
+    podSelector: {}
+  - name: tender           # the generation and query routes
+    namespaceSelector:
+      kubernetes.io/metadata.name: tender
+    podSelector: {}
+
+# ServiceMonitor needs kube-prometheus-stack; the app serves /metrics only once ENABLE_METRICS is
+# true and the `llm` domain is registered, so this is off until then.
+serviceMonitor:
+  enabled: false
+  interval: "30s"
+  scrapeTimeout: "10s"
+  additionalLabels: {}
+  relabelings: []
+  namespaceSelector: {}
+
+# Ingress is off by default. Only the listed paths are routed; /api/v1/internal/* stays in-cluster.
+#   type: HTTPRoute  Gateway API (Envoy Gateway), recommended
+#   type: Ingress    classic controller
+ingress:
+  enabled: false
+  type: HTTPRoute
+  hosts:
+    - host: llm-retrieval-generation.internal.example.com
+      paths:
+        - path: /api/v1/answers
+        - path: /api/v1/sections
+        - path: /api/v1/collections
+        - path: /api/v1/operator
+  gateway:
+    name: ""
+    namespace: ""
+    sectionName: ""
+  className: ""
+  annotations: {}
+  tls: []

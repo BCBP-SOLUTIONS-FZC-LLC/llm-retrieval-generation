@@ -4,7 +4,7 @@ This is an internal LLM-subsystem microservice for the XpertPMS platform. This g
 
 ## Prerequisites
 
-- Python 3.12+ (matches `requires-python`; ruff and mypy target 3.12)
+- Python 3.15+ (matches `requires-python`; ruff and mypy target 3.15). `make setup` lets `uv` fetch it (macOS currently gets 3.15.0; CI and the image run 3.15.2). `asyncpg` 0.31 (held below 0.32 by `pgcommon` 0.4.1) has no 3.15 wheel, so it compiles on install: you need a C compiler (Xcode command line tools on macOS)
 - Docker (required for the compose stack and for the integration and e2e tests, which start `postgres:18` through `testcontainers`)
 - `make`. `uv` (pinned `0.13.1`) is installed into `.venv` by `make setup` if it is not on your `PATH` — no separate install needed
 - Access to the private BCBP packages `platform-fastapicommon`, `pgcommon` and `eventcommon`. Locally they come from the index your `uv` is configured for; in CI the `CI_REPO_READ_TOKEN` secret provides it (`PY_PRIVATE_INDEX_URL` is not used)
@@ -238,7 +238,7 @@ fix(events): fail closed on an unregistered event type at enqueue (EVT-9)
 
 ## Deployment
 
-**Planned** — there is no `Dockerfile`, Helm chart or release workflow yet (see the table in [`VERSIONING.md`](VERSIONING.md#planned-not-yet-in-place)). Today, CI only validates; nothing is built or published.
+**Partly planned** — a `Dockerfile` exists (`make docker-build`; base images are digest-pinned, `make pin-base-images` updates them and `.docker-digests`), and a Helm chart exists in `deploy/helm/` (run `make helm-check` after any change there; CI does), and `.github/workflows/release.yml` builds, scans, boot-tests, pushes and signs the image on a version tag (never run yet; see [`VERSIONING.md`](VERSIONING.md#planned-not-yet-in-place)). CI validates and boot-tests the image; it publishes nothing.
 
 **On push to `main` and on pull requests** (`.github/workflows/ci.yml`, skipped for Markdown-only changes):
 

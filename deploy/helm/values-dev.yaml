@@ -1,0 +1,24 @@
+# Dev overrides: merge with values.yaml (helm upgrade ... -f values.yaml -f values-dev.yaml).
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+env:
+  APP_ENV: "dev"
+  LOG_LEVEL: "debug"
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "768Mi"
+
+# One replica cannot satisfy hard anti-affinity with a surge, and dev has no gateway namespace yet.
+sweeps:
+  activeDeadlineSeconds: 900

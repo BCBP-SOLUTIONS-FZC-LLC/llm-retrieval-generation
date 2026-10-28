@@ -1,0 +1,15 @@
+apiVersion: v2
+name: llm-retrieval-generation
+description: LLM Retrieval and Generation Service - collections, retrieval, grounded generation, verification and the audit record
+type: application
+version: 0.1.0-phase0
+appVersion: "0.1.0"
+kubeVersion: ">=1.28.0"
+keywords:
+  - llm
+  - retrieval
+  - generation
+  - rag
+maintainers:
+  - name: BCBP Solutions
+    email: platform@bcbpsolutions.com

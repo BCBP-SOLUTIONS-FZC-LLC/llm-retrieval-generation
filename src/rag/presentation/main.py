@@ -9,6 +9,7 @@ from eventcommon.inbox import apply_schema as apply_inbox_schema
 from eventcommon.outbox import apply_schema
 from fastapi import FastAPI
 from fastapicommon import create_platform_app
+from fastapicommon.health import ReadinessCheck, create_health_router
 from pgcommon import MetricsIdentity, pgmetrics_init_with_identity
 
 from rag.infrastructure.config import Settings, assert_isolation_config
@@ -68,6 +69,26 @@ def _lifespan(settings: Settings) -> Callable[[FastAPI], AsyncIterator[None]]:
     return lifespan  # type: ignore[return-value]
 
 
+def _relay_ready(app: FastAPI) -> bool:
+    """The outbox relays are polling (§18.1). Not ready before they started or after one stopped."""
+    check = getattr(app.state, "relay_ready", None)
+    return bool(check()) if callable(check) else False
+
+
+def install_probes(app: FastAPI, settings: Settings) -> None:
+    """Shadow the platform's check-less ``/ready`` with one that also gates on the relays.
+
+    ``create_platform_app`` mounts a health router with no readiness checks and offers no hook for
+    them. The same router, built with the check, is included and moved to the front of the route
+    list, so it answers ``/health``, ``/live`` and ``/ready`` first (the first match wins).
+    ``/live`` and ``/health`` behave as before: a stalled relay takes the pod out of rotation, not
+    out of service (the relay recovers by itself once the database does).
+    """
+    checks: list[ReadinessCheck] = [lambda: _relay_ready(app)] if settings.events_enabled else []
+    app.include_router(create_health_router(checks))
+    app.router.routes.insert(0, app.router.routes.pop())
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Build the service app. Raises ``ConfigError`` when ``PG_BOUNCER_MODE`` is not ``true``."""
     settings = settings or Settings()
@@ -75,6 +96,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = create_platform_app(settings=settings, lifespan=_lifespan(settings))
     app.state.settings = settings
     app.state.worker_starters = []
+    install_probes(app, settings)
     if settings.events_enabled:  # relays + consumers, in process (EVT-8, §18.3)
         register_background_worker(app, start_event_workers)
     app.add_middleware(ExtraIdentityMiddleware)

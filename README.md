@@ -3,7 +3,7 @@
 The Retrieval & Generation Service of the LLM subsystem — the **only component that turns a tenant's indexed documents into grounded answers, drafts, extractions and long-form artefacts**, and the system of record for what was retrieved, what was generated, and how well each claim was supported. It owns the corpus *collections* and their access grants, the retrieval record, the generation record (artefacts, versions, sections, runs), verification verdicts, and the audit chain over generated content. It resolves every caller's search scope, fails closed when it cannot, and never lets one tenant's chunk reach another tenant's prompt.
 
 **Repository:** `github.com/BCBP-SOLUTIONS-FZC-LLC/llm-retrieval-generation`
-**Stack:** Python 3.12 · FastAPI · asyncpg (`pgcommon`) · `eventcommon` · `platform-fastapicommon` · deployed as one service plus CronJob sweeps from one image (image pipeline is planned — see [Deployment](#deployment))
+**Stack:** Python 3.15 · FastAPI · asyncpg (`pgcommon`) · `eventcommon` · `platform-fastapicommon` · deployed as one service plus CronJob sweeps from one image (image pipeline is planned — see [Deployment](#deployment))
 **Design:** the LLD, `docs/lld/llm-lld-retrieval-generation-service.md` (6,664 lines); where the LLD and the LLM HLD disagree, the HLD is authoritative. Build status, deviations and the traceability matrix are in [`docs/implementation-plan.md`](docs/implementation-plan.md).
 
 > **Status: pre-release (`v0.x`), never deployed.** All 35 routes are mounted and tested against fakes, a real Postgres 18 and an e2e stack. The Worker Pool, the Model Gateway and the other peer services are not wired, so long-form generation and anything that calls a model cannot run end to end. See [Out of scope](#out-of-scope) and [`VERSIONING.md`](VERSIONING.md).
@@ -172,7 +172,7 @@ Events are written to the outbox **in the same transaction** as the state change
 
 ### Prerequisites
 
-Python 3.12+, Docker (for the compose stack and the integration/e2e tests), `make`. `uv` is installed into `.venv` by `make setup` if it is missing (pinned `0.13.1`).
+Python 3.15+ (`make setup` has `uv` fetch it; asyncpg 0.31 has no 3.15 wheel yet, so a C compiler is needed to build it), Docker (for the compose stack and the integration/e2e tests), `make`. `uv` is installed into `.venv` by `make setup` if it is missing (pinned `0.13.1`).
 
 ### Setup
 
@@ -205,6 +205,8 @@ make run          # API on :8080 (kills anything already listening there)
 | `make sweeps` | Run the sweep runner locally |
 | `make events-peek` | Print the events waiting in the dev probe queue |
 | `make gateway-up` / `gateway-down` | Start / stop the model gateway (Agent Router, pinned image) in front of a model stub (opt-in) |
+| `make gateway-up-ollama` / `ollama-down` | Put real local models behind the gateway: Ollama (`alpine/ollama`) serves `embed`, `draft`, `judge`, `extract` and both refiners (`qwen2.5:1.5b`, `llama3.2:1b`, `nomic-embed-text`); `rerank` stays on the stub. The first run pulls about 2.5 GB. `make test-gateway` needs the stub config, so run `ollama-down` first |
+| `make chat-up` / `chat-down` | Start / stop Open WebUI (`ghcr.io/open-webui/open-webui:v0.6.43`) wired to the gateway; needs `gateway-up`; the first pull is several GB |
 | `make test-gateway` | Our gateway client against that gateway: contract tests (needs `gateway-up`) |
 | `make schema-validate` | `extract-schemas`, then validate `schemas/events/` with `platform-schemagov` (Docker) |
 | `make docker-down` | Stop the containers |
@@ -223,7 +225,8 @@ Single test: `.venv/bin/python -m pytest tests/unit/test_config.py::test_env_ove
 | floci (S3 / SNS / SQS) | 4568 |
 | floci-ui | 4501 |
 | Model gateway (opt-in, `make gateway-up`) | 1975 (admin 1064) |
-| Model stub and the **gateway console** (opt-in): http://localhost:8090/console | 8090 |
+| Open WebUI chat over the gateway (opt-in, `make chat-up`): http://localhost:3000 | 3000 |
+| Model stub (opt-in; the gateway's backend, no UI) | 8090 |
 
 ### Calling the API locally
 
@@ -237,7 +240,7 @@ curl -s -X POST localhost:8080/api/v1/internal/collections/resolve \
   -d "{\"tender_id\":\"$(uuidgen | tr A-Z a-z)\"}"
 ```
 
-Public routes also need `x-user-id`, and some need `x-tenant-roles: tenant_admin`. Routes that call Tender, IAM or the workflow engine answer `503` locally by design — there is no Temporal in the compose stack. Routes that call a model also answer `503` until you run `make gateway-up` and set `GATEWAY_BASE_URL=http://localhost:1975` in `.env`: that starts Agent Router in front of the **model stub** (deterministic answers, failures on command), so the routes run end to end without a real model. To see it by hand, open **http://localhost:8090/console**: one card per task class (`embed`, `rerank`, `draft`, `judge`, `extract`, `refine-query`, `refine-instruction`), each sending the request our client would send through the gateway and showing what was sent, the answer, and what the backend received; a dropdown makes the next call fail (429, no in-region capacity, malformed, slow). The gateway itself has no web interface: port 1975 is the API and 1064 serves only `/health` and `/metrics`.
+Public routes also need `x-user-id`, and some need `x-tenant-roles: tenant_admin`. Routes that call Tender, IAM or the workflow engine answer `503` locally by design — there is no Temporal in the compose stack. Routes that call a model also answer `503` until you run `make gateway-up` and set `GATEWAY_BASE_URL=http://localhost:1975` in `.env`: that starts Agent Router in front of the **model stub** (deterministic answers, failures on command), so the routes run end to end without a real model. To see it by hand, `make chat-up` starts **Open WebUI** at http://localhost:3000 (no sign-in), pointed at the gateway: pick a task class as the model and type; the picker lists whatever the gateway's `GET /v1/models` returns, so each class has its own exact route in `deploy/model-gateway/aigw.yaml`. With `make gateway-up-ollama` the same picker talks to real models (class to model in `deploy/model-gateway/aigw-ollama.yaml`). The **Document editor** model is a preset on `draft` (created by `make chat-up` from `scripts/open-webui/document_mode.py`): it always answers with the whole document in one `html` block, which Open WebUI shows in its Artifacts side panel, so each edit request ("make the second section a bullet list") shows the revised document beside the chat. It is not a true canvas: you cannot type in the panel, only ask for changes, and the small local models sometimes alter parts you did not mention. `embed` and `rerank` are listed but are not chat models, so use `draft`, `judge`, `extract`, `refine-query` or `refine-instruction` there. The gateway itself has no web interface: port 1975 is the API and 1064 serves only `/health` and `/metrics`.
 
 ---
 
@@ -318,7 +321,7 @@ Logs, spans and metrics go through `fastapicommon` and nothing else. Every log l
 
 ## Deployment
 
-**Planned.** There is no `Dockerfile`, Helm chart or release workflow yet — see the table in [`VERSIONING.md`](VERSIONING.md#planned-not-yet-in-place). When they exist:
+**Partly planned.** A `Dockerfile` exists (`make docker-build`: digest-pinned `python:3.15.2-slim-bookworm`, `uv sync --locked`, non-root uid 10001, port 8080); a Helm chart exists in `deploy/helm/` (`make helm-check`; the IRSA policy is in `deploy/irsa/`) but has never been applied to a cluster, and there is no release workflow yet — see the table in [`VERSIONING.md`](VERSIONING.md#planned-not-yet-in-place). The chart runs:
 
 - One image carrying the API (`uvicorn --factory rag.presentation.main:create_app`), the migration entrypoint (`python -m rag.infrastructure.persistence.migrate`) and the sweep runner (`python -m rag.infrastructure.sweeps <name>|all`).
 - Migrations run from a one-shot job, directly against Postgres (never through PgBouncer: the advisory lock is session-scoped), before the new image takes traffic, and must be safe while the previous image still serves.

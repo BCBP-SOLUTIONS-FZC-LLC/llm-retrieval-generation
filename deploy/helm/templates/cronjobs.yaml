@@ -1,0 +1,67 @@
+{{- /*
+One CronJob per sweep: `python -m rag.infrastructure.sweeps <name>` (the ten sweeps of the sweep
+runner). Each takes a per-sweep advisory lock, so an overlapping run skips instead of doubling up.
+Exit codes: 0 clean or skipped, 1 a tenant failed, 2 an alert (an audit-chain break is a tamper
+signal and pages), 64 usage. The sweeps connect as the sweep role through the *_SWEEP_DATABASE_URL
+secret keys. The keys are optional for the API, but a sweep refuses to start without both.
+*/ -}}
+{{- range $key, $cj := .Values.cronjobs }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "llm-retrieval-generation.fullname" $ }}-{{ $key }}
+  labels:
+    {{- include "llm-retrieval-generation.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: sweep
+    sweep/name: {{ $cj.sweep }}
+spec:
+  schedule: {{ $cj.schedule | quote }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: {{ $.Values.sweeps.activeDeadlineSeconds }}
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/instance: {{ $.Release.Name }}
+            app.kubernetes.io/component: sweep
+        spec:
+          restartPolicy: Never
+          {{- with $.Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          serviceAccountName: {{ $.Values.serviceAccount.name }}
+          securityContext:
+            {{- toYaml $.Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: sweep
+              image: "{{ $.Values.image.repository }}:{{ include "llm-retrieval-generation.imageTag" $ }}"
+              imagePullPolicy: {{ $.Values.image.pullPolicy }}
+              command: ["python", "-m", "rag.infrastructure.sweeps", {{ $cj.sweep | quote }}]
+              securityContext:
+                {{- toYaml $.Values.securityContext | nindent 16 }}
+              env:
+                {{- include "llm-retrieval-generation.env" $ | nindent 16 }}
+              resources:
+                {{- toYaml $.Values.sweeps.resources | nindent 16 }}
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir: {}
+          {{- with $.Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $.Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

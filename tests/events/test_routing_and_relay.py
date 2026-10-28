@@ -104,7 +104,11 @@ class FakeRunner:
         self.config = config
         self.log: list[str] = []
         self.ready = __import__("asyncio").Event()
+        self.alive = True
         FakeRunner.instances.append(self)
+
+    def healthy(self, max_age: float) -> bool:
+        return self.alive
 
     async def start(self) -> None:
         self.log.append("start")
@@ -139,10 +143,15 @@ async def test_one_relay_per_database_sharing_one_router(monkeypatch: pytest.Mon
         publishers=[sns],  # type: ignore[list-item,dict-item]
     )
     assert set(relays.runners) == {"generation", "corpus"}
+    assert relays.max_poll_age == 3 * FakeRunner.instances[0].config.poll_interval + 30
     assert {id(x.config.publisher) for x in FakeRunner.instances} == {id(r)}
     assert relays.ready() is False
     for x in FakeRunner.instances:
         x.ready.set()
+    assert relays.ready() is True
+    FakeRunner.instances[0].alive = False  # the loop died or the database stopped answering
+    assert relays.ready() is False, "the one-shot latch must not keep a dead relay ready"
+    FakeRunner.instances[0].alive = True
     assert relays.ready() is True
     await relays.stop()
     assert all("stop" in x.log for x in FakeRunner.instances) and sns.closed

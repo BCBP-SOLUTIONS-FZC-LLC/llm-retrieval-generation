@@ -6,7 +6,7 @@ The subsystem has four planned deployables: Ingestion, Retrieval & Generation (t
 
 ## What This Repo Is
 
-A **private Python service** (`github.com/BCBP-SOLUTIONS-FZC-LLC/llm-retrieval-generation`, Python 3.12+, FastAPI) that owns the **retrieval and generation layer**: which collections a caller may search, hybrid retrieval, grounded answers and drafts, structured extraction, long-form runs (started and signalled, not executed), verification, and the audit record of all of it.
+A **private Python service** (`github.com/BCBP-SOLUTIONS-FZC-LLC/llm-retrieval-generation`, Python 3.15+, FastAPI) that owns the **retrieval and generation layer**: which collections a caller may search, hybrid retrieval, grounded answers and drafts, structured extraction, long-form runs (started and signalled, not executed), verification, and the audit record of all of it.
 
 **Key responsibilities (sole writer for, except where the Worker Pool's activities write under `rag_activity`):**
 - **Collections** (`collections`, `collection_grants`, `index_generations`, `retention_policies`, `tenant_lifecycle` in `llm_corpus`) — placement, overlay answers, activation, retention, freeze and purge.

@@ -1,0 +1,7 @@
+# Prod overrides: merge with values.yaml. Use existingSecret in production (never secretValues).
+env:
+  APP_ENV: "prod"
+  LOG_LEVEL: "info"
+
+networkPolicy:
+  enabled: true

@@ -5,7 +5,7 @@ Runbooks for the alerts this service **should** carry. **None of them is deploye
 Common starting points:
 
 - Logs: structured JSON on stdout; follow `trace_id` and `request_id`. Content is never logged, so debug from ids in the database.
-- Health: `GET /health`, `/live`, `/ready`. **`/ready` does not yet reflect the outbox relay** (`app.state.relay_ready` exists; the probe is not wired), so a stalled relay will not fail readiness.
+- Health: `GET /health`, `/live`, `/ready`. `/ready` returns 503 when `EVENTS_ENABLED=true` and an outbox relay has not yet polled successfully or has not completed a store round trip within `3 x OUTBOX_POLL_INTERVAL + 30 s` (`Relays.ready`); `/live` and `/health` are unaffected, so a stalled relay leaves rotation without a restart. A relay hung inside a publish is bounded by `OUTBOX_PUBLISH_TIMEOUT`, not detected by the probe.
 - Database: connect **direct to Postgres** as the DDL role for diagnosis (`docker compose exec postgres psql -U rag_admin -d llm_generation` locally); the app role cannot see other tenants' rows by design.
 - Sweeps: `python -m rag.infrastructure.sweeps <name>`; exit `0` clean or skipped, `1` a tenant failed, `2` an alert, `64` usage.
 
@@ -46,7 +46,7 @@ Domain events are being lost to dead letters. See [`runbook-outbox-dead-letter.m
 1. `SELECT count(*), min(created_at) FROM outbox_events WHERE published_at IS NULL;` on **both** `llm_corpus` and `llm_generation` (each has its own outbox and relay).
 2. Is `EVENTS_ENABLED=true` on the replicas? With it false nothing relays, silently.
 3. `last_error` and `attempts` on the oldest rows; check `GENERATION_TOPIC_ARN` / `INDEX_TOPIC_ARN` and SNS reachability.
-4. `/ready` will not tell you (known gap).
+4. `/ready` goes 503 once a relay stops polling (a database or loop failure); a growing backlog with `/ready` still 200 points at SNS or a bad ARN, not the relay loop.
 
 **Mitigate.** Fix the cause; the relay drains the backlog on its own. A row that exhausts `OUTBOX_MAX_ATTEMPTS` moves to `outbox_dead_letters`.
 

@@ -1,0 +1,259 @@
+# Agent Router in front of real local models (Ollama), for trying the task classes with actual
+# model answers: `make gateway-up-ollama`. Same shape as aigw.yaml; the differences:
+#   - embed, draft, judge, extract, refine-query, refine-instruction go to Ollama, each class
+#     rewritten to a real model name (modelNameOverride on the route's backendRef), which is what a production
+#     route does when a task class is a virtual name for a Model Profile;
+#   - rerank still goes to the model stub (Ollama has no rerank API; see the plan in docs);
+#   - /tokenize has no Ollama equivalent, so the client's over-estimate fallback answers.
+# Models: ollama-a (qwen2.5:1.5b) draft and the two refiners; ollama-b (llama3.2:1b) judge and
+# extract; ollama-embed (nomic-embed-text). Small on purpose: they fit a 4 GB Docker VM on CPU.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: aigw-run
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: aigw-run
+  namespace: default
+spec:
+  gatewayClassName: aigw-run
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 1975
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: envoy-ai-gateway
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: envoy-ai-gateway
+  namespace: default
+spec:
+  logging:
+    level:
+      default: error
+  telemetry:
+    accessLog:
+      settings:
+        - matches:
+            - "request.headers['x-ai-eg-model'] != ''"
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
+          format:
+            type: JSON
+            json:
+              gen_ai.request.model: "%REQ(X-AI-EG-MODEL)%"
+              gen_ai.usage.input_tokens: "%DYNAMIC_METADATA(io.envoy.ai_gateway:llm_input_token)%"
+              gen_ai.usage.output_tokens: "%DYNAMIC_METADATA(io.envoy.ai_gateway:llm_output_token)%"
+              request.path: "%REQ(:PATH)%"
+              response_code: "%RESPONSE_CODE%"
+              duration: "%DURATION%"
+              x-tenant-id: "%REQ(X-TENANT-ID)%"
+              x-residency-mode: "%REQ(X-RESIDENCY-MODE)%"
+              upstream_host: "%UPSTREAM_HOST%"
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: aigw-run
+  namespace: default
+spec:
+  parentRefs:
+    - name: aigw-run
+      kind: Gateway
+      group: gateway.networking.k8s.io
+  rules:
+    # chat-shaped and embedding task classes: the OpenAI schema. One exact rule per class (not a
+    # regex) so that GET /v1/models lists every class, which is what a client's model picker reads.
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: embed
+      backendRefs:
+        - name: ollama-embed
+          modelNameOverride: nomic-embed-text
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: draft
+      backendRefs:
+        - name: ollama-a
+          modelNameOverride: qwen2.5:1.5b
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: judge
+      backendRefs:
+        - name: ollama-b
+          modelNameOverride: llama3.2:1b
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: extract
+      backendRefs:
+        - name: ollama-b
+          modelNameOverride: llama3.2:1b
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: refine-query
+      backendRefs:
+        - name: ollama-a
+          modelNameOverride: qwen2.5:1.5b
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: refine-instruction
+      backendRefs:
+        - name: ollama-a
+          modelNameOverride: qwen2.5:1.5b
+      timeouts:
+        request: 120s
+    # rerank: Cohere's v2 API is the only rerank schema the gateway speaks
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: rerank
+      backendRefs:
+        - name: stub-cohere
+      timeouts:
+        request: 30s
+  llmRequestCosts:
+    - metadataKey: llm_input_token
+      type: InputToken
+    - metadataKey: llm_output_token
+      type: OutputToken
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: model-stub
+  namespace: default
+spec:
+  endpoints:
+    - fqdn:
+        hostname: model-stub
+        port: 8000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: ollama
+  namespace: default
+spec:
+  endpoints:
+    - fqdn:
+        hostname: ollama
+        port: 11434
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: ollama-a
+  namespace: default
+spec:
+  schema:
+    name: OpenAI
+  backendRef:
+    name: ollama
+    kind: Backend
+    group: gateway.envoyproxy.io
+    namespace: default
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: ollama-b
+  namespace: default
+spec:
+  schema:
+    name: OpenAI
+  backendRef:
+    name: ollama
+    kind: Backend
+    group: gateway.envoyproxy.io
+    namespace: default
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: ollama-embed
+  namespace: default
+spec:
+  schema:
+    name: OpenAI
+  backendRef:
+    name: ollama
+    kind: Backend
+    group: gateway.envoyproxy.io
+    namespace: default
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: stub-openai
+  namespace: default
+spec:
+  schema:
+    name: OpenAI
+  backendRef:
+    name: model-stub
+    kind: Backend
+    group: gateway.envoyproxy.io
+    namespace: default
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: stub-cohere
+  namespace: default
+spec:
+  schema:
+    name: Cohere
+    version: v2
+  backendRef:
+    name: model-stub
+    kind: Backend
+    group: gateway.envoyproxy.io
+    namespace: default
+---
+# Envoy Gateway's default buffer limit (32 KiB) is too small for AI payloads.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-buffer-limit
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: aigw-run
+  connection:
+    bufferLimit: 50Mi

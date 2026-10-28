@@ -71,12 +71,58 @@ spec:
       kind: Gateway
       group: gateway.networking.k8s.io
   rules:
-    # chat-shaped and embedding task classes: the OpenAI schema
+    # chat-shaped and embedding task classes: the OpenAI schema. One exact rule per class (not a
+    # regex) so that GET /v1/models lists every class, which is what a client's model picker reads.
     - matches:
         - headers:
-            - type: RegularExpression
+            - type: Exact
               name: x-ai-eg-model
-              value: ^(embed|draft|judge|extract|refine-query|refine-instruction)$
+              value: embed
+      backendRefs:
+        - name: stub-openai
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: draft
+      backendRefs:
+        - name: stub-openai
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: judge
+      backendRefs:
+        - name: stub-openai
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: extract
+      backendRefs:
+        - name: stub-openai
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: refine-query
+      backendRefs:
+        - name: stub-openai
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: refine-instruction
       backendRefs:
         - name: stub-openai
       timeouts:

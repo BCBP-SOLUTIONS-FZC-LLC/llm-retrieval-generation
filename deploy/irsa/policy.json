@@ -1,0 +1,68 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublishGenerationAndIndexEvents",
+      "Effect": "Allow",
+      "Action": [
+        "sns:Publish",
+        "sns:GetTopicAttributes"
+      ],
+      "Resource": [
+        "${generation_events_topic_arn}",
+        "${index_events_topic_arn}"
+      ]
+    },
+    {
+      "Sid": "ConsumeEventQueues",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl",
+        "sqs:ChangeMessageVisibility",
+        "sqs:SendMessage"
+      ],
+      "Resource": [
+        "${document_queue_arn}",
+        "${document_queue_dlq_arn}",
+        "${domainprofile_queue_arn}",
+        "${domainprofile_queue_dlq_arn}",
+        "${iam_purge_queue_arn}",
+        "${iam_purge_queue_dlq_arn}",
+        "${iam_membership_queue_arn}",
+        "${iam_membership_queue_dlq_arn}",
+        "${tender_queue_arn}",
+        "${tender_queue_dlq_arn}",
+        "${usage_queue_arn}",
+        "${usage_queue_dlq_arn}"
+      ]
+    },
+    {
+      "Sid": "ArtefactContentObjects",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "${artefact_bucket_arn}/*"
+    },
+    {
+      "Sid": "ArtefactContentListForPrefixDelete",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "${artefact_bucket_arn}"
+    },
+    {
+      "Sid": "ArtefactContentEncryption",
+      "Effect": "Allow",
+      "Action": [
+        "kms:GenerateDataKey",
+        "kms:Decrypt"
+      ],
+      "Resource": "${artefact_kms_key_arn}"
+    }
+  ]
+}

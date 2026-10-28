@@ -233,7 +233,7 @@ class GenerationStream:
         queue.put_nowait(None)
         return cls(queue, eligibility, heartbeat_seconds=heartbeat_seconds, suppressed=True)
 
-    async def events(self) -> AsyncGenerator[Frame, None]:
+    async def events(self) -> AsyncGenerator[Frame]:
         """Frames in order, ``Heartbeat`` whenever ``heartbeat_seconds`` pass in silence."""
         finished = False
         try:
