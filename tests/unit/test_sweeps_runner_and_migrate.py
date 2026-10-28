@@ -156,7 +156,7 @@ def test_migrations_path_defaults_to_the_repo_and_honours_the_override() -> None
 async def test_migrate_all_applies_the_outbox_before_any_numbered_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """0003 grants on ``outbox_events``, so both outbox schemas go first."""
+    """0003 grants on ``outbox_events`` and ``processed_events``: eventcommon's schemas go first."""
     order: list[str] = []
 
     class FakeRunner:
@@ -172,15 +172,19 @@ async def test_migrate_all_applies_the_outbox_before_any_numbered_set(
     monkeypatch.setattr(
         migrate, "apply_schema", AsyncMock(side_effect=lambda p: order.append("outbox"))
     )
+    monkeypatch.setattr(
+        migrate, "apply_inbox_schema", AsyncMock(side_effect=lambda p: order.append("inbox"))
+    )
     settings = Settings(
         corpus_migration_database_url="postgresql://ddl@h/llm_corpus",
         generation_migration_database_url="postgresql://ddl@h/llm_generation",
     )
     await migrate.migrate_all(settings)
     assert order == [
+        "outbox",  # llm_corpus: the outbox only, no consumers' ledger there
         "outbox",
-        "outbox",
+        "inbox",  # llm_generation: the ledger rows commit with the consumers' effects
         "up:postgresql://ddl@h/llm_corpus",
         "up:postgresql://ddl@h/llm_generation",
     ]
-    assert pool.drain_and_close.await_count == 2
+    assert pool.drain_and_close.await_count == 2  # one library-schema pool per database

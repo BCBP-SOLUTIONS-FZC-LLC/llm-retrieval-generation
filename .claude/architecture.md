@@ -83,6 +83,6 @@ Every external adapter **fails closed**: unconfigured peers are wired to an `Unw
 |---|---|
 | `platform-fastapicommon` 0.4.x | `create_platform_app`, RFC 9457, `RequireRole` / `RequireAnyRole`, tracing, logging, metrics registry |
 | `pgcommon` 0.4.x | asyncpg `Pool`, tenant GUC provider, `run_in_tx`, `Runner` (migrations), pool metrics |
-| `eventcommon` 0.4.x | `Envelope`, outbox (`apply_schema`, relay), `SQSConsumer`, DLQ publisher, inbox `Store`, `GlueDecodeCodec` |
+| `eventcommon` 0.4.x | `Envelope`, outbox (`apply_schema`, relay), `SQSConsumer`, DLQ publisher, inbox `Store` and `processed_events`, `GlueDecodeCodec`, `eventcommon.config` (all tuning); built in `infrastructure/events/config.py` |
 
 Private packages: installed via the index configured for `uv` (`CI_REPO_READ_TOKEN` in CI), as in `platform-fastapicommon`.

@@ -155,28 +155,24 @@ class Settings(PlatformSettings):
     # --- events: relay, consumers, sweeps (§12, §18.3, §21.2) -----------------------------------
     # Off by default so a replica without AWS (tests, local) starts. When true the relays and
     # every consumer whose queue URL is set run in process (EVT-8).
+    # Outbox and SQS tuning is not here: it is eventcommon's own OUTBOX_* / SQS_* variables, parsed
+    # by ``infrastructure/events/config.py`` (poll interval, batch size, attempts, publish timeout,
+    # concurrency, handler timeout, ...). Settings holds topology and the redrive threshold.
     events_enabled: bool = False
     aws_region: str = "eu-west-1"
     aws_endpoint_url: str = ""  # an emulator (LocalStack) for CI and local runs
     generation_topic_arn: str = ""  # llm-generation-events
     index_topic_arn: str = ""  # llm-index-events
-    outbox_poll_interval_seconds: PosFloat = 5.0
-    outbox_batch_size: PosInt = 50
-    outbox_max_attempts: PosInt = 5
-    outbox_publish_timeout_seconds: PosFloat = 10.0
     document_queue_url: str = ""  # llm-document-rag-q
     domainprofile_queue_url: str = ""  # domainprofile-llm-invalidate-q
     iam_purge_queue_url: str = ""  # iam-rag-purge-q
     iam_membership_queue_url: str = ""  # iam-rag-membership-q
     tender_queue_url: str = ""  # tender-rag-q
     usage_queue_url: str = ""  # usage-rag-q
-    sqs_concurrency: PosInt = 1
-    sqs_visibility_timeout_seconds: PosInt = 60
     # LD-86: a message dead-letters at the fourth receive. eventcommon forwards a message whose
     # receive count *exceeds* this value, so 3 makes the fourth receive the one that is
     # forwarded; the queue's own redrive policy (five) is the backstop.
     sqs_max_receive_count: PosInt = 3
-    sqs_queue_depth_interval_seconds: PosFloat = 30.0
     quota_resume_batch_size: PosInt = 10  # LD-70: a value the LLD leaves open
     # This service's own service-account id on system-initiated audit entries (§4.6.3, OQ-108).
     service_account_id: str = "00000000-0000-7000-8000-4c4c4d000010"

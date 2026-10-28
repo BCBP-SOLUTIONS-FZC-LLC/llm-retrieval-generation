@@ -11,7 +11,7 @@ Runner: `pgcommon.migrate.Runner`, files named `NNNN_name.up.sql` + `NNNN_name.d
 `pgcommon_migrations` in each database. Every `.up.sql` has a `.down.sql` that reverses it. Run from the
 init container / pre-deploy job, never from a replica's boot path:
 
-    python -m rag.infrastructure.persistence.migrate     # both sets, then eventcommon outbox schema
+    python -m rag.infrastructure.persistence.migrate     # eventcommon outbox (+ inbox on llm_generation), then both sets
 
 DDL role: `CORPUS_MIGRATION_DATABASE_URL` / `GENERATION_MIGRATION_DATABASE_URL` (direct to Postgres,
 not PgBouncer; the runner's advisory lock is session-scoped).
@@ -27,7 +27,7 @@ instance** (`0002`, `0003`, ... in merge order, no gaps, never renumbered). Name
 | `0000_roles` | roles, schema grants, default privileges | same |
 | `0001_types_and_functions` | enums (§4.7 + `grant_level`), §4.8.2 functions | enums (§4.2 + `evidence_tier`, `grant_level`), `pgcrypto`, §4.8.2 functions |
 | `0002_corpus_tables` | five tables, indexes, `reject_generation_transition`, `reject_purged_change`, triggers, RLS + FORCE (uniform + read/write pair), per-table grants | |
-| `0002_generation_tables` | | 19 tables, cross-table FKs (ART-2/AS-3/ART-9 cycles deferrable), indexes, §4.8.2 triggers + audit-chain functions, RLS + FORCE, §4.1 grants. No outbox (eventcommon's) |
+| `0002_generation_tables` | | 18 tables, cross-table FKs (ART-2/AS-3/ART-9 cycles deferrable), indexes, §4.8.2 triggers + audit-chain functions, RLS + FORCE, §4.1 grants. No outbox and no `processed_events`: both are eventcommon's (applied before the numbered sets) |
 | `0003_corpus_events_sweeps` | outbox grants for `rag_app`; role `rag_sweeper` + column grants and `FOR SELECT` policies on `tenant_lifecycle`, `collections` | |
 | `0003_generation_events_sweeps` | | outbox grants (`rag_app`: S/I/U/D, `rag_activity`: INSERT + sequence); `rag_sweeper` on `artefacts`, `generation_runs`, `retrieval_sets`, `graph_checkpoints`, `artefact_audit_chain` |
 | `0004_generation_workflows` | | `uq_run_workflow` (RUN-2: one run row per `workflow_id`), `idx_fc_section` |
@@ -45,8 +45,8 @@ The corpus seed (reference collection + generation 1, `IG-3`, `COL-3`) is the co
   (nothing logs in as it; `FORCE ROW LEVEL SECURITY` then binds the owner, §4.1, §4.8.1). `0000` grants
   `rag_owner` to the migration role.
 * Primary keys default to `uuidv7()` (PostgreSQL 18, LD-54).
-* Every table except `processed_events` and the library's `outbox_*` gets the uniform `tenant_isolation`
-  policy (§4.8.1, RLS-1); `collections` / `collection_grants` the read/write pair.
+* Every table except the library's own (`processed_events`, the `outbox_*` tables) gets the uniform
+  `tenant_isolation` policy (§4.8.1, RLS-1); `collections` / `collection_grants` the read/write pair.
 
 ## Deviations from the LLD text (and why)
 

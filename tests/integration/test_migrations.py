@@ -8,9 +8,10 @@ from pathlib import Path
 
 import asyncpg
 import pytest
-from eventcommon.outbox import apply_schema
 from pgcommon import Config, Pool
 from pgcommon.migrate import Runner
+
+from rag.infrastructure.persistence.migrate import apply_library_schemas
 
 pytestmark = pytest.mark.integration
 
@@ -69,7 +70,7 @@ async def test_up_down_up(dsns: dict[str, str], instance: str) -> None:
     """Both sets apply, roll back cleanly and re-apply; objects are owned by rag_owner."""
     pool = await Pool.create(Config(dsn=dsns[instance], max_conns=1, min_conns=1))
     try:
-        await apply_schema(pool)  # 0003 grants on the outbox, so it exists first (migrate_all)
+        await apply_library_schemas(pool, instance)  # 0003 grants on them: first (migrate_all)
     finally:
         await pool.drain_and_close()
     runner = Runner(dsns[instance], MIGRATIONS / instance)
@@ -93,15 +94,21 @@ async def test_up_down_up(dsns: dict[str, str], instance: str) -> None:
     await runner.up()
 
 
-async def test_outbox_schema_applies_on_generation(dsns: dict[str, str]) -> None:
-    """eventcommon's outbox lands beside our ledger on llm_generation."""
+async def test_library_schemas_apply_on_generation(dsns: dict[str, str]) -> None:
+    """eventcommon's outbox and inbox (``processed_events``) land beside our tables."""
     pool = await Pool.create(Config(dsn=dsns["generation"], max_conns=1, min_conns=1))
     try:
-        await apply_schema(pool)
+        await apply_library_schemas(pool, "generation")
     finally:
         await pool.drain_and_close()
     await Runner(dsns["generation"], MIGRATIONS / "generation").up()
     tables = await _names(
         dsns["generation"], "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
     )
-    assert {"outbox_events", "pgcommon_migrations", "outbox_migrations"} <= tables
+    assert {
+        "outbox_events",
+        "outbox_migrations",
+        "processed_events",
+        "inbox_migrations",
+        "pgcommon_migrations",
+    } <= tables

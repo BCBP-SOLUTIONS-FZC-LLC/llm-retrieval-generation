@@ -1,4 +1,4 @@
-REVOKE DELETE ON processed_events FROM rag_app;
+REVOKE SELECT, INSERT, UPDATE, DELETE ON processed_events FROM rag_app;
 REVOKE INSERT ON outbox_events FROM rag_activity;
 REVOKE USAGE ON SEQUENCE outbox_events_ordering_seq FROM rag_app, rag_activity;
 REVOKE SELECT, INSERT, UPDATE, DELETE ON outbox_events, outbox_dead_letters FROM rag_app;

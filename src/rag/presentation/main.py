@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
 
+from eventcommon.inbox import apply_schema as apply_inbox_schema
 from eventcommon.outbox import apply_schema
 from fastapi import FastAPI
 from fastapicommon import create_platform_app
@@ -56,6 +57,7 @@ def _lifespan(settings: Settings) -> Callable[[FastAPI], AsyncIterator[None]]:
             stack.push_async_callback(generation_pool.drain_and_close)
             if settings.outbox_apply_schema_on_startup:
                 await apply_schema(generation_pool)
+                await apply_inbox_schema(generation_pool)  # the consumers' ledger lives here
                 await apply_schema(corpus_pool)  # corpus events join llm_corpus transactions
             app.state.container = build_container(settings, corpus_pool, generation_pool)
             stack.push_async_callback(app.state.container.aclose)

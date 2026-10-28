@@ -6,6 +6,11 @@ This service has never been deployed to any environment — there is no released
 
 ## [Unreleased]
 
+### Changed
+
+- Events, the outbox and dedup go through `eventcommon` only: `eventcommon.inbox.apply_schema` now creates `processed_events` (migration `0002_generation_tables` no longer does; `0003` grants on it), every relay/publisher/consumer config is built in `infrastructure/events/config.py` from `eventcommon.config`, and `tests/architecture/test_events_only_through_eventcommon.py` guards it. Pre-release migration edit (never deployed); dev databases adopt the existing table
+- Env renames (durations now need a unit): `OUTBOX_POLL_INTERVAL_SECONDS` to `OUTBOX_POLL_INTERVAL`, `OUTBOX_PUBLISH_TIMEOUT_SECONDS` to `OUTBOX_PUBLISH_TIMEOUT`, `SQS_VISIBILITY_TIMEOUT_SECONDS` to `SQS_VISIBILITY_TIMEOUT`, `SQS_QUEUE_DEPTH_INTERVAL_SECONDS` to `SQS_QUEUE_DEPTH_INTERVAL`; `OUTBOX_BATCH_SIZE`, `OUTBOX_MAX_ATTEMPTS`, `SQS_CONCURRENCY` keep their names but are the library's
+
 ### Added
 
 - **Service foundation.** FastAPI app factory over `fastapicommon.create_platform_app`; settings carrying every LLD §17 variable at its documented default; two `pgcommon` pools (`llm_corpus`, `llm_generation`) behind PgBouncer in transaction mode with the tenant GUC bound transaction-locally; startup refuses any `PG_BOUNCER_MODE` other than exactly `true` (ISO-11); RFC 9457 errors with the 32-code taxonomy (§24); outbox wiring on both databases.
@@ -23,7 +28,6 @@ This service has never been deployed to any environment — there is no released
 - **Tests.** About 1,270 tests: unit, use-case, API, architecture, events, isolation, repository and integration suites (real `postgres:18` via testcontainers), and 32 end-to-end tests over a real RLS Postgres (`make test-e2e`). Coverage is about 97.8% for unit + integration.
 - **Documentation.** `README.md`, `CONTRIBUTING.md`, `VERSIONING.md` (with a *Planned* table for the machinery that does not exist yet), `ARCHITECTURE.md`, `docs/` runbooks and observability notes, `.claude/` working notes, and `.githooks/pre-commit`.
 
-### Changed
 
 - **Events: outbox on both databases (decision).** Corpus events must share the state change's transaction (EVT-8) and a transaction cannot span two databases, so `llm_corpus` carries its own outbox. OBX-3's "one relay" is met as one claim loop per table, all publishing through one routing publisher that picks the topic by event type name. `migrate_all` applies the outbox schema **before** the numbered sets because `0003` grants on tables the library owns.
 - **Envelope corrections against §12.2.** `source` is `llm-rag-service`; `subject` is `tenders/<tender_id>` or absent; `correlation_id` propagates.

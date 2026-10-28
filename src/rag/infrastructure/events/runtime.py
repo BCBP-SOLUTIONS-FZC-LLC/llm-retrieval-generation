@@ -16,13 +16,15 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from eventcommon.codec import GlueDecodeCodec
-from eventcommon.consumer import DLQConfig, DLQPublisher, SQSConfig, SQSConsumer, SQSDLQPublisher
+from eventcommon.consumer import DLQConfig, DLQPublisher, SQSConsumer, SQSDLQPublisher
 from eventcommon.inbox import Store
+from fastapicommon.logging import get_logger
 from pgcommon import Pool
 
 from rag.application.events import contracts as c
 from rag.infrastructure.config import Settings
 from rag.infrastructure.events import consumers as h
+from rag.infrastructure.events.config import sqs_settings
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +37,8 @@ class QueueSpec:
     factory: Callable[[h.ConsumerServices, Store], h.Handler]
     glue: bool = False
 
+
+log = get_logger(__name__)
 
 QUEUES = (
     QueueSpec(
@@ -94,20 +98,14 @@ def build_consumer(
 ) -> SQSConsumer:
     """One ``SQSConsumer`` for ``spec`` (``client`` injects a fake SQS client in tests)."""
     handler = h.poison_safe(spec.factory(services, Store(pool, spec.consumer)), dlq)
+    config, options = sqs_settings(settings, getattr(settings, spec.url_setting))
     return SQSConsumer(
-        SQSConfig(
-            queue_url=getattr(settings, spec.url_setting),
-            region=settings.aws_region,
-            endpoint_url=settings.aws_endpoint_url or None,
-        ),
+        config,
         handler,
-        concurrency=settings.sqs_concurrency,
-        visibility_timeout=settings.sqs_visibility_timeout_seconds,
-        max_receive_count=settings.sqs_max_receive_count,
         dlq_publisher=dlq,
-        queue_depth_interval=settings.sqs_queue_depth_interval_seconds,
         codec=GlueDecodeCodec() if spec.glue else None,
         client=client,
+        **options,
     )
 
 
@@ -124,6 +122,7 @@ def start_consumers(
                 region=settings.aws_region,
                 endpoint_url=settings.aws_endpoint_url or None,
                 consumer_name=spec.consumer,
+                logger=log,
             )
         )
         consumer = build_consumer(settings, spec, services, generation_pool, dlq)

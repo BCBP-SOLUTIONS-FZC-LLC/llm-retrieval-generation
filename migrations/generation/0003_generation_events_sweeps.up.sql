@@ -1,5 +1,5 @@
 -- Events slice (LLD 4.6.4, 21.2): outbox grants and the sweeps' tenant enumeration on llm_generation.
--- Needs eventcommon's outbox schema to exist first: migrate_all applies it BEFORE this runner.
+-- Needs eventcommon's outbox and inbox schemas to exist first: migrate_all applies them BEFORE this runner.
 
 DO $$
 BEGIN
@@ -37,6 +37,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON outbox_events, outbox_dead_letters TO ra
 GRANT USAGE ON SEQUENCE outbox_events_ordering_seq TO rag_app, rag_activity;
 GRANT INSERT ON outbox_events TO rag_activity;
 
--- 3. The consumer-ledger sweep (21.2, PE-1, EVT-16) prunes processed_events as rag_app, and 0002
---    granted that table no DELETE (the baseline is SELECT, INSERT, UPDATE).
-GRANT DELETE ON processed_events TO rag_app;
+-- 3. processed_events is eventcommon's inbox (PE-1), also owned by the migration role, so rag_owner's
+--    default privileges do not reach it: rag_app claims rows (INSERT), checks (SELECT) and the
+--    consumer-ledger sweep (21.2, EVT-16) prunes them (DELETE). No RLS: the ledger holds no tenant.
+GRANT SELECT, INSERT, UPDATE, DELETE ON processed_events TO rag_app;

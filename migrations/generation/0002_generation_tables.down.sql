@@ -1,6 +1,6 @@
 SET ROLE rag_owner;
 DROP TABLE IF EXISTS
-  processed_events, artefact_audit_chain, instruction_refinements, query_refinements,
+  artefact_audit_chain, instruction_refinements, query_refinements,
   graph_checkpoints, fact_conflicts, document_facts, completeness_checks, claim_verifications,
   groundedness_reports, retrieval_set_purges, retrieval_set_chunks, artefact_version_sections,
   artefact_section_versions, artefact_sections, artefact_versions, generation_runs,

@@ -12,19 +12,22 @@ from pathlib import Path
 
 import asyncpg
 import pytest
-from eventcommon.outbox import apply_schema
 from pgcommon import Config, Pool
 from pgcommon.migrate import Runner
 from tests.repository.test_corpus_repositories import dsn_base  # noqa: F401  (fixture)
 
+from rag.infrastructure.persistence.migrate import apply_library_schemas
+
 pytestmark = pytest.mark.integration
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
-APP_TABLES = {"corpus": 5, "generation": 19}  # excluding the library's outbox and ledger tables
+APP_TABLES = {"corpus": 5, "generation": 18}  # excluding eventcommon's tables
 LIBRARY_TABLES = {
     "outbox_events",
     "outbox_dead_letters",
     "outbox_migrations",
+    "processed_events",
+    "inbox_migrations",
     "pgcommon_migrations",
 }
 
@@ -44,7 +47,7 @@ async def instance(request: pytest.FixtureRequest, dsn_base: str) -> AsyncIterat
     url = f"{dsn_base}/{db}"
     pool = await Pool.create(Config(dsn=url, max_conns=1, min_conns=1))
     try:
-        await apply_schema(pool)  # as migrate_all: 0003 grants on the library's outbox tables
+        await apply_library_schemas(pool, name)  # as migrate_all: 0003 grants on them
     finally:
         await pool.drain_and_close()
     yield name, url

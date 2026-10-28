@@ -350,12 +350,8 @@ CREATE TABLE artefact_audit_chain (
   CONSTRAINT chk_audit_metadata CHECK (jsonb_typeof(metadata) = 'object' AND octet_length(metadata::text) <= 8192)
 );
 
-CREATE TABLE processed_events (
-  event_id     uuid NOT NULL,
-  consumer     text NOT NULL,
-  processed_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (event_id, consumer)
-);
+-- processed_events (the consumers' dedup ledger) is eventcommon's inbox, not ours: migrate_all applies
+-- eventcommon.inbox.apply_schema before this runner, exactly as it does for the outbox (OBX-4, PE-1).
 
 -- ---------------------------------------------------------------------------------------
 -- 2. Cross-table foreign keys (ART-2, AS-3, ART-9 cycles are DEFERRABLE as specified)
@@ -461,8 +457,6 @@ CREATE INDEX idx_ir_version ON instruction_refinements (tenant_id, refiner_versi
 CREATE UNIQUE INDEX uq_audit_source_event ON artefact_audit_chain (tenant_id, source_event_id);
 CREATE INDEX idx_audit_artefact ON artefact_audit_chain (tenant_id, artefact_id, seq);
 CREATE INDEX idx_audit_created ON artefact_audit_chain (tenant_id, created_at);
-
-CREATE INDEX idx_processed_events_prune ON processed_events (processed_at);
 
 -- ---------------------------------------------------------------------------------------
 -- 4. Trigger functions (LLD 4.8.2) and the audit chain's canonical form
@@ -588,7 +582,7 @@ CREATE TRIGGER trg_bump_record_version BEFORE UPDATE ON fact_conflicts
   FOR EACH ROW EXECUTE FUNCTION bump_record_version();
 
 -- ---------------------------------------------------------------------------------------
--- 6. RLS (4.8.1): ENABLE + FORCE + uniform policy on every table but processed_events
+-- 6. RLS (4.8.1): ENABLE + FORCE + uniform policy on every table (processed_events is the library's)
 -- ---------------------------------------------------------------------------------------
 DO $$
 DECLARE t text;
@@ -616,7 +610,7 @@ REVOKE ALL ON
   artefact_section_versions, generation_runs, retrieval_sets, retrieval_set_chunks,
   retrieval_set_purges, groundedness_reports, claim_verifications, completeness_checks,
   document_facts, fact_conflicts, graph_checkpoints, query_refinements,
-  instruction_refinements, artefact_audit_chain, processed_events
+  instruction_refinements, artefact_audit_chain
 FROM PUBLIC;
 
 REVOKE INSERT, UPDATE ON graph_checkpoints FROM rag_app;
@@ -629,7 +623,7 @@ GRANT DELETE ON
   document_facts, fact_conflicts, query_refinements, instruction_refinements,
   graph_checkpoints
 TO rag_app;
--- artefact_audit_chain is granted no DELETE to anyone (AC-1). processed_events is rag_app's alone.
+-- artefact_audit_chain is granted no DELETE to anyone (AC-1).
 GRANT SELECT, INSERT, UPDATE ON
   artefacts, artefact_versions, artefact_version_sections, artefact_sections,
   artefact_section_versions, generation_runs, retrieval_sets, retrieval_set_chunks,

@@ -485,20 +485,20 @@ TABLES = [
 ]  # fmt: skip
 
 
-def test_migration_creates_all_tables_and_no_outbox() -> None:
-    """19 tables here; eventcommon owns the outbox (OBX-4)."""
+def test_migration_creates_our_tables_and_neither_of_eventcommons() -> None:
+    """18 tables here; eventcommon owns the outbox (OBX-4) and the inbox (PE-1)."""
     sql = MIGRATION.read_text()
     created = re.findall(r"^CREATE TABLE (\w+)", sql, re.M)
-    assert sorted(created) == sorted(TABLES)
-    assert "outbox" not in sql.replace("outbox_events / outbox_dead_letters", "")
+    assert sorted(created) == sorted(set(TABLES) - {"processed_events"})
+    assert not [t for t in created if t.startswith("outbox") or t == "processed_events"]
 
 
-def test_migration_rls_covers_every_table_but_processed_events() -> None:
-    """RLS-1: exactly the one named exemption in this schema (outbox tables are not ours)."""
+def test_migration_rls_covers_every_table_of_ours() -> None:
+    """RLS-1: every table this migration creates (the library's inbox and outbox are not ours)."""
     sql = MIGRATION.read_text()
     block = sql[sql.index("FOREACH t IN ARRAY ARRAY[") : sql.index("LOOP")]
     covered = set(re.findall(r"'(\w+)'", block))
-    assert covered == set(TABLES) - {"processed_events"}
+    assert covered == set(TABLES) - {"processed_events"}  # the ledger is created elsewhere
     assert "FORCE ROW LEVEL SECURITY" in sql
     assert "tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid" in sql
 

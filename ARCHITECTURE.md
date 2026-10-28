@@ -394,7 +394,7 @@ Two databases, two ledgers, **no foreign key across them** (LLD §4.11). The dia
 
 ```mermaid
 erDiagram
-    %% llm_corpus (5 tables) and llm_generation (19 tables + the library's outbox). No foreign key crosses the two databases.
+    %% llm_corpus (5 tables) and llm_generation (18 tables + the library's outbox and inbox). No foreign key crosses the two databases.
 
     collections ||--o{ collection_grants : "overlay answers"
     collections ||--o{ index_generations : "generations"
@@ -451,7 +451,7 @@ erDiagram
 ```
 
 - `llm_corpus` (5 tables): `collections`, `collection_grants`, `index_generations`, `retention_policies`, `tenant_lifecycle`.
-- `llm_generation` (19 tables plus the library's outbox): artefacts and versions, sections and section versions, `generation_runs`, retrieval record, verification (`groundedness_reports`, `claim_verifications`, `completeness_checks`), facts and conflicts, refinements, `graph_checkpoints`, `artefact_audit_chain`, `processed_events`.
+- `llm_generation` (18 tables plus the library's outbox and inbox): artefacts and versions, sections and section versions, `generation_runs`, retrieval record, verification (`groundedness_reports`, `claim_verifications`, `completeness_checks`), facts and conflicts, refinements, `graph_checkpoints`, `artefact_audit_chain`; the library's `processed_events` ledger is granted to `rag_app`, not owned here.
 - **Write authority** is per table and is enforced by roles: request handlers write as `rag_app`; the Worker Pool's activities write the activity tables as `rag_activity`; Ingestion holds no grant on our tables. **This service is the schema authority for all of them**, whichever deployable writes the rows.
 - **Conventions (LD-103):** mutable tables carry `record_version`, `created_at`, `updated_at`, maintained by trigger, and an `UPDATE` that changes nothing is skipped; append-only tables carry none and reject updates (`reject_always`). Primary keys default to `uuidv7()` (PostgreSQL 18).
 - **State machines in the database:** triggers enforce the artefact, run and section transition tables, index-generation status (a generation is activatable only when `verified`), and purged-row immutability. The audit chain is gapless and hash-linked (`audit_chain_append()`), verified by a sweep.

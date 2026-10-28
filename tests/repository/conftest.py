@@ -12,11 +12,11 @@ from pathlib import Path
 
 import asyncpg
 import pytest
-from eventcommon.outbox import apply_schema
 from pgcommon import Config, Pool
 from pgcommon.migrate import Runner
 from tests.repository.support import Db, guc
 
+from rag.infrastructure.persistence.migrate import apply_library_schemas
 from rag.infrastructure.persistence.transactions import PgTransactionRunner
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations" / "generation"
@@ -70,10 +70,10 @@ async def db(dsn_base: str) -> AsyncIterator[Db]:
     await admin.execute(f"CREATE DATABASE {DB}")
     await admin.close()
     admin_dsn = f"{dsn_base}/{DB}"
-    # eventcommon's outbox first: migration 0003 grants on it (as migrate_all orders them)
-    outbox = await Pool.create(Config(dsn=admin_dsn, max_conns=1, min_conns=1, pool_name="outbox"))
-    await apply_schema(outbox)
-    await outbox.drain_and_close()
+    # eventcommon's outbox and inbox first: migration 0003 grants on them (as migrate_all orders it)
+    boot = await Pool.create(Config(dsn=admin_dsn, max_conns=1, min_conns=1, pool_name="boot"))
+    await apply_library_schemas(boot, "generation")
+    await boot.drain_and_close()
     await Runner(admin_dsn, MIGRATIONS).up()
     conn = await asyncpg.connect(admin_dsn)
     for login, group in (("rag_app_login", "rag_app"), ("rag_activity_login", "rag_activity")):

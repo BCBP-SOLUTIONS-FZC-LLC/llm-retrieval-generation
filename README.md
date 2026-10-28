@@ -245,7 +245,7 @@ Public routes also need `x-user-id`, and some need `x-tenant-roles: tenant_admin
 
 C-I1 is the simplest route that emits an event (`CollectionProvisioned`). The outbox relay publishes it to the `llm-index-events` SNS topic, and a dev **probe queue** (`llm-events-probe-q`, created by `scripts/init-floci.sh`) is subscribed to both topics so you can see what was published.
 
-1. In `.env` set `EVENTS_ENABLED=true` (optionally `OUTBOX_POLL_INTERVAL_SECONDS=1`), then `make run`.
+1. In `.env` set `EVENTS_ENABLED=true` (optionally `OUTBOX_POLL_INTERVAL=1s`), then `make run`.
 2. Call C-I1 with a **fresh** `tender_id` (a repeat returns `200` and emits nothing).
 3. In floci-ui (http://localhost:4501) open SQS → `llm-events-probe-q`: the message count rises by one. floci-ui shows counts only, not message bodies.
 4. `make events-peek` prints the event envelopes (`type`, `source: llm-rag-service`, `tenant_id`, `subject`, `data`). It does not consume them.

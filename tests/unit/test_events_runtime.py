@@ -128,10 +128,10 @@ def test_outbox_grants_sit_outside_set_role_because_the_library_owns_those_table
         assert not re.search(r"(UPDATE|DELETE)[^;]*outbox_events TO rag_activity", sql)
 
 
-def test_migrate_all_applies_the_outbox_before_the_numbered_sets() -> None:
+def test_migrate_all_applies_eventcommons_schemas_before_the_numbered_sets() -> None:
     import inspect
 
     from rag.infrastructure.persistence import migrate
 
     src = inspect.getsource(migrate.migrate_all)
-    assert src.index("_apply_outbox") < src.index("migrate_instance")
+    assert src.index("_apply_library_schemas") < src.index("migrate_instance")

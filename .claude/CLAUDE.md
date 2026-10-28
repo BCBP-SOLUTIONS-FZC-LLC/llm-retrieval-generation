@@ -95,6 +95,7 @@ Full per-file descriptions in **[`key-files.md`](key-files.md)**. Most-touched e
 - **Absent and ungranted are the same `404`** (CG-8).
 - **Never hand-edit generated files**: `docs/swagger/swagger.*`, `api/asyncapi.*`, `schemas/events/*.json`. Change the code and run `make swag`.
 - **Never reuse a retired route or LLD ID** (`C-T1`, `C-T2`).
+- **Reach events only through `eventcommon`**: no raw SNS/SQS client, no SQL on `outbox_events`/`processed_events` (the library owns them), envelopes via `new_envelope`; relay/publisher/consumer configs only from `infrastructure/events/config.py`; tuning is the library's `OUTBOX_*`/`SQS_*` env (durations with a unit, e.g. `5s`). Enforced by `tests/architecture/test_events_only_through_eventcommon.py`.
 - **Log only with `fastapicommon.logging.get_logger`** (structured: event name plus fields). Never `import logging`, `prometheus_client`, `opentelemetry` or `structlog`; metrics and tracing live in `infrastructure/observability`. Enforced by `tests/architecture/test_shared_libs_only.py`.
 - **Never log or label content** (OBS-2).
 - **Migrations are per instance, monotonic, and each has a `.down.sql`**; they open with `SET ROLE rag_owner` and apply the outbox schema before the numbered sets.

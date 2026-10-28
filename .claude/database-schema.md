@@ -14,7 +14,7 @@ Two PostgreSQL 18 databases, two migration ledgers (`pgcommon_migrations`), **no
 
 Plus the library's `outbox_events` / `outbox_dead_letters` / `outbox_migrations` (corpus events commit in this database's transactions, EVT-8).
 
-## `llm_generation` (19 tables plus the library's outbox)
+## `llm_generation` (18 tables plus the library's outbox and inbox)
 
 | Group | Tables |
 |---|---|

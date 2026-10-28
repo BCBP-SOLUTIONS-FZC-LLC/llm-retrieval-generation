@@ -1,5 +1,5 @@
 erDiagram
-    %% llm_corpus (5 tables) and llm_generation (19 tables + the library's outbox). No foreign key crosses the two databases.
+    %% llm_corpus (5 tables) and llm_generation (18 tables + the library's outbox and inbox). No foreign key crosses the two databases.
 
     collections ||--o{ collection_grants : "overlay answers"
     collections ||--o{ index_generations : "generations"

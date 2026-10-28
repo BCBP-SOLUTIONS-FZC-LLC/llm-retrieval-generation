@@ -20,14 +20,14 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from dataclasses import dataclass, field
-from typing import Any
 
-from eventcommon.outbox import Runner, RunnerConfig
-from eventcommon.publisher import SNSConfig, SNSPublisher
+from eventcommon.outbox import Runner
+from eventcommon.publisher import SNSPublisher
 from fastapicommon.logging import get_logger
 from pgcommon import Pool
 
 from rag.infrastructure.config import Settings
+from rag.infrastructure.events.config import runner_config, sns_config
 from rag.infrastructure.events.routing import RoutingPublisher
 
 log = get_logger(__name__)
@@ -59,25 +59,7 @@ class Relays:
 
 
 def _sns(settings: Settings, topic_arn: str) -> SNSPublisher:
-    return SNSPublisher(
-        SNSConfig(
-            topic_arn=topic_arn,
-            region=settings.aws_region,
-            endpoint_url=settings.aws_endpoint_url or None,
-        )
-    )
-
-
-def runner_config(settings: Settings, pool: Pool, publisher: Any) -> RunnerConfig:
-    """``RunnerConfig`` from settings; the lease is left to the library's default."""
-    return RunnerConfig(
-        pool=pool,
-        publisher=publisher,
-        poll_interval=settings.outbox_poll_interval_seconds,
-        batch_size=settings.outbox_batch_size,
-        max_attempts=settings.outbox_max_attempts,
-        publish_timeout=settings.outbox_publish_timeout_seconds,
-    )
+    return SNSPublisher(sns_config(settings, topic_arn))
 
 
 def start_relays(
@@ -97,7 +79,7 @@ def start_relays(
         index = _sns(settings, settings.index_topic_arn)
         owned = [generation, index]
         router = RoutingPublisher(generation, index)
-    runners = {name: Runner(runner_config(settings, pool, router)) for name, pool in pools.items()}
+    runners = {name: Runner(runner_config(pool, router)) for name, pool in pools.items()}
     relays = Relays(runners, owned)
     relays.tasks = [
         asyncio.create_task(r.start(), name=f"outbox-relay-{name}") for name, r in runners.items()

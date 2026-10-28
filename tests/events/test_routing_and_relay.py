@@ -148,11 +148,11 @@ async def test_one_relay_per_database_sharing_one_router(monkeypatch: pytest.Mon
     assert all("stop" in x.log for x in FakeRunner.instances) and sns.closed
 
 
-def test_runner_config_follows_settings_and_lease_is_valid() -> None:
+def test_runner_config_comes_from_the_library_and_the_lease_is_valid() -> None:
     """The lease must cover ``batch_size x publish_timeout`` or the Runner refuses to start."""
     from eventcommon.outbox import Runner
 
-    cfg = relay.runner_config(Settings(), None, MockPublisher())  # type: ignore[arg-type]
+    cfg = relay.runner_config(None, MockPublisher())  # type: ignore[arg-type]
     cfg.store = object()  # type: ignore[assignment]  # no pool needed to check the lease rule
     Runner(cfg)
-    assert (cfg.batch_size, cfg.poll_interval) == (50, 5.0)
+    assert (cfg.batch_size, cfg.poll_interval) == (50, 5.0)  # the library's defaults

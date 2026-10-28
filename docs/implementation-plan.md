@@ -58,7 +58,7 @@ C-I1 `[~]` C-I2 `[~]` C-I4 `[~]` C-I5 `[~]` C-I6 `[~]` C-I8 `[~]` · C-M1 `[~]`
 ### Tables (LLD §4)
 llm_generation (22): artefacts, artefact_versions, artefact_version_sections, artefact_sections, artefact_section_versions, generation_runs,
 retrieval_sets, retrieval_set_chunks, retrieval_set_purges, groundedness_reports, claim_verifications, completeness_checks, document_facts,
-fact_conflicts, graph_checkpoints, query_refinements, instruction_refinements, artefact_audit_chain, processed_events `[~]` (0002_generation_tables: 19 tables here; outbox is the library's; PG16 + stub-validated, not run on PG18/testcontainers)
+fact_conflicts, graph_checkpoints, query_refinements, instruction_refinements, artefact_audit_chain, processed_events (library inbox, granted in 0003) `[~]` (0002_generation_tables: 18 tables here; outbox and inbox are eventcommon's; PG16 + stub-validated, not run on PG18/testcontainers)
 llm_corpus: collections, collection_grants, index_generations, retention_policies, tenant_lifecycle `[~]` (0002_corpus_tables: syntax-checked, integration-untested; reference seed pending)
 Roles migration `0000_roles`, RLS + FORCE, triggers (§4.8.2) `[~]` (generation set done in 0002; corpus triggers are the corpus slice's)
 
