@@ -1,0 +1,237 @@
+# Agent Router in front of vLLM for the two self-hosted classes, to test them against our gateway
+# contract (LLD OQ-93): `make gateway-up-vllm`. Same shape as aigw.yaml; the differences:
+#   - embed goes to vLLM (OpenAI schema, /v1/embeddings), rewritten to BAAI/bge-small-en-v1.5;
+#   - rerank goes to vLLM (Cohere v2 schema, /v2/rerank), rewritten to
+#     cross-encoder/ms-marco-MiniLM-L-6-v2 (a one-label cross-encoder, which vLLM can score);
+#   - draft, judge, extract and both refiners stay on the model stub (no chat model is loaded);
+#   - /tokenize is not tested here: no generative model is served.
+# CPU only and small on purpose (laptop). Not a quality or speed test, and not Bedrock.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: aigw-run
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: aigw-run
+  namespace: default
+spec:
+  gatewayClassName: aigw-run
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 1975
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: envoy-ai-gateway
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: envoy-ai-gateway
+  namespace: default
+spec:
+  logging:
+    level:
+      default: error
+  telemetry:
+    accessLog:
+      settings:
+        - matches:
+            - "request.headers['x-ai-eg-model'] != ''"
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
+          format:
+            type: JSON
+            json:
+              gen_ai.request.model: "%REQ(X-AI-EG-MODEL)%"
+              gen_ai.usage.input_tokens: "%DYNAMIC_METADATA(io.envoy.ai_gateway:llm_input_token)%"
+              gen_ai.usage.output_tokens: "%DYNAMIC_METADATA(io.envoy.ai_gateway:llm_output_token)%"
+              request.path: "%REQ(:PATH)%"
+              response_code: "%RESPONSE_CODE%"
+              duration: "%DURATION%"
+              x-tenant-id: "%REQ(X-TENANT-ID)%"
+              x-residency-mode: "%REQ(X-RESIDENCY-MODE)%"
+              upstream_host: "%UPSTREAM_HOST%"
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: aigw-run
+  namespace: default
+spec:
+  parentRefs:
+    - name: aigw-run
+      kind: Gateway
+      group: gateway.networking.k8s.io
+  rules:
+    # chat-shaped and embedding task classes: the OpenAI schema. One exact rule per class (not a
+    # regex) so that GET /v1/models lists every class, which is what a client's model picker reads.
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: embed
+      backendRefs:
+        - name: vllm-embed
+          modelNameOverride: BAAI/bge-small-en-v1.5
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: draft
+      backendRefs:
+        - name: stub-openai
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: judge
+      backendRefs:
+        - name: stub-openai
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: extract
+      backendRefs:
+        - name: stub-openai
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: refine-query
+      backendRefs:
+        - name: stub-openai
+      timeouts:
+        request: 120s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: refine-instruction
+      backendRefs:
+        - name: stub-openai
+      timeouts:
+        request: 120s
+    # rerank: Cohere's v2 API is the only rerank schema the gateway speaks
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: rerank
+      backendRefs:
+        - name: vllm-rerank
+          modelNameOverride: cross-encoder/ms-marco-MiniLM-L-6-v2
+      timeouts:
+        request: 60s
+  llmRequestCosts:
+    - metadataKey: llm_input_token
+      type: InputToken
+    - metadataKey: llm_output_token
+      type: OutputToken
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: model-stub
+  namespace: default
+spec:
+  endpoints:
+    - fqdn:
+        hostname: model-stub
+        port: 8000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: vllm-embed
+  namespace: default
+spec:
+  endpoints:
+    - fqdn:
+        hostname: vllm-embed
+        port: 8000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: vllm-rerank
+  namespace: default
+spec:
+  endpoints:
+    - fqdn:
+        hostname: vllm-rerank
+        port: 8000
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: vllm-embed
+  namespace: default
+spec:
+  schema:
+    name: OpenAI
+  backendRef:
+    name: vllm-embed
+    kind: Backend
+    group: gateway.envoyproxy.io
+    namespace: default
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: vllm-rerank
+  namespace: default
+spec:
+  schema:
+    name: Cohere
+    version: v2
+  backendRef:
+    name: vllm-rerank
+    kind: Backend
+    group: gateway.envoyproxy.io
+    namespace: default
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: stub-openai
+  namespace: default
+spec:
+  schema:
+    name: OpenAI
+  backendRef:
+    name: model-stub
+    kind: Backend
+    group: gateway.envoyproxy.io
+    namespace: default
+---
+# Envoy Gateway's default buffer limit (32 KiB) is too small for AI payloads.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-buffer-limit
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: aigw-run
+  connection:
+    bufferLimit: 50Mi

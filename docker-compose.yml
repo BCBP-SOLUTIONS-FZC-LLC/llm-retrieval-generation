@@ -164,6 +164,43 @@ services:
     entrypoint: ["sh", "-c", "ollama pull qwen2.5:1.5b && ollama pull llama3.2:1b && ollama pull nomic-embed-text"]
     restart: "no"
 
+  # --- opt-in: `make gateway-up-vllm`: the two self-hosted classes on vLLM (LLD OQ-93) ----------
+  # CPU image, one small model per container (vLLM serves one model per process). The gateway
+  # config is deploy/model-gateway/aigw-vllm.yaml; Hugging Face downloads land in vllm_cache.
+  vllm-embed:
+    profiles: ["vllm"]
+    image: vllm/vllm-openai-cpu:v0.32.0
+    command: ["BAAI/bge-small-en-v1.5", "--port", "8000"]
+    shm_size: "512mb"                  # vLLM needs more than the 64 MiB default for its shared-memory queue
+    environment:
+      VLLM_CPU_KVCACHE_SPACE: "1"        # GiB; the default is larger than a laptop Docker VM
+    ports:
+      - "8001:8000"
+    volumes:
+      - vllm_cache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+
+  vllm-rerank:
+    profiles: ["vllm"]
+    image: vllm/vllm-openai-cpu:v0.32.0
+    command: ["cross-encoder/ms-marco-MiniLM-L-6-v2", "--port", "8000"]
+    shm_size: "512mb"                  # vLLM needs more than the 64 MiB default for its shared-memory queue
+    environment:
+      VLLM_CPU_KVCACHE_SPACE: "1"        # GiB; the default is larger than a laptop Docker VM
+    ports:
+      - "8002:8000"
+    volumes:
+      - vllm_cache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+
   # A chat UI over the gateway: pick a task class as the "model" and talk to it. Everything it
   # sends goes through Agent Router, so it is the same path our service's client takes.
   open-webui:
@@ -192,5 +229,6 @@ volumes:
   postgres_data:
   open_webui_data:
   ollama_data:
+  vllm_cache:
   qdrant_data:
   floci_data:

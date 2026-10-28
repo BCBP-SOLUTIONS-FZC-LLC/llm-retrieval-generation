@@ -91,6 +91,8 @@ help:
 	@echo "  make gateway-down    - stop them (and the chat UI)"
 	@echo "  make gateway-up-ollama - the gateway over real local models (Ollama; ~3 GB pull the first time)"
 	@echo "  make ollama-down     - stop Ollama and return the gateway to the stub"
+	@echo "  make gateway-up-vllm - embed + rerank on vLLM (CPU) behind the gateway (OQ-93 spike)"
+	@echo "  make vllm-down       - stop vLLM and return the gateway to the stub"
 	@echo "  make chat-up         - Open WebUI wired to the gateway (needs gateway-up; http://localhost:3000)"
 	@echo "  make chat-down       - stop the chat UI only"
 	@echo "  make test-gateway    - our client against the gateway: contract tests (needs gateway-up)"
@@ -258,6 +260,17 @@ gateway-up-ollama:  ## the gateway over real local models (Ollama); pulls ~3 GB 
 .PHONY: ollama-down
 ollama-down:  ## stop Ollama and put the gateway back on the stub (models stay in the ollama_data volume)
 	docker compose --profile ollama stop ollama
+	docker compose --profile gateway up -d --force-recreate agent-router
+
+.PHONY: gateway-up-vllm
+gateway-up-vllm:  ## embed + rerank on vLLM (CPU) behind the gateway, to test the self-hosted contract
+	docker compose --profile gateway --profile vllm up -d --build --wait model-stub vllm-embed vllm-rerank
+	AIGW_CONFIG=aigw-vllm.yaml docker compose --profile gateway up -d --force-recreate agent-router
+	@echo "gateway on :1975: embed and rerank from vLLM, the other classes from the stub"
+
+.PHONY: vllm-down
+vllm-down:  ## stop vLLM and put the gateway back on the stub (models stay in the vllm_cache volume)
+	docker compose --profile vllm stop vllm-embed vllm-rerank
 	docker compose --profile gateway up -d --force-recreate agent-router
 
 .PHONY: chat-up

@@ -206,6 +206,7 @@ make run          # API on :8080 (kills anything already listening there)
 | `make events-peek` | Print the events waiting in the dev probe queue |
 | `make gateway-up` / `gateway-down` | Start / stop the model gateway (Agent Router, pinned image) in front of a model stub (opt-in) |
 | `make gateway-up-ollama` / `ollama-down` | Put real local models behind the gateway: Ollama (`alpine/ollama`) serves `embed`, `draft`, `judge`, `extract` and both refiners (`qwen2.5:1.5b`, `llama3.2:1b`, `nomic-embed-text`); `rerank` stays on the stub. The first run pulls about 2.5 GB. `make test-gateway` needs the stub config, so run `ollama-down` first |
+| `make gateway-up-vllm` / `vllm-down` | Put `embed` and `rerank` on vLLM (CPU image, `BAAI/bge-small-en-v1.5` and `cross-encoder/ms-marco-MiniLM-L-6-v2`) behind the gateway, config `deploy/model-gateway/aigw-vllm.yaml`; the other classes stay on the stub. Tests the self-hosted contract (LLD OQ-93). Measured at about 2.6 GB for the two containers, so stop Ollama first on a 4 GB Docker VM; `vllm-down` returns the gateway to the stub |
 | `make chat-up` / `chat-down` | Start / stop Open WebUI (`ghcr.io/open-webui/open-webui:v0.6.43`) wired to the gateway; needs `gateway-up`; the first pull is several GB |
 | `make test-gateway` | Our gateway client against that gateway: contract tests (needs `gateway-up`) |
 | `make schema-validate` | `extract-schemas`, then validate `schemas/events/` with `platform-schemagov` (Docker) |

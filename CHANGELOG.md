@@ -8,6 +8,7 @@ This service has never been deployed to any environment — there is no released
 
 ### Changed
 
+- `make gateway-up-vllm`: `embed` and `rerank` on vLLM (CPU image, small models) behind Agent Router, config `deploy/model-gateway/aigw-vllm.yaml`. First run of the LLD OQ-93 self-hosted check: our `HttpModelGateway` embeds (384 dimensions) and reranks through it with no code change. vLLM's cross-encoder returns raw logits, not 0 to 1; the profile sufficiency thresholds must match the production reranker's scale. `/tokenize`, Bedrock, quota and fail-closed are still untested
 - `Settings.migration_dsn` raises `ConfigError` when `*_MIGRATION_DATABASE_URL` is empty outside `local` / `dev` / `test` (the application DSN is PgBouncer's and the migration lock is session-scoped); *Connection budget* section in `ARCHITECTURE.md`; chart comments now say the sweeps refuse to start without their DSNs
 - Release hardening: every action in `release.yml` pinned to a commit SHA; `.github/dependabot.yml` (pip, github-actions, docker; weekly); scheduled `vuln-scan.yml`; `.github/scripts/image-boot-check.sh` (migrate, start, `/ready` = 200 against Postgres + PgBouncer) run by a CI `image-boot` job and by the release workflow before any push; uvicorn `--timeout-keep-alive 65 --timeout-graceful-shutdown 60` in the image
 - `/ready` now reflects the outbox relays (`install_probes` in `presentation/main.py`): 503 until every relay has polled once and whenever one has not completed a store round trip within `3 x OUTBOX_POLL_INTERVAL + 30 s`. `/live` and `/health` are unchanged

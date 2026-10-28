@@ -54,8 +54,8 @@ if helm_run template rel "$P" >/dev/null 2>&1; then
   exit 1
 fi
 echo "== dev-only services never reach a deployable"
-if grep -rniE 'ollama|open-webui|model-stub' deploy/helm Dockerfile .dockerignore 2>/dev/null | grep -viE '^\S+:[0-9]+:\s*#|^\.dockerignore'; then
-  echo "the chart or the Dockerfile references a dev-only service (Ollama, Open WebUI, the model stub)"
+if grep -rniE 'ollama|open-webui|model-stub|vllm' deploy/helm Dockerfile .dockerignore 2>/dev/null | grep -viE '^\S+:[0-9]+:\s*#|^\.dockerignore'; then
+  echo "the chart or the Dockerfile references a dev-only service (Ollama, vLLM, Open WebUI, the model stub)"
   exit 1
 fi
 echo "helm-check passed"

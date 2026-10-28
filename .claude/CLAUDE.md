@@ -48,6 +48,8 @@ make docker-down      # stop containers
 make events-peek      # print events waiting in the dev probe queue (does not consume)
 make gateway-up       # Agent Router (pinned image) + model stub, opt-in; :1975
 make gateway-down
+make gateway-up-vllm  # embed + rerank on vLLM (CPU) behind the gateway, to test the self-hosted contract
+make vllm-down        # stop vLLM, gateway back on the stub
 make test-gateway     # contract tests of our client against it (needs gateway-up)
 make vuln-check       # pip-audit on the locked deps
 make schema-validate  # platform-schemagov over schemas/events (Docker, linux/amd64)

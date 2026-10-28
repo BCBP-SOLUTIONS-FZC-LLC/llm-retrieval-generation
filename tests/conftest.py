@@ -13,6 +13,12 @@ def _ignore_dotenv(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(Settings.model_config, "env_file", None)
 
 
+@pytest.fixture(autouse=True)
+def _no_trace_export(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No OTLP exporter in tests: nothing listens on :4317, and its retries log at exit."""
+    monkeypatch.setenv("ENABLE_TRACING", "false")
+
+
 @pytest.fixture
 def settings() -> Settings:
     """Settings with tracing and metrics off, for tests that build the app."""
