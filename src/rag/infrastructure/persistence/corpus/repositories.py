@@ -1,4 +1,4 @@
-"""asyncpg implementations of the corpus repository ports.
+"""Corpus repository ports over the ``pgcommon`` transaction.
 
 Every method takes the transaction-bound connection ``pgcommon.run_in_tx`` hands the use case,
 so RLS (the tenant GUC bound for that transaction) applies to each statement. Statements that
@@ -12,8 +12,6 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 from uuid import UUID
-
-import asyncpg  # type: ignore[import-untyped]
 
 from rag.domain.corpus.collection import Collection
 from rag.domain.corpus.grant import CollectionGrant
@@ -35,6 +33,23 @@ _COLLECTION = (
     "migration_id, record_version, created_at, updated_at"
 )
 _LOCK = " FOR UPDATE"
+
+
+class CollectionSlotConflict(Exception):  # noqa: N818 - named for the conflict, like the DB error
+    """Another row holds this tender's slot under a different id (``uq_coll_tender``, COL-9).
+
+    ``INSERT ... ON CONFLICT DO NOTHING`` swallows every unique violation, so a conflict that is
+    not the concurrent first-document race on the derived id is raised here. It carries what
+    Postgres' own error would (``sqlstate`` 23505 and the constraint name), which is exactly what
+    ``pgcommon.is_unique_violation`` and ``pgcommon.constraint_name`` read, so callers classify it
+    the same way and this layer never imports a database driver.
+    """
+
+    sqlstate = "23505"
+    constraint_name = "uq_coll_tender"
+
+    def __init__(self) -> None:
+        super().__init__(self.constraint_name)
 
 
 def _count(status: str) -> int:
@@ -164,7 +179,7 @@ class PgCollectionRepository:
         ):
             # Another row holds this tender's slot under a different id (uq_coll_tender): not a race
             # on the derived key, so it is a real conflict (COL-9).
-            raise asyncpg.UniqueViolationError("uq_coll_tender")
+            raise CollectionSlotConflict
         return inserted is not None
 
     async def update(self, tx: Any, collection: Collection, expected_version: int) -> int | None:

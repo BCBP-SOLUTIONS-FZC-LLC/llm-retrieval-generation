@@ -13,10 +13,11 @@ import asyncio
 from pathlib import Path
 
 from eventcommon.outbox import apply_schema
-from pgcommon import Config, Pool, StructlogLogger
+from pgcommon import Pool, StructlogLogger
 from pgcommon.migrate import Runner
 
 from rag.infrastructure.config import Settings
+from rag.infrastructure.persistence.pools import pool_config
 
 INSTANCES = ("corpus", "generation")
 _REPO_MIGRATIONS = Path(__file__).resolve().parents[4] / "migrations"
@@ -40,12 +41,15 @@ async def migrate_instance(settings: Settings, instance: str) -> None:
 
 async def _apply_outbox(settings: Settings, instance: str) -> None:
     pool = await Pool.create(
-        Config(
-            dsn=settings.migration_dsn(instance),
+        # direct to Postgres (the library's advisory lock is session-scoped): no PgBouncer, no GUC
+        pool_config(
+            settings.migration_dsn(instance),
+            "migrate",
+            settings,
             max_conns=1,
             min_conns=1,
-            pool_name="migrate",
-            logger=StructlogLogger(),
+            guc=False,
+            pgbouncer=False,
         )
     )
     try:

@@ -106,6 +106,35 @@ services:
       floci:
         condition: service_healthy
 
+  # --- opt-in: `make gateway-up` (docker compose --profile gateway) --------------------------
+  # The model gateway (Agent Router, formerly Envoy AI Gateway) in standalone mode, in front of a
+  # model stub. Pinned to a release tag: `latest` is a development build.
+  model-stub:
+    profiles: ["gateway"]
+    build: ./scripts/model-stub
+    environment:
+      GATEWAY_URL: http://agent-router:1975   # the console (/console) sends its requests through it
+    ports:
+      - "8090:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  agent-router:
+    profiles: ["gateway"]
+    image: envoyproxy/ai-gateway-cli:v1.2.0
+    command: ["run", "/config/aigw.yaml"]
+    ports:
+      - "1975:1975"   # the gateway; point GATEWAY_BASE_URL at http://localhost:1975
+      - "1064:1064"   # admin: /health, /metrics
+    volumes:
+      - ./deploy/model-gateway/aigw.yaml:/config/aigw.yaml:ro
+    depends_on:
+      model-stub:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   qdrant_data:

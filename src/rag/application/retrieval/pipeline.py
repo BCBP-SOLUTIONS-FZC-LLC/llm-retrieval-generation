@@ -119,7 +119,9 @@ class RetrievalPipeline:
                 if exc.code is ErrorCode.COLLECTION_NOT_FOUND:
                     obs.scope_empty()
                 raise
-        ctx = GatewayContext(identity.plan, identity.residency_mode.value)
+        ctx = GatewayContext(
+            identity.plan, identity.residency_mode.value, tenant_id=identity.tenant_id
+        )
         async with obs.stage("pack"):
             bundle, markers = await resolve_or_default(
                 self._packs,

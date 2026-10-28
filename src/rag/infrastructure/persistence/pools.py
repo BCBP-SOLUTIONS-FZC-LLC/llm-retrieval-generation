@@ -2,14 +2,35 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator
 from contextlib import AbstractContextManager, contextmanager
+from dataclasses import replace
 from uuid import UUID
 
 from fastapicommon.context import get_request_context_or_none
-from pgcommon import Config, GUCSet, Pool, StructlogLogger, guc_set_from_context, with_guc_set
+from fastapicommon.logging import get_logger
+from pgcommon import (
+    Config,
+    ConfigWarning,
+    GUCSet,
+    Pool,
+    StructlogLogger,
+    config_from_env,
+    guc_set_from_context,
+    with_guc_set,
+)
 
 from rag.infrastructure.config import Settings
+
+log = get_logger(__name__)
+
+# ``config_from_env`` also assembles a DSN from DATABASE_URL / PG_HOST / PG_USER ...; ours come
+# from Settings (two databases, their own variable names), so warnings about those are noise.
+_DSN_WARNING_KEYS = frozenset(
+    {"DATABASE_URL", "PG_USER/PG_DBNAME", "PG_HOST", "PG_PORT", "PG_PASSWORD", "PG_SSLMODE"}
+)
+_warned: set[tuple[str, str]] = set()
 
 
 def request_guc_provider() -> GUCSet | None:
@@ -31,14 +52,48 @@ def request_guc_provider() -> GUCSet | None:
     )
 
 
-def pool_config(dsn: str, name: str, settings: Settings) -> Config:
-    """``pgcommon.Config`` for one instance: PgBouncer mode on, request GUC provider set."""
-    return Config(
+def _log_warnings_once(warnings: list[ConfigWarning]) -> None:
+    """The library asks for every warning to be logged at startup, once (a typo'd tuning value)."""
+    for w in warnings:
+        if w.key in _DSN_WARNING_KEYS or (w.key, w.reason) in _warned:
+            continue
+        _warned.add((w.key, w.reason))
+        log.warning("pgcommon_config_warning", key=w.key, reason=w.reason)
+
+
+def pool_config(
+    dsn: str,
+    name: str,
+    settings: Settings,
+    *,
+    max_conns: int | None = None,
+    min_conns: int | None = None,
+    guc: bool = True,
+    pgbouncer: bool = True,
+) -> Config:
+    """The ``pgcommon.Config`` of every pool this service opens; nothing else builds one.
+
+    Tuning (``PG_STATEMENT_TIMEOUT``, ``PG_LOCK_TIMEOUT``, ``PG_ACQUIRE_TIMEOUT``,
+    ``PG_SLOW_QUERY_THRESHOLD``, ``PG_MAX_CONN_LIFETIME`` and the rest of the library's ``PG_*``
+    variables) is parsed and validated by ``pgcommon.config_from_env``, which replaces a bad value
+    with a safe default and a warning, logged once. What stays ours, because it is a security or
+    topology decision and not tuning: the DSN (two databases, their own variable names), the pool
+    name and size (``PG_MAX_CONNS`` must equal PgBouncer's pool size, so a typo fails at startup
+    instead of becoming a default), PgBouncer mode (read leniently by the library, asserted as
+    exactly ``true`` by ``assert_isolation_config``) and the tenant GUC provider.
+    """
+    base, warnings = config_from_env()
+    _log_warnings_once(warnings)
+    return replace(
+        base,
         dsn=dsn,
-        max_conns=settings.pg_max_conns,
-        pgbouncer_mode=True,
-        guc_provider=request_guc_provider,
         pool_name=name,
+        max_conns=max_conns if max_conns is not None else settings.pg_max_conns,
+        min_conns=min_conns
+        if min_conns is not None
+        else (base.min_conns if "PG_MIN_CONNS" in os.environ else None),
+        pgbouncer_mode=pgbouncer,
+        guc_provider=request_guc_provider if guc else None,
         logger=StructlogLogger(),
     )
 

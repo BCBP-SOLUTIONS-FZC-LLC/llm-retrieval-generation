@@ -16,7 +16,6 @@ dependency exists yet, so they are not faked.
 from __future__ import annotations
 
 import hashlib
-import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -24,7 +23,8 @@ from uuid import UUID
 
 from eventcommon.inbox import Store
 from eventcommon.outbox import PostgresStore
-from pgcommon import Config, Pool, StructlogLogger, run_in_tx
+from fastapicommon.logging import get_logger
+from pgcommon import Pool, run_in_tx
 
 from rag.application.corpus.lifecycle import PurgeTenantCorpus
 from rag.application.corpus.ports import CorpusRepositories
@@ -47,13 +47,13 @@ from rag.infrastructure.persistence.generation.repositories import (
     PgArtefactPurgeRepository,
     PgAuditChainRepository,
 )
-from rag.infrastructure.persistence.pools import bind_tenant_scope, request_guc_provider
+from rag.infrastructure.persistence.pools import bind_tenant_scope, pool_config
 from rag.infrastructure.persistence.transactions import PgTransactionRunner
 from rag.infrastructure.storage.artefact_content_store import S3ArtefactContentStore
 from rag.infrastructure.sweeps.directory import PgTenantDirectory
 from rag.infrastructure.temporal.factory import build_orphan_restarter
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 CORPUS_SWEEPS = frozenset({s.TENANT_PURGE, s.STALLED_PROMOTIONS})
 NAMES = (
@@ -101,14 +101,7 @@ async def open_pools(settings: Settings) -> Pools:
 
     async def pool(dsn: str, name: str, guc: bool) -> Pool:
         return await Pool.create(
-            Config(
-                dsn=dsn,
-                max_conns=settings.sweep_pool_max_conns,
-                pgbouncer_mode=True,
-                guc_provider=request_guc_provider if guc else None,
-                pool_name=name,
-                logger=StructlogLogger(),
-            )
+            pool_config(dsn, name, settings, max_conns=settings.sweep_pool_max_conns, guc=guc)
         )
 
     return Pools(
@@ -253,7 +246,7 @@ async def run_sweep(settings: Settings, name: str, pools: Pools | None = None) -
         sweep = build_sweep(settings, pools, name)
         pool = pools.corpus if name in CORPUS_SWEEPS else pools.generation
         outcome = await run_exclusive(pool, name, sweep)
-        log.info("sweep %s: %s", name, outcome)
+        log.info("sweep_finished", sweep=name, outcome=str(outcome))
         return outcome
     finally:
         if own:

@@ -18,7 +18,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 from eventcommon.outbox import apply_schema
-from pgcommon import Config, Pool
+from pgcommon import Config, Pool, constraint_name, is_unique_violation
 from pgcommon.migrate import Runner
 from tests.support_corpus import NOW, TENANT, TENDER, USER
 
@@ -35,6 +35,7 @@ from rag.domain.shared.enums import CollectionStatus as C
 from rag.domain.shared.enums import IndexGenerationStatus as G
 from rag.infrastructure.events.publisher import OutboxEventPublisher
 from rag.infrastructure.persistence.corpus.repositories import (
+    CollectionSlotConflict,
     PgCollectionRepository,
     PgGrantRepository,
     PgIndexGenerationRepository,
@@ -336,14 +337,18 @@ async def test_promotion_rows_and_the_unique_indexes(dsn: str) -> None:
     async def dup(tx: Any) -> None:
         await REPOS.collections.insert(tx, other_target)
 
-    with pytest.raises(asyncpg.UniqueViolationError):  # uq_coll_tender
+    with pytest.raises(CollectionSlotConflict) as slot:  # uq_coll_tender
         await app(dsn).run_in_tx(dup)
+    # raised by the repository (ON CONFLICT DO NOTHING hid the database's own error), and
+    # classified by pgcommon exactly like the real one
+    assert is_unique_violation(slot.value) and constraint_name(slot.value) == "uq_coll_tender"
 
     async def two_active(tx: Any) -> None:
         await REPOS.collections.update(tx, replace(tgt, status=C.ACTIVE), 1)
 
-    with pytest.raises(asyncpg.UniqueViolationError):  # uq_coll_active: supersede first
-        await app(dsn).run_in_tx(two_active)
+    with pytest.raises(Exception) as active:  # noqa: B017 - the real database error, below
+        await app(dsn).run_in_tx(two_active)  # uq_coll_active: supersede first
+    assert is_unique_violation(active.value) and constraint_name(active.value) == "uq_coll_active"
 
 
 async def test_generation_transition_trigger(dsn: str) -> None:

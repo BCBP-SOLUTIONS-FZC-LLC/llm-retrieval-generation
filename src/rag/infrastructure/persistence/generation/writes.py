@@ -71,7 +71,7 @@ def _run(r: Any) -> GenerationRun:
 
 
 class PgGenerationWriteRepository:
-    """``GenerationWriteRepository`` over asyncpg."""
+    """``GenerationWriteRepository`` over the ``pgcommon`` transaction."""
 
     async def find_run_by_key(
         self, tx: Conn, tenant_id: UUID, principal_id: UUID, key: str

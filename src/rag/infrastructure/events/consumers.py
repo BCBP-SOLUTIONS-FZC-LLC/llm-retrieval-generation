@@ -21,7 +21,6 @@ configured receive count).
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
@@ -31,6 +30,7 @@ from eventcommon import Envelope
 from eventcommon.consumer import DLQPublisher, forward_source_message
 from eventcommon.inbox import Store
 from eventcommon.inbox import handler as ledger_handler
+from fastapicommon.logging import get_logger
 
 from rag.application.corpus.lifecycle import (
     ApplyTenantState,
@@ -50,7 +50,7 @@ from rag.application.events.ports import LedgerTx
 from rag.infrastructure.events.schemas import parse_consumed
 from rag.infrastructure.persistence.pools import bind_tenant_scope
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 Handler = Callable[[Envelope[Any]], Awaitable[None]]
 
@@ -169,7 +169,11 @@ def tenant_offboarding(svc: ConsumerServices, store: Store) -> Handler:
         tenant = tenant_of(env, p.tenant_id)
         with bind_tenant_scope(tenant):
             await svc.offboard_tenant.execute(tenant, "TenantMembershipsPurged")
-        log.error("ALERT tenant %s offboarding phase one applied (event %s)", tenant, env.id)
+        log.error(
+            "ALERT tenant_offboarding_phase_one_applied",
+            tenant_id=str(tenant),
+            event_id=str(env.id),
+        )
 
     return ledger_handler(store, handle)
 
@@ -226,7 +230,7 @@ def quota_resume(svc: ConsumerServices, store: Store) -> Handler:
 
 
 def _ignore(env: Envelope[Any]) -> None:
-    log.info("ignoring event type %s on this queue (id %s)", env.type, env.id)
+    log.info("ignoring_event_type_on_queue", event_type=env.type, event_id=str(env.id))
 
 
 def poison_safe(handler: Handler, dlq: DLQPublisher) -> Handler:
@@ -236,7 +240,9 @@ def poison_safe(handler: Handler, dlq: DLQPublisher) -> Handler:
         try:
             await handler(env)
         except (Poison, ForgedEvent) as exc:
-            log.error("poison %s %s: %s", env.type, env.id, exc)
+            log.error(
+                "poison_event", event_type=env.type, event_id=str(env.id), error=type(exc).__name__
+            )
             await forward_source_message(dlq, f"poison: {exc}"[:256])
 
     return guarded

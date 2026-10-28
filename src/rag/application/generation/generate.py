@@ -13,12 +13,13 @@ tenant itself (LD-23): nothing in it reads request-scoped state.
 from __future__ import annotations
 
 import asyncio
-import logging
 import re
 import time
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from dataclasses import dataclass, replace
 from uuid import UUID
+
+from fastapicommon.logging import get_logger
 
 from rag.application.generation.flow import (
     AdmissionRequest,
@@ -95,7 +96,7 @@ from rag.domain.shared.errors import DomainError, ErrorCode
 from rag.domain.shared.identity import RequestIdentity
 from rag.domain.verification.tiers import EvidenceChunk
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 _MARKER = re.compile(r"\[(c-\d+(?:\s*,\s*c-\d+)*)\]")
 ANSWER_CAPABILITY = "answer"
 
@@ -482,7 +483,9 @@ class ShortFormEngine:
             # §13.1: layer 3 and layer 5 share the user allocation; over it is 413, never trimmed
             counts = await self._tokens.count(
                 [spec.user_prompt, user_ctx.text],
-                ctx=GatewayContext(a.identity.plan, a.identity.residency_mode.value),
+                ctx=GatewayContext(
+                    a.identity.plan, a.identity.residency_mode.value, tenant_id=a.identity.tenant_id
+                ),
             )
             plan_budget(
                 self._cfg.window_tokens,
@@ -518,6 +521,7 @@ class ShortFormEngine:
             a.identity.plan,
             a.identity.residency_mode.value,
             user_ctx.preferred_model if user_ctx else None,
+            a.identity.tenant_id,
         )
         evidence = [EvidenceChunk(c.chunk_id, c.text) for c in outcome.chunks]
         return _Plan(composed, ctx, evidence, tuple(merge_markers(markers)))
@@ -717,7 +721,7 @@ class _Producer:
             if await self._probe():
                 self.handle.disconnected = True
         except Exception as exc:  # noqa: BLE001 - an unreadable connection is not a verdict
-            log.warning("disconnect_probe_failed error=%s", type(exc).__name__)
+            log.warning("disconnect_probe_failed", error=type(exc).__name__)
 
     async def _fail(self, exc: BaseException) -> None:
         """Close the run, then report: HTTP before byte one, the ``error`` frame after (API-6)."""
@@ -729,7 +733,7 @@ class _Producer:
             else:
                 await asyncio.shield(e._lifecycle.cancel(a, reason.value))
         except Exception as close_error:  # noqa: BLE001 - the sweep reaps it (§21.2)
-            log.warning("run_close_failed error=%s", type(close_error).__name__)
+            log.warning("run_close_failed", error=type(close_error).__name__)
         if self._committed or self._first.done():
             if not self._first.done():
                 self._first.set_result(None)

@@ -7,10 +7,11 @@ progress and failure events, and the signal.
 from __future__ import annotations
 
 import copy
-import logging
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
+
+from fastapicommon.logging import get_logger
 
 from rag.application.events.contracts import (
     GenerationCancelled,
@@ -45,7 +46,7 @@ from rag.domain.shared.errors import DomainError, ErrorCode
 from rag.domain.shared.identity import RequestIdentity
 from rag.domain.workflows.repositories import RunRepository
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def not_found() -> DomainError:

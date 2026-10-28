@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
-import logging
 from typing import Any
 from uuid import UUID
 
@@ -14,10 +13,11 @@ from botocore.exceptions import (  # type: ignore[import-untyped]
     BotoCoreError,
     ClientError,
 )
+from fastapicommon.logging import get_logger
 
 from rag.domain.shared.errors import DomainError, ErrorCode
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 _DELETE_BATCH = 1000
 
@@ -76,13 +76,13 @@ class S3ArtefactContentStore:
     async def get(self, tenant_id: UUID, content_ref: str) -> bytes:
         """Read ``content_ref``, refusing any key outside the tenant's prefix."""
         if not content_ref.startswith(tenant_prefix(tenant_id)):
-            log.error("content_ref outside the tenant prefix")
+            log.error("content_ref_outside_tenant_prefix")
             raise _unavailable()
         try:
             obj = await asyncio.to_thread(self._s3.get_object, Bucket=self._bucket, Key=content_ref)
             data: bytes = await asyncio.to_thread(obj["Body"].read)
         except (ClientError, BotoCoreError) as exc:
-            log.error("artefact content read failed: %s", type(exc).__name__)
+            log.error("artefact_content_read_failed", error=type(exc).__name__)
             raise _unavailable() from exc
         return data
 

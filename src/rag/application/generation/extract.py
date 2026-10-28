@@ -11,11 +11,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import time
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
+
+from fastapicommon.logging import get_logger
 
 from rag.application.generation.flow import (
     AdmissionRequest,
@@ -67,7 +68,7 @@ from rag.domain.verification.completeness import Completeness
 from rag.domain.verification.scoring import combined_verdict, derive_score_and_tier
 from rag.domain.verification.tiers import value_in_text
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 EXTRACT_CAPABILITY = "extract"
 INSUFFICIENT = "insufficient_evidence"
 
@@ -320,7 +321,9 @@ class ExtractStructured:
         d: _Dispatch,
         began: float,
     ) -> ExtractionOutcome:
-        ctx = GatewayContext(a.identity.plan, a.identity.residency_mode.value)
+        ctx = GatewayContext(
+            a.identity.plan, a.identity.residency_mode.value, tenant_id=a.identity.tenant_id
+        )
         await self._lifecycle.start(a)
         try:
             done = await self._gw.complete(
@@ -363,7 +366,7 @@ class ExtractStructured:
             try:
                 await asyncio.shield(self._lifecycle.fail(a, reason))
             except Exception:  # noqa: BLE001 - the stalled-generation sweep reaps it (§21.2)
-                log.warning("extraction run could not be closed")
+                log.warning("extraction_run_close_failed")
             if problem is not None and problem is not exc:
                 raise problem from exc
             raise
@@ -387,7 +390,7 @@ class ExtractStructured:
             key = self._store.diagnostic_key(tenant, a.artefact.id, f"{a.run.id}-raw.json")
             await self._store.put(tenant, key, raw.encode())
         except Exception:  # noqa: BLE001 - diagnostics are best effort; the 422 stands
-            log.warning("raw extraction output could not be retained")
+            log.warning("raw_extraction_output_not_retained")
 
     async def _replay(self, rep: Replayed) -> ExtractionOutcome:
         """The stored extraction, read back (§5.7.2)."""

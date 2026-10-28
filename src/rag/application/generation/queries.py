@@ -8,9 +8,10 @@ authorizes nothing. The artefact is read first in its own short transaction beca
 from __future__ import annotations
 
 import hashlib
-import logging
 from dataclasses import dataclass
 from uuid import UUID
+
+from fastapicommon.logging import get_logger
 
 from rag.application.generation.dtos import (
     ArtefactDTO,
@@ -38,7 +39,7 @@ from rag.domain.shared.enums import GrantLevel
 from rag.domain.shared.errors import DomainError, ErrorCode
 from rag.domain.shared.identity import RequestIdentity
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 CONTENT_TYPE = "text/markdown"
 
@@ -176,9 +177,7 @@ class GetSectionVersionContent:
         sv = record.section_version
         data = await self.store.get(sv.tenant_id, sv.content_ref)
         if hashlib.sha256(data).digest() != sv.content_sha256:
-            log.error(
-                "section version content digest mismatch", extra={"section_version": str(sv.id)}
-            )
+            log.error("section_version_content_digest_mismatch", section_version=str(sv.id))
             raise DomainError(
                 ErrorCode.ARTEFACT_CONTENT_UNAVAILABLE, "The section content is unavailable."
             )

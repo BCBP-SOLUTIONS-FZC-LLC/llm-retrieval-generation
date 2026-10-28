@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from uuid import UUID
+
+from fastapicommon.logging import get_logger
 
 from rag.application.generation.ports import ArtefactContentStore
 from rag.application.shared.ports import TransactionRunner, TxHandle
@@ -19,7 +20,7 @@ from rag.domain.generation.repositories import (
 )
 from rag.domain.shared.enums import AuditActorType
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,7 +120,7 @@ class PurgeArtefacts:
                 for artefact_id in ids:
                     deleted += await self.store.delete_prefix(tenant_id, artefact_id)
         except Exception:  # noqa: BLE001 - the sweep reclaims; the DB erasure already committed
-            log.exception("S3 delete after purge failed; the orphan sweep will remove the objects")
+            log.exception("s3_delete_after_purge_failed")  # the orphan sweep removes the objects
             failed = True
         return PurgeResult(tuple(ids), deleted, failed)
 

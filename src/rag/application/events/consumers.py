@@ -9,10 +9,11 @@ directly.
 from __future__ import annotations
 
 import asyncio
-import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from uuid import UUID
+
+from fastapicommon.logging import get_logger
 
 from rag.application.corpus.generations import BumpPurgeEpoch
 from rag.application.corpus.lifecycle import BeginTenderPurge, CloseTender
@@ -40,7 +41,7 @@ from rag.domain.generation.repositories import RetrievalSetRepository
 from rag.domain.shared.enums import AuditActorType
 from rag.domain.shared.errors import DomainError, ErrorCode
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class ForgedEvent(Exception):
@@ -92,7 +93,7 @@ class ProjectDocumentPurge:
         try:
             await self.placement.evict(tenant_id, collection_id)
         except Exception:  # noqa: BLE001 - the purge epoch is the invalidation; this is a bonus
-            log.warning("placement cache eviction failed", exc_info=True)
+            log.warning("placement_cache_eviction_failed", exc_info=True)
 
         async def markers(tx: TxHandle) -> None:  # TX-2
             await self.sets.purge_for_document(

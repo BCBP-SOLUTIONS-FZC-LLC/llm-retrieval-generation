@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 import pytest
 from eventcommon import new_envelope
 from eventcommon.errors import BatchError, BatchFailure, RetryableError
 from eventcommon.mock import MockPublisher
+from tests.support_logs import RecordingLog
 
 from rag.application.events import contracts as c
 from rag.infrastructure.config import Settings
 from rag.infrastructure.events import relay
+from rag.infrastructure.events import routing as routing_module
 from rag.infrastructure.events.routing import RoutingPublisher
 
 
@@ -43,15 +44,17 @@ async def test_generation_types_route_to_the_generation_topic(type_: str) -> Non
 
 
 async def test_an_unknown_type_defaults_to_generation_with_a_warning_and_never_raises(
-    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A KeyError would dead-letter and delete the row; a wrong topic is recoverable."""
+    rec = RecordingLog()
+    monkeypatch.setattr(routing_module, "log", rec)
     r, gen, idx = router()
-    with caplog.at_level(logging.WARNING):
-        await r.publish(env("BrandNewThing"))
-        await r.publish_batch([env("AnotherNewThing")])
+    await r.publish(env("BrandNewThing"))
+    await r.publish_batch([env("AnotherNewThing")])
     assert len(gen.published) == 2 and idx.published == [] and r.unrouted == 2
-    assert "not registered" in caplog.text
+    warned = [f["event_type"] for f in rec.find("event_type_not_registered", "warning")]
+    assert warned == ["BrandNewThing", "AnotherNewThing"]
 
 
 async def test_a_mixed_batch_is_split_by_topic() -> None:

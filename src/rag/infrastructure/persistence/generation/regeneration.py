@@ -37,7 +37,7 @@ def _conflict(r: Any) -> FactConflict:
 
 
 class PgRegenerationRepository:
-    """``RegenerationRepository`` over asyncpg."""
+    """``RegenerationRepository`` over the ``pgcommon`` transaction."""
 
     async def get_section(
         self, tx: Conn, artefact_id: UUID, ref: str

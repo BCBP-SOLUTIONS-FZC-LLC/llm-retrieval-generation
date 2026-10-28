@@ -16,12 +16,13 @@ section's current version (the LLD does not say which).
 from __future__ import annotations
 
 import json
-import logging
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID, uuid4
+
+from fastapicommon.logging import get_logger
 
 from rag.application.events.contracts import (
     GenerationStarted,
@@ -89,7 +90,7 @@ from rag.domain.shared.identity import RequestIdentity
 from rag.domain.workflows.ids import regeneration_workflow_id
 from rag.domain.workflows.input import ScopeSeed, WorkflowInput
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 MAX_REVIEW_CONTEXT_CHARS = 8000
 
 
@@ -597,7 +598,9 @@ class RegenerateSection:
         if instruction is None:
             return None, None, None
         d = self._d
-        ctx = GatewayContext(identity.plan, identity.residency_mode.value)
+        ctx = GatewayContext(
+            identity.plan, identity.residency_mode.value, tenant_id=identity.tenant_id
+        )
         run = await self._refiner.refine(
             instruction=instruction,
             section_text=prior_text,

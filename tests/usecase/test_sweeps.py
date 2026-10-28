@@ -20,6 +20,7 @@ from tests.support_generation import (
     FixedClock,
     make_artefact,
 )
+from tests.support_logs import RecordingLog
 
 from rag.application.corpus.lifecycle import PurgeTenantCorpus
 from rag.application.generation.commands import AppendAuditEntry, PurgeArtefacts
@@ -300,14 +301,17 @@ async def test_checkpoints_use_their_own_age_floor() -> None:
 
 
 async def test_one_failing_tenant_is_counted_and_never_stops_the_others(
-    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    rec = RecordingLog()
+    monkeypatch.setattr(s, "log", rec)
     k = kit(TENANT, OTHER)
     repo = Repo(k["scope"])
     repo.boom = {TENANT}
     out = await s.ClearIdempotencyKeys(FakeTx(), repo, ttl_seconds=60, **common(k)).run()
     assert out.failed_tenants == 1 and out.affected == 3 and not out.ok
-    assert "failed for tenant" in caplog.text
+    [failure] = rec.find("sweep_failed_for_tenant", "error")
+    assert failure["tenant_id"] == str(TENANT)
 
 
 # --- audit chain verifier -----------------------------------------------------------------------
@@ -345,7 +349,7 @@ class Chains:
 
 
 async def test_the_verifier_is_quiet_on_an_intact_chain_and_alerts_on_the_first_break(
-    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """AC-2 / AC-3: a flipped hash and a deleted entry are both breaks; it pages, never repairs."""
     good, bad_hash, gap = (
@@ -355,12 +359,16 @@ async def test_the_verifier_is_quiet_on_an_intact_chain_and_alerts_on_the_first_
     )
     bad_hash[2] = replace(bad_hash[2], payload_hash=b"\x00" * 32)
     del gap[1]
+    rec = RecordingLog()
+    monkeypatch.setattr(s, "log", rec)
     k = kit(TENANT, OTHER, gap[0].draft.tenant_id)
     chains = Chains(k["scope"], {TENANT: good, OTHER: bad_hash, gap[0].draft.tenant_id: gap})
     out = await s.VerifyAuditChains(FakeTx(), chains, **common(k)).run()  # type: ignore[arg-type]
     assert len(out.alerts) == 2 and not out.ok and "seq 3" in out.alerts[0]
     assert "seq 3" in out.alerts[1]  # the gap shows at the first entry after the deleted one
-    assert "ALERT" in caplog.text
+    alerts = rec.find("ALERT audit_chain_break", "error")
+    assert [a["seq"] for a in alerts] == [3, 3]
+    assert {a["tenant_id"] for a in alerts} == {str(OTHER), str(gap[0].draft.tenant_id)}
     # a second run does not accumulate the first run's alerts
     k2 = kit(TENANT)
     sweep = s.VerifyAuditChains(FakeTx(), Chains(k2["scope"], {TENANT: good}), **common(k2))  # type: ignore[arg-type]
@@ -562,8 +570,8 @@ async def test_the_cli_rejects_an_unknown_sweep_and_the_runner_requires_enumerat
     with pytest.raises(RuntimeError, match="at least 2"):
         await open_pools(
             Settings(
-                corpus_sweep_database_url="x",
-                generation_sweep_database_url="y",
+                corpus_sweep_database_url="postgresql://sweeper@h/llm_corpus",
+                generation_sweep_database_url="postgresql://sweeper@h/llm_generation",
                 sweep_pool_max_conns=1,
             )
         )

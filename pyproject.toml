@@ -38,11 +38,12 @@ packages = ["src/rag"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-addopts = "-m 'not integration and not e2e'"
+addopts = "-m 'not integration and not e2e and not gateway'"
 filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`"]
 markers = [
     "integration: needs Docker (testcontainers); skipped by default, run with `make test-integration`",
     "e2e: real app over real Postgres (testcontainers); skipped by default, run with `make test-e2e`",
+    "gateway: our client against the real gateway image + model stub; skipped by default, run with `make test-gateway`",
 ]
 
 [tool.ruff]

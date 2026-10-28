@@ -8,8 +8,9 @@ principal who has no request, so the principal is re-read from IAM (ASYNC-11).
 
 from __future__ import annotations
 
-import logging
 from typing import Any
+
+from fastapicommon.logging import get_logger
 
 from rag.application.events.ports import SuspendedRun
 from rag.application.shared.ports import TransactionRunner, TxHandle
@@ -26,7 +27,7 @@ from rag.domain.shared.errors import DomainError, ErrorCode
 from rag.domain.workflows import gate
 from rag.domain.workflows.repositories import RunRepository
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 SKIPPED = frozenset(
     {
         ErrorCode.WORKFLOW_STATE_CONFLICT,  # no longer suspended: someone else resumed it
@@ -122,4 +123,4 @@ class QuotaRunResumer:
         except DomainError as exc:
             if exc.code not in SKIPPED:
                 raise
-            log.info("quota_resume_skipped code=%s", exc.code.value)
+            log.info("quota_resume_skipped", code=exc.code.value)

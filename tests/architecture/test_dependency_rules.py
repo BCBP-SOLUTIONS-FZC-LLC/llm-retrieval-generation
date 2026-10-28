@@ -11,6 +11,9 @@ SRC = Path(__file__).resolve().parents[2] / "src"
 STDLIB = set(sys.stdlib_module_names)
 MODULES = {"corpus", "retrieval", "generation", "verification", "workflows", "packs", "corpusscope"}
 VENDORED_THIRD_PARTY = {"pydantic", "qdrant_client"}
+# The one platform library the application layer may import: every log line goes through it
+# (get_logger), so the layer cannot use stdlib logging. Metrics and tracing stay in infrastructure.
+APPLICATION_PLATFORM_IMPORTS = ("fastapicommon.logging",)
 HTTP_CLIENTS = {"httpx", "requests", "aiohttp", "urllib3", "fastapicommon.propagation"}
 HTTP_CLIENT_HOMES = (
     "rag.infrastructure.gateway",
@@ -78,8 +81,12 @@ def allowed_layer_import(layer: str, target: str) -> bool:
     top = target.split(".")[0]
     if layer == "domain":  # stdlib + domain only
         return top in STDLIB or under(target, "rag.domain")
-    if layer == "application":  # stdlib + domain + application only
-        return top in STDLIB or under(target, ("rag.domain", "rag.application"))
+    if layer == "application":  # stdlib + domain + application, plus the platform logger
+        return (
+            top in STDLIB
+            or under(target, ("rag.domain", "rag.application"))
+            or under(target, APPLICATION_PLATFORM_IMPORTS)
+        )
     if layer == "infrastructure":  # anything but the outer layer
         return not under(target, "rag.presentation")
     if layer == "corpusscope":  # vendored: stdlib, pydantic, qdrant_client and itself only

@@ -1,0 +1,152 @@
+# Agent Router (formerly Envoy AI Gateway) in standalone mode, for local development and the
+# gateway contract tests: `make gateway-up`. The format is the project's own (Kubernetes-style
+# resources read by `aigw run`); the production route configuration is a separate piece of work
+# (LD-69, OQ-92) and will use the same resources.
+#
+# Routing is by the task class, the "model" in the request body, which the gateway copies into
+# the x-ai-eg-model header. Behind it is the model stub (scripts/model-stub), not a model.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: aigw-run
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: aigw-run
+  namespace: default
+spec:
+  gatewayClassName: aigw-run
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 1975
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: envoy-ai-gateway
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: envoy-ai-gateway
+  namespace: default
+spec:
+  logging:
+    level:
+      default: error
+  telemetry:
+    accessLog:
+      settings:
+        - matches:
+            - "request.headers['x-ai-eg-model'] != ''"
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
+          format:
+            type: JSON
+            json:
+              gen_ai.request.model: "%REQ(X-AI-EG-MODEL)%"
+              gen_ai.usage.input_tokens: "%DYNAMIC_METADATA(io.envoy.ai_gateway:llm_input_token)%"
+              gen_ai.usage.output_tokens: "%DYNAMIC_METADATA(io.envoy.ai_gateway:llm_output_token)%"
+              request.path: "%REQ(:PATH)%"
+              response_code: "%RESPONSE_CODE%"
+              duration: "%DURATION%"
+              x-tenant-id: "%REQ(X-TENANT-ID)%"
+              x-residency-mode: "%REQ(X-RESIDENCY-MODE)%"
+              upstream_host: "%UPSTREAM_HOST%"
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: aigw-run
+  namespace: default
+spec:
+  parentRefs:
+    - name: aigw-run
+      kind: Gateway
+      group: gateway.networking.k8s.io
+  rules:
+    # chat-shaped and embedding task classes: the OpenAI schema
+    - matches:
+        - headers:
+            - type: RegularExpression
+              name: x-ai-eg-model
+              value: ^(embed|draft|judge|extract|refine-query|refine-instruction)$
+      backendRefs:
+        - name: stub-openai
+      timeouts:
+        request: 120s
+    # rerank: Cohere's v2 API is the only rerank schema the gateway speaks
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: rerank
+      backendRefs:
+        - name: stub-cohere
+      timeouts:
+        request: 30s
+  llmRequestCosts:
+    - metadataKey: llm_input_token
+      type: InputToken
+    - metadataKey: llm_output_token
+      type: OutputToken
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: model-stub
+  namespace: default
+spec:
+  endpoints:
+    - fqdn:
+        hostname: model-stub
+        port: 8000
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: stub-openai
+  namespace: default
+spec:
+  schema:
+    name: OpenAI
+  backendRef:
+    name: model-stub
+    kind: Backend
+    group: gateway.envoyproxy.io
+    namespace: default
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: stub-cohere
+  namespace: default
+spec:
+  schema:
+    name: Cohere
+    version: v2
+  backendRef:
+    name: model-stub
+    kind: Backend
+    group: gateway.envoyproxy.io
+    namespace: default
+---
+# Envoy Gateway's default buffer limit (32 KiB) is too small for AI payloads.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-buffer-limit
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: aigw-run
+  connection:
+    bufferLimit: 50Mi

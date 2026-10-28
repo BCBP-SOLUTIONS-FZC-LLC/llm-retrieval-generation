@@ -32,7 +32,7 @@ Provide a clear description of the changes.
 
 ### Event Schemas
 *Complete only when `schemas/events/` changed.*
-- [ ] `"additionalProperties": false` set on every modified or new schema
+- [ ] Schemas regenerated with `make swag` (never hand-edited); every object keeps additional properties allowed (LD-65)
 - [ ] Consumers updated before the producer emits the change
 - [ ] No semantic drift in existing fields (range, units, encoding, meaning)
 

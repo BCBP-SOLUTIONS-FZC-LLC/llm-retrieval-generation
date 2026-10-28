@@ -69,16 +69,7 @@ jobs:
       # inside a transaction. A session-scoped SET leaks across pooled PgBouncer
       # backends — the cross-tenant breach RLS-6 exists to prevent.
       - name: Reject non-LOCAL SET app.tenant_id (RLS-6)
-        run: |
-          hits=$(grep -REn '\bSET[[:space:]]+("?app\.tenant_id"?)[[:space:]]*=' \
-                   --include='*.py' --include='*.sql' \
-                   src/ migrations/ | grep -v 'SET LOCAL' | grep -v 'set_config' || true)
-          if [ -n "$hits" ]; then
-            echo "::error::Non-LOCAL SET app.tenant_id detected (RLS-6). Use SET LOCAL inside a transaction."
-            echo "$hits"
-            exit 1
-          fi
-          echo "RLS-6 non-LOCAL SET check passed."
+        run: make rls-check
 
       - name: Format check
         run: make fmt-check

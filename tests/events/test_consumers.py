@@ -3,7 +3,6 @@ redelivery, unknown types, poison -> DLQ."""
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
 from typing import Any
 from uuid import UUID, uuid4
@@ -14,6 +13,7 @@ from pgcommon import guc_set_from_context
 from tests.support_corpus import OTHER_TENANT, TENANT, TENDER
 from tests.support_events import Bench, FakeLedger, FakeRuns, envelope, view
 from tests.support_generation import make_artefact as _make_artefact
+from tests.support_logs import RecordingLog
 
 from rag.application.events import contracts as c
 from rag.application.events.ports import SuspendedRun
@@ -123,12 +123,15 @@ async def test_a_payload_tenant_that_disagrees_with_the_envelope_is_poison() -> 
 
 # --- unknown, malformed ---------------------------------------------------------------------
 async def test_an_unknown_type_is_acked_and_logged_not_dead_lettered(
-    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    rec = RecordingLog()
+    monkeypatch.setattr(h, "log", rec)
     rig = Rig(Bench(), h.tenant_state)
-    with caplog.at_level(logging.INFO):
-        await rig.send(envelope("TenantSomethingElse", {"x": 1}))
-    assert rig.dlq.sent == [] and "ignoring event type TenantSomethingElse" in caplog.text
+    await rig.send(envelope("TenantSomethingElse", {"x": 1}))
+    assert rig.dlq.sent == []
+    [fields] = rec.find("ignoring_event_type_on_queue", "info")
+    assert fields["event_type"] == "TenantSomethingElse"
 
 
 async def test_a_payload_missing_a_field_goes_straight_to_the_dlq_with_the_original_body() -> None:
@@ -158,19 +161,21 @@ async def test_a_transient_failure_propagates_so_sqs_redelivers() -> None:
 
 
 # --- tenant_offboarding ---------------------------------------------------------------------
-async def test_offboarding_is_phase_one_only_and_alerts(caplog: pytest.LogCaptureFixture) -> None:
+async def test_offboarding_is_phase_one_only_and_alerts(monkeypatch: pytest.MonkeyPatch) -> None:
     """EVT-15: collections to purging, lifecycle purged; nothing deleted, nothing in S3 touched."""
     bench = Bench()
     col = bench.world.add_collection(status=CollectionStatus.ACTIVE)
     artefact = make_artefact()
     bench.artefacts.append(artefact)
+    rec = RecordingLog()
+    monkeypatch.setattr(h, "log", rec)
     rig = Rig(bench, h.tenant_offboarding)
-    with caplog.at_level(logging.ERROR):
-        await rig.send(envelope(c.TENANT_MEMBERSHIPS_PURGED, {"actor_id": "iam"}))
+    await rig.send(envelope(c.TENANT_MEMBERSHIPS_PURGED, {"actor_id": "iam"}))
     assert bench.world.state.collections[col.id].status is CollectionStatus.PURGING
     assert bench.world.state.lifecycle[TENANT].purged
     assert bench.purge_repo.artefacts == [artefact] and bench.store.deleted == []
-    assert "ALERT" in caplog.text
+    [alert] = rec.find("ALERT tenant_offboarding_phase_one_applied", "error")
+    assert alert["tenant_id"] == str(TENANT)
 
 
 # --- tender_lifecycle -----------------------------------------------------------------------

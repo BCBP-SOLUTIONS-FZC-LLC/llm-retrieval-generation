@@ -12,7 +12,6 @@ from rag.application.corpus.dtos import ModelCatalogueDto, ModelDto
 from rag.domain.shared.errors import DomainError, ErrorCode
 from rag.infrastructure.config import Settings
 
-CATALOGUE_PATH = "/v1/models"
 """Assumption: the Gateway's route-configuration listing. The LLD names no path (§22.1, OQ-92)."""
 CATALOGUE_TIMEOUT_SECONDS = 2.0
 
@@ -43,6 +42,7 @@ class HttpModelCatalogue:
 
     def __init__(self, settings: Settings) -> None:
         self._base_url = settings.gateway_base_url
+        self._path = settings.gateway_models_path
 
     async def list_models(self) -> ModelCatalogueDto:
         """Raises ``INFERENCE_UNAVAILABLE`` where the Gateway's catalogue cannot be read."""
@@ -50,7 +50,7 @@ class HttpModelCatalogue:
             async with create_platform_http_client(
                 base_url=self._base_url, timeout=CATALOGUE_TIMEOUT_SECONDS
             ) as client:
-                response = await client.get(CATALOGUE_PATH)
+                response = await client.get(self._path)
                 response.raise_for_status()
                 return parse_catalogue(response.json(), datetime.now(UTC))
         except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as exc:

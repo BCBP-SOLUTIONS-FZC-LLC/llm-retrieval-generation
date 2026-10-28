@@ -17,16 +17,16 @@ line.
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from eventcommon.envelope import Envelope
 from eventcommon.errors import BatchError, BatchFailure, is_retryable
 from eventcommon.publisher.sns import Publisher
+from fastapicommon.logging import get_logger
 
 from rag.application.events.contracts import GENERATION_EVENT_TYPES, INDEX_EVENT_TYPES
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class RoutingPublisher:
@@ -44,7 +44,9 @@ class RoutingPublisher:
         if event_type not in GENERATION_EVENT_TYPES:
             self.unrouted += 1
             log.warning(
-                "event type %r is not registered; routed to llm-generation-events", event_type
+                "event_type_not_registered",
+                event_type=event_type,
+                routed_to="llm-generation-events",
             )
         return self._generation
 

@@ -211,3 +211,45 @@ def test_build_cache_is_none_without_a_url() -> None:
     """No URL, no cache: callers bypass to source."""
     assert build_cache(Settings(valkey_url="")) is None
     assert isinstance(build_cache(Settings(valkey_url="redis://localhost:1/0")), ValkeyCache)
+
+
+async def test_every_call_carries_the_tenant_for_the_gateways_per_tenant_budget() -> None:
+    """``x-tenant-id`` is the key the Gateway's token budget is charged to; without it a call
+    counts against no tenant."""
+    tenant = uuid4()
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "data": [{"embedding": [1.0]}],
+                "results": [{"index": 0, "relevance_score": 0.5}],
+                "choices": [{"message": {"content": "x"}}],
+            },
+        )
+
+    ctx = GatewayContext(plan="pro", residency_mode="standard", tenant_id=tenant)
+    g = gw(handler)
+    await g.embed(["t"], ctx=ctx)
+    await g.rerank("q", ["a"], ctx=ctx, deadline_seconds=1)
+    await g.complete("judge", "s", "u", ctx=ctx, deadline_seconds=1)
+    assert [r.headers["x-tenant-id"] for r in seen] == [str(tenant)] * 3
+    # no tenant, no header: the context is optional for calls made on the platform's behalf
+    seen.clear()
+    await g.embed(["t"], ctx=CTX)
+    assert "x-tenant-id" not in seen[0].headers
+
+
+async def test_rerank_uses_the_cohere_v2_path_the_gateway_serves() -> None:
+    """Agent Router exposes rerank at ``/cohere/v2/rerank``, not ``/v1/rerank``."""
+    paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        paths.append(request.url.path)
+        return httpx.Response(200, json={"results": [{"index": 1, "relevance_score": 0.9}]})
+
+    scores = await gw(handler).rerank("q", ["a", "b"], ctx=CTX, deadline_seconds=1)
+    assert paths == ["/cohere/v2/rerank"]
+    assert scores == [0.0, 0.9]

@@ -10,13 +10,14 @@ themselves, whatever the runner does.
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Mapping
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Protocol
 from uuid import UUID, uuid5
+
+from fastapicommon.logging import get_logger
 
 from rag.application.corpus.events import StatusReason, collection_status_changed
 from rag.application.corpus.lifecycle import PurgeTenantCorpus
@@ -32,7 +33,7 @@ from rag.domain.generation.ops import FailedArtefact, StuckArtefact, SweepReposi
 from rag.domain.generation.repositories import AuditChainRepository
 from rag.domain.shared.enums import AuditActorType, RunFailureReason, RunStage
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # Sweep names, as accepted by ``python -m rag.infrastructure.sweeps <name>``.
 ORPHAN_ARTEFACTS = "orphan-artefacts"
@@ -122,7 +123,7 @@ class _PerTenantSweep:
                     affected += await self._tenant(tenant_id)
             except Exception:  # noqa: BLE001 - one tenant must not stop the sweep
                 failed += 1
-                log.exception("sweep %s failed for tenant %s", self.name, tenant_id)
+                log.exception("sweep_failed_for_tenant", sweep=self.name, tenant_id=str(tenant_id))
         return SweepOutcome(self.name, len(tenants), affected, failed)
 
 
@@ -223,7 +224,9 @@ class OrphanPendingArtefacts(_PerTenantSweep):
                 await self._starter.start(item.workflow_id, item.run_input)
                 continue
             except Exception:  # noqa: BLE001 - the second failure is the verdict
-                log.warning("restart of artefact %s failed", item.artefact_id, exc_info=True)
+                log.warning(
+                    "artefact_restart_failed", artefact_id=str(item.artefact_id), exc_info=True
+                )
             failed += await self._fail(item)
         return failed
 
@@ -370,7 +373,7 @@ class VerifyAuditChains(_PerTenantSweep):
         seq = first_break(entries)
         if seq is not None:
             message = f"audit chain of tenant {tenant_id} breaks at seq {seq}"
-            log.error("ALERT %s", message)
+            log.error("ALERT audit_chain_break", tenant_id=str(tenant_id), seq=seq)
             self._breaks.append(message)
             return 1
         return 0
@@ -476,7 +479,7 @@ class StalledPromotions(_PerTenantSweep):
                 await self._events.publish(
                     tx, collection_status_changed(c, failed, StatusReason.MIGRATION_FAILED)
                 )
-                log.error("ALERT promotion of collection %s timed out", c.id)
+                log.error("ALERT promotion_timed_out", collection_id=str(c.id))
                 moved += 1
             return moved
 

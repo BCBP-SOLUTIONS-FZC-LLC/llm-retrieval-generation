@@ -8,11 +8,11 @@ R-1 to R-4 are unaffected and only the async entry points answer ``503``.
 from __future__ import annotations
 
 import asyncio
-import logging
 from collections.abc import Awaitable, Callable
 from datetime import timedelta
 from typing import Any
 
+from fastapicommon.logging import get_logger
 from temporalio.client import Client
 from temporalio.common import WorkflowIDConflictPolicy, WorkflowIDReusePolicy
 from temporalio.exceptions import WorkflowAlreadyStartedError
@@ -21,7 +21,7 @@ from temporalio.service import RPCError, RPCStatusCode
 from rag.application.workflows.ports import StartOutcome, StartRequest
 from rag.domain.shared.errors import DomainError, ErrorCode
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 CALL_TIMEOUT_SECONDS = 2.0
 RETRIES = 2
 BACKOFF_SECONDS = (0.2, 0.5)
@@ -85,7 +85,7 @@ class TemporalWorkflowClient:
                 last = exc
             if attempt < RETRIES:
                 await self._sleep(BACKOFF_SECONDS[min(attempt, len(BACKOFF_SECONDS) - 1)])
-        log.warning("temporal_%s_failed error=%s", what, type(last).__name__)
+        log.warning("temporal_call_failed", operation=what, error=type(last).__name__)
         raise _unavailable("The workflow engine is unreachable.") from last
 
     async def start(self, request: StartRequest) -> StartOutcome:

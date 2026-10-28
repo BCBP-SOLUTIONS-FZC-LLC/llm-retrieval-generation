@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Protocol
+from uuid import UUID
 
 TASK_EMBED = "embed"
 TASK_RERANK = "rerank"
@@ -23,11 +24,16 @@ TASK_JUDGE = "judge"
 
 @dataclass(frozen=True, slots=True)
 class GatewayContext:
-    """Per-request routing inputs the Gateway re-validates (§22.1): plan, residency, hint."""
+    """Per-request routing inputs the Gateway re-validates (§22.1): plan, residency, hint.
+
+    ``tenant_id`` is sent as ``x-tenant-id``: the Gateway keys each tenant's token budget on it
+    (usage-based rate limiting), so a call without it is not counted against any tenant.
+    """
 
     plan: str | None = None
     residency_mode: str = "standard"
     preferred_model: str | None = None
+    tenant_id: UUID | None = None
 
 
 class GatewayError(Exception):

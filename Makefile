@@ -45,12 +45,21 @@ setup:
 	  echo "uv not found — installing into $(VENV)"; \
 	  $(PY) -m pip install -q 'uv==0.13.1'; }
 	$(UV) sync --locked
+	@$(MAKE) --no-print-directory install-hooks
 	@echo "Environment ready ($(VENV))"
+
+.PHONY: install-hooks
+install-hooks:
+	@if [ -d .git ]; then \
+	  mkdir -p .git/hooks && cp .githooks/pre-commit .git/hooks/pre-commit \
+	    && chmod +x .git/hooks/pre-commit && echo "Installed git hooks"; \
+	else echo "not a git checkout; skipping hooks"; fi
 
 .PHONY: help
 help:
 	@echo "Available commands:"
-	@echo "  make setup           - create .venv and install deps (uv sync); copy .env-example if present"
+	@echo "  make setup           - create .venv and install deps (uv sync); copy .env-example if present; install git hooks"
+	@echo "  make install-hooks   - install .githooks/pre-commit into .git/hooks"
 	@echo "  make lock            - refresh the lockfile (uv lock)"
 	@echo "  make lock-check      - fail if uv.lock is stale vs pyproject.toml"
 	@echo "  make fmt             - ruff format + autofix"
@@ -62,22 +71,29 @@ help:
 	@echo "  make test-unit       - unit tests only (no Docker required)"
 	@echo "  make test-integration - migration/Postgres integration tests (requires Docker)"
 	@echo "  make test-e2e        - end-to-end tests: real app + RLS Postgres (requires Docker)"
-	@echo "  make swag            - regenerate docs/swagger/swagger.{json,yaml} + api/asyncapi.yaml"
-	@echo "  make swag-check      - fail if the generated specs are stale (drift gate)"
+	@echo "  make rls-check       - fail on a non-LOCAL SET app.tenant_id in src/ or migrations/ (RLS-6, mirrors CI)"
+	@echo "  make extract-schemas - derive schemas/events/*.json from the event contracts"
+	@echo "  make swag            - extract-schemas + regenerate docs/swagger/* and api/asyncapi.{yaml,html}"
+	@echo "  make swag-check      - fail if the generated specs or event schemas are stale (drift gate)"
 	@echo "  make run             - run the API locally (uvicorn)"
 	@echo "  make sweeps          - run the sweeps runner locally"
 	@echo "  make migrate         - apply corpus + generation migrations (needs *_MIGRATION_DATABASE_URL)"
 	@echo "  make cover           - coverage HTML report"
 	@echo "  make cover-func      - coverage summary by file"
-	@echo "  make ci              - fmt-check + lint + typecheck + test-ci"
+	@echo "  make cover-check     - test-ci, then enforce the coverage gate (COVERAGE_THRESHOLD, default 95)"
+	@echo "  make build           - build the sdist and wheel (uv build) into dist/"
+	@echo "  make ci              - lock-check + fmt-check + lint + typecheck + rls-check + swag-check + test-ci + build"
 	@echo "  make docker-up       - start local infra: postgres x2 DBs + pgbouncer + valkey + qdrant + floci + floci-ui (http://localhost:4501)"
+	@echo "  make gateway-up      - start the model gateway (Agent Router) + a model stub (opt-in, :1975)"
+	@echo "  make gateway-down    - stop them"
+	@echo "  make test-gateway    - our client against the gateway: contract tests (needs gateway-up)"
 	@echo "  make docker-down     - stop local containers"
 	@echo "  make vuln-check      - pip-audit on the locked deps"
 	@echo "  make clean           - remove build artefacts"
 	@echo ""
 	@echo "Schema governance (platform-schemagov 0.4):"
 	@echo "  make schema-pull      - pull the schema-gov Docker image"
-	@echo "  make schema-validate  - validate event schemas in $(EVENT_SCHEMA_DIR) (no AWS needed)"
+	@echo "  make schema-validate  - extract-schemas, then validate $(EVENT_SCHEMA_DIR) (no AWS needed)"
 	@echo "  make schema-diff      - diff two schemas: CURRENT=<path> PROPOSED=<path>"
 
 # -----------------------------
@@ -106,6 +122,18 @@ fmt-check:
 vuln-check:
 	$(UV) run --with pip-audit pip-audit
 
+# RLS-6: the tenant GUC may only be bound with SET LOCAL / set_config(..., true) inside a
+# transaction; a session-scoped SET leaks across pooled PgBouncer backends. CI calls this target.
+.PHONY: rls-check
+rls-check:
+	@hits=$$(grep -REn '\bSET[[:space:]]+("?app\.tenant_id"?)[[:space:]]*=' \
+	    --include='*.py' --include='*.sql' src/ migrations/ | grep -v 'SET LOCAL' | grep -v 'set_config' || true); \
+	if [ -n "$$hits" ]; then \
+	  echo "Non-LOCAL SET app.tenant_id detected (RLS-6). Use SET LOCAL inside a transaction."; \
+	  echo "$$hits"; exit 1; \
+	fi; \
+	echo "RLS-6 non-LOCAL SET check passed."
+
 # -----------------------------
 # LINT
 # -----------------------------
@@ -130,7 +158,7 @@ test:  ## unit + architecture + api (no Docker)
 
 .PHONY: test-ci
 test-ci:  ## unit + integration, one coverage run (needs Docker)
-	$(PY) -m pytest -m "not e2e" --cov=src/rag --cov-report=xml:coverage.xml --cov-report=term
+	$(PY) -m pytest -m "not e2e and not gateway" --cov=src/rag --cov-report=xml:coverage.xml --cov-report=term
 
 .PHONY: test-unit
 test-unit:
@@ -178,6 +206,22 @@ events-peek:
 	  --queue-url http://localhost:4566/000000000000/llm-events-probe-q --visibility-timeout 0 \
 	  --query 'Messages[].Body' --output text | tr '\t' '\n'
 
+# The model gateway (Agent Router) in front of a model stub: opt-in, for local runs of the
+# routes that call a model and for the gateway contract tests. Not started by docker-up.
+.PHONY: gateway-up
+gateway-up:
+	docker compose --profile gateway up -d --build model-stub agent-router
+	@echo "gateway API on http://localhost:1975 (set GATEWAY_BASE_URL to use it)"
+	@echo "try all seven task classes in the browser: http://localhost:8090/console"
+
+.PHONY: gateway-down
+gateway-down:
+	docker compose --profile gateway stop agent-router model-stub
+
+.PHONY: test-gateway
+test-gateway:  ## our client against the real gateway image and the model stub (make gateway-up first)
+	$(PY) -m pytest -m gateway tests/gateway
+
 .PHONY: docker-down
 docker-down:
 	@echo "Stopping local containers..."
@@ -188,7 +232,15 @@ docker-down:
 # -----------------------------
 
 .PHONY: ci
-ci: fmt-check lint typecheck test-ci
+ci: lock-check fmt-check lint typecheck rls-check swag-check test-ci build
+
+# -----------------------------
+# BUILD
+# -----------------------------
+
+.PHONY: build
+build:
+	$(UV) build --out-dir dist
 
 # kept from the previous Makefile
 .PHONY: check
@@ -206,16 +258,25 @@ cover: test-ci
 cover-func: test-ci
 	$(PY) -m coverage report
 
+.PHONY: cover-check
+cover-check: test-ci
+	PY=$(PY) bash .github/scripts/coverage-gate.sh
+
 # -----------------------------
 # SCHEMA GOVERNANCE
 # -----------------------------
+
+.PHONY: extract-schemas
+extract-schemas:
+	@echo "Deriving event schemas from the contracts..."
+	$(PY) -m rag.infrastructure.events.schemas
 
 .PHONY: schema-pull
 schema-pull:
 	docker pull --platform "$(SCHEMA_GOV_PLATFORM)" "$(SCHEMA_GOV_IMAGE)"
 
 .PHONY: schema-validate
-schema-validate:
+schema-validate: extract-schemas
 	docker run --rm --platform "$(SCHEMA_GOV_PLATFORM)" \
 	  -v "$(CURDIR)":/workspace \
 	  "$(SCHEMA_GOV_IMAGE)" validate \
@@ -237,20 +298,23 @@ schema-diff:
 # -----------------------------
 # DOCS
 # -----------------------------
-# OpenAPI (docs/swagger/swagger.{json,yaml}) comes from the FastAPI app; AsyncAPI (api/asyncapi.yaml)
-# from the event contracts. Both are generated and committed — never hand-edited.
+# OpenAPI (docs/swagger/swagger.{json,yaml}) comes from the FastAPI app; AsyncAPI (api/asyncapi.{yaml,html})
+# and the JSON Schemas (schemas/events/) from the event contracts. All generated and committed — never hand-edited.
 # Served at: / (landing), /swagger (Swagger UI), /swagger/doc.json|yaml, /asyncapi (events),
 # /asyncapi.yaml; FastAPI's own /docs and /openapi.json stay too.
 # Run `make swag` after changing a route, a model or an event payload; tests/unit fails on drift.
 
 .PHONY: swag
-swag:
+swag: extract-schemas
 	@echo "Generating OpenAPI + AsyncAPI..."
 	$(PY) scripts/gen_api_docs.py
 
 .PHONY: swag-check
 swag-check:
 	$(PY) scripts/gen_api_docs.py --check
+	@$(PY) -c "import sys; from rag.infrastructure.events import schemas as s; \
+	stale = [n for n, text in s.schema_files().items() if not (s.SCHEMA_DIR / n).is_file() or (s.SCHEMA_DIR / n).read_text(encoding='utf-8') != text]; \
+	print('event schemas: stale ' + ', '.join(stale) if stale else 'event schemas: up to date'); sys.exit(1 if stale else 0)"
 
 .PHONY: docs-serve
 docs-serve: run
@@ -261,5 +325,5 @@ docs-serve: run
 
 .PHONY: clean
 clean:
-	rm -rf htmlcov .pytest_cache .mypy_cache .ruff_cache
+	rm -rf htmlcov dist .pytest_cache .mypy_cache .ruff_cache
 	rm -f coverage.xml .coverage

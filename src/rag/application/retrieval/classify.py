@@ -77,7 +77,9 @@ class ProposeClassification:
             f"filename: {cmd.filename or ''}\n<doc-{nonce}>\n{cmd.content[:PROMPT_CHARS]}\n"
             f"</doc-{nonce}>"
         )
-        ctx = GatewayContext(identity.plan, identity.residency_mode.value)
+        ctx = GatewayContext(
+            identity.plan, identity.residency_mode.value, tenant_id=identity.tenant_id
+        )
         try:
             completion = await asyncio.wait_for(
                 self._gw.complete(

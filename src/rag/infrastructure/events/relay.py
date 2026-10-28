@@ -19,18 +19,18 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import logging
 from dataclasses import dataclass, field
 from typing import Any
 
 from eventcommon.outbox import Runner, RunnerConfig
 from eventcommon.publisher import SNSConfig, SNSPublisher
+from fastapicommon.logging import get_logger
 from pgcommon import Pool
 
 from rag.infrastructure.config import Settings
 from rag.infrastructure.events.routing import RoutingPublisher
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 @dataclass
@@ -50,7 +50,7 @@ class Relays:
         for name, runner in self.runners.items():
             warning = await runner.stop()
             if warning:  # a drain timeout is visible, never silent (§18)
-                log.warning("outbox relay %s: %s", name, warning)
+                log.warning("outbox_relay_warning", relay=name, warning=str(warning))
         for task in self.tasks:
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await task

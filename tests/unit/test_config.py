@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from rag.infrastructure.config import ConfigError, Settings, assert_isolation_config
 from rag.presentation.main import create_app
@@ -97,3 +98,54 @@ def test_create_app_refuses_bad_pgbouncer_mode(settings: Settings) -> None:
     """The assertion runs in the app factory, before any pool exists."""
     with pytest.raises(ConfigError):
         create_app(settings.model_copy(update={"pg_bouncer_mode": "True"}))
+
+
+# --- startup validation: a bad value stops the process, it does not surface later ------------
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"rrf_k": -5},
+        {"rrf_k": 0},
+        {"page_limit_max": 0},
+        {"scope_token_ttl_seconds": -1},
+        {"candidate_overfetch": 0.5},
+        {"context_output_reserve_fraction": 1.0},
+        {"groundedness_supported_threshold": 1.5},
+        {"verify_tier0_sample_rate": -0.1},
+        {"collection_namespace": "not-a-uuid"},
+        {"corpus_database_url": "garbage"},
+        {"generation_database_url": ""},
+        {"corpus_sweep_database_url": "mysql://x"},
+        {"page_limit_default": 600},  # above the default maximum of 500
+        {"request_timeout_seconds": 60.0},  # must exceed R-4's 90 s synchronous budget (§17)
+        {"context_output_reserve_fraction": 0.95, "context_user_input_max_fraction": 0.10},
+        {"verify_entail_unsupported": 0.9},  # above verify_entail_supported
+        {"groundedness_partial_threshold": 0.99},  # above the supported threshold
+        {"events_enabled": True},  # no topic ARNs
+    ],
+)
+def test_a_misconfigured_setting_is_rejected_at_construction(overrides: dict[str, object]) -> None:
+    """Each of these used to be accepted and would have failed later, or silently misbehaved."""
+    with pytest.raises(ValidationError):
+        Settings(**overrides)
+
+
+def test_a_bad_environment_value_stops_startup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The service reads its settings in ``create_app``: a bad variable fails before any pool."""
+    monkeypatch.setenv("RRF_K", "-5")
+    with pytest.raises(ValidationError, match="rrf_k"):
+        create_app()
+
+
+def test_valid_optional_values_are_still_accepted() -> None:
+    """Optional DSNs may be empty; events may be enabled once the ARNs are set."""
+    s = Settings(
+        corpus_migration_database_url="",
+        events_enabled=True,
+        generation_topic_arn="arn:aws:sns:eu-west-1:000000000000:g",
+        index_topic_arn="arn:aws:sns:eu-west-1:000000000000:i",
+        refinement_retention_days=30,
+    )
+    assert s.events_enabled and s.refinement_retention_days == 30

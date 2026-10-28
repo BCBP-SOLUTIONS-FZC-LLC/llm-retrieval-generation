@@ -37,7 +37,7 @@ def fact_from_row(r: Any) -> DocumentFact:
 
 
 class PgRunRepository:
-    """``RunRepository`` over asyncpg."""
+    """``RunRepository`` over the ``pgcommon`` transaction."""
 
     async def get_run(self, tx: Conn, run_id: UUID, *, lock: bool = False) -> GenerationRun | None:
         """The run row, ``FOR UPDATE`` when ``lock``."""

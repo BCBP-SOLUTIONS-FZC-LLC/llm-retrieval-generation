@@ -9,10 +9,11 @@ is neither.
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID, uuid4
+
+from fastapicommon.logging import get_logger
 
 from rag.application.generation.commands import AppendAuditEntry
 from rag.application.shared.ports import TransactionRunner, TxHandle
@@ -29,7 +30,7 @@ from rag.domain.shared.identity import RequestIdentity
 from rag.domain.workflows import gate
 from rag.domain.workflows.repositories import RunRepository
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 OPERATOR_ROLE = "platform_operator"
 TICKET_MAX_CHARS = 128
 REASON_MAX_CHARS = 512
@@ -126,8 +127,8 @@ class RematerialiseRun:
         except Exception:
             # The workflow already started: refusing now would invite a second start. The access
             # is the control (§15.3), so a failed record is loud, never silent.
-            log.exception("cross_tenant_access_not_recorded ticket_ref=%s", ticket)
+            log.exception("cross_tenant_access_not_recorded", ticket_ref=ticket)
             raise
         self._obs.gate_action("rematerialise")
-        log.warning("cross_tenant_access operation=rematerialise ticket_ref=%s", ticket)
+        log.warning("cross_tenant_access", operation="rematerialise", ticket_ref=ticket)
         return Rematerialised(run.id, run.artefact_id, run.workflow_id, now)

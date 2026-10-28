@@ -9,10 +9,11 @@ reads the post-state re-raises the signal, so a signal lost after the commit is 
 from __future__ import annotations
 
 import copy
-import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from uuid import UUID
+
+from fastapicommon.logging import get_logger
 
 from rag.application.events.contracts import GenerationCancelled, build_event, tender_subject
 from rag.application.shared.ports import TxHandle
@@ -40,7 +41,7 @@ from rag.domain.shared.errors import DomainError, ErrorCode
 from rag.domain.shared.identity import RequestIdentity
 from rag.domain.workflows import gate
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 MAX_OUTLINE_SECTIONS = 200
 MAX_REF_CHARS = 256
 MAX_REASON_CHARS = 256

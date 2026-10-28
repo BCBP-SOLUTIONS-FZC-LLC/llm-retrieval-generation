@@ -7,8 +7,9 @@ is a tamper signal and is never self-healed), 64 usage.
 from __future__ import annotations
 
 import asyncio
-import logging
 import sys
+
+from fastapicommon.logging import configure_logging
 
 from rag.infrastructure.config import Settings
 from rag.infrastructure.sweeps.runner import NAMES, open_pools, run_sweep
@@ -19,7 +20,7 @@ async def main(argv: list[str]) -> int:
     if len(argv) != 1 or argv[0] not in (*NAMES, "all"):
         print(f"usage: python -m rag.infrastructure.sweeps <{'|'.join((*NAMES, 'all'))}>")
         return 64
-    logging.basicConfig(level=logging.INFO)
+    configure_logging("INFO")
     settings = Settings()
     pools = await open_pools(settings)
     try:

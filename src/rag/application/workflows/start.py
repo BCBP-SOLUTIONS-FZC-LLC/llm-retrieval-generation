@@ -8,9 +8,10 @@ leave a workflow with no artefact row (GEN-3).
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field, replace
 from uuid import UUID
+
+from fastapicommon.logging import get_logger
 
 from rag.application.events.contracts import Recipient
 from rag.application.generation.flow import (
@@ -42,7 +43,7 @@ from rag.domain.shared.errors import DomainError, ErrorCode
 from rag.domain.shared.identity import RequestIdentity
 from rag.domain.workflows.ids import task_queue_for
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 @dataclass(frozen=True, slots=True)

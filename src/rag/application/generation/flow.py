@@ -14,11 +14,12 @@ from __future__ import annotations
 import copy
 import dataclasses
 import hashlib
-import logging
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID, uuid4
+
+from fastapicommon.logging import get_logger
 
 from rag.application.events.contracts import (
     ExtractionCompleted,
@@ -80,7 +81,7 @@ from rag.domain.shared.identity import RequestIdentity
 from rag.domain.workflows.ids import original_workflow_id
 from rag.domain.workflows.input import ScopeSeed, WorkflowInput
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 ADMISSION_ATTEMPTS = 3
 """Re-reads after losing an ``Idempotency-Key`` race before the conflict is reported."""
 
@@ -316,7 +317,9 @@ class AdmitGeneration:
         eligibility = resolve_eligibility(
             dp.eligibility_for(req.capability), req.requested_mode, dp.version
         )
-        ctx = GatewayContext(identity.plan, identity.residency_mode.value)
+        ctx = GatewayContext(
+            identity.plan, identity.residency_mode.value, tenant_id=identity.tenant_id
+        )
         used = (await self._tokens.count([req.user_text], ctx=ctx))[0]
         plan_budget(
             self._cfg.window_tokens,
@@ -671,7 +674,7 @@ class RunLifecycle:
         try:
             await self.cancel(a, reason, gap_reason=gap_reason)
         except Exception as exc:  # noqa: BLE001
-            log.warning("run_close_failed error=%s", type(exc).__name__)
+            log.warning("run_close_failed", error=type(exc).__name__)
 
     async def fail(self, a: Admitted, reason: RunFailureReason) -> None:
         """Close after dispatch as ``failed`` with its reason (RUN-5, AS-5)."""
@@ -835,7 +838,7 @@ class CompleteGeneration:
         except DomainError:
             raise
         except Exception as exc:
-            log.error("completion_failed error=%s", type(exc).__name__)  # never the message (OBS-2)
+            log.error("completion_failed", error=type(exc).__name__)  # never the message (OBS-2)
             raise DomainError(
                 ErrorCode.ARTEFACT_STORE_UNWRITABLE, "The artefact could not be recorded."
             ) from exc
@@ -935,7 +938,7 @@ class CompleteGeneration:
         except DomainError:
             raise
         except Exception as exc:
-            log.error("completion_failed error=%s", type(exc).__name__)  # never the message (OBS-2)
+            log.error("completion_failed", error=type(exc).__name__)  # never the message (OBS-2)
             raise DomainError(
                 ErrorCode.ARTEFACT_STORE_UNWRITABLE, "The artefact could not be recorded."
             ) from exc
