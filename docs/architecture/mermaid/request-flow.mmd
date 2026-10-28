@@ -1,0 +1,38 @@
+sequenceDiagram
+    autonumber
+    participant C as Caller (via gateway)
+    participant MW as Middleware
+    participant R as Router R-1 search
+    participant SC as ScopeResolver
+    participant V as Valkey
+    participant IAM as IAM / TAC-4
+    participant DB as llm_corpus
+    participant P as RetrievalPipeline
+    participant GW as Model Gateway
+    participant Q as Qdrant (corpusscope)
+    participant G as llm_generation
+
+    C->>MW: POST /api/v1/search + x-tenant-id, x-user-id, x-tenant-roles
+    MW->>MW: request id, trace, ExtraIdentityMiddleware
+    MW->>R: require_identity builds RequestIdentity (API-1, API-11)
+    R->>SC: resolve scope for named collections
+    SC->>V: GET scope cache (key includes tenant, principal, roles)
+    alt cache hit
+        V-->>SC: ScopeToken (600 s, purge epoch inside)
+    else miss
+        SC->>DB: collections + grants + active index generation (RLS, tenant GUC)
+        SC->>IAM: TAC-4 overlay for restricted tenders (100 ms, one retry)
+        IAM-->>SC: level or null
+        SC->>V: SET scope cache (60 s)
+    end
+    Note over SC: empty scope is an empty answer, a failed read refuses with 503 (CG-4)
+    SC-->>R: ScopeToken
+    R->>P: run(query, scope)
+    P->>P: pack, refine (150 ms), plan
+    P->>GW: embed (300 ms, one retry, breaker)
+    P->>Q: dense search (mandatory compound filter, is_current)
+    P->>DB: lexical search
+    P->>P: RRF fusion, optional rerank (90 ms, no retry), sufficiency verdict
+    P->>G: RecordRetrievalSet (one set per attempt)
+    P-->>R: results + degradation markers
+    R-->>C: 200, or 206 where any stage degraded

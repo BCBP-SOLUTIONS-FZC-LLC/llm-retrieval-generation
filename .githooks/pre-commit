@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Local commit gates: formatting, lint, types, lockfile and generated-spec staleness.
+set -euo pipefail
+
+if git diff --cached --name-only | grep -qE '^(pyproject\.toml|uv\.lock)$'; then
+  echo "[pre-commit] checking uv.lock is in step with pyproject.toml..."
+  make lock-check
+fi
+
+echo "[pre-commit] running fmt-check..."
+make fmt-check
+
+echo "[pre-commit] running lint..."
+make lint
+
+echo "[pre-commit] running typecheck..."
+make typecheck
+
+echo "[pre-commit] checking generated specs are not stale (make swag-check)..."
+make swag-check

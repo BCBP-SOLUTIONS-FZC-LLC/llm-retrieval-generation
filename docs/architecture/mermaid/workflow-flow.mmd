@@ -1,0 +1,38 @@
+sequenceDiagram
+    autonumber
+    participant C as Caller
+    participant R as Router W-1 / W-3 / W-5
+    participant U as Start / Signals use case
+    participant SC as ScopeAuthorizer
+    participant DB as llm_generation
+    participant T as Temporal client port
+    participant WP as Worker Pool (separate service)
+    participant OB as Outbox relay
+
+    C->>R: POST /api/v1/generations + Idempotency-Key
+    R->>U: execute_async(identity, request)
+    U->>SC: prepare: checks of the synchronous path
+    U->>DB: one tx: shell, run (workflow_id), GenerationStarted outbox row
+    Note over U,DB: admission commits first (LD-88)
+    U->>T: start workflow GenerationWorkflow on queue by tier (WP-10)
+    alt engine unset or unreachable
+        T-->>U: unavailable
+        U-->>C: 503 WORKFLOW_ENGINE_UNAVAILABLE, run stays pending, a repeat of the same key starts it
+    else started
+        U-->>C: 202 handle (200 on idempotent replay)
+        T->>WP: workflow runs, activities write rows under rag_activity
+        WP->>DB: outline, sections, versions, GenerationProgressed outbox rows
+    end
+
+    C->>R: POST /generations/id/outline/approve (W-3)
+    R->>U: signal
+    U->>SC: re-resolve scope (ASYNC-11)
+    alt scope now empty
+        U->>DB: one tx: run failed scope_revoked, artefact failed, audit, GenerationFailed
+        U-->>C: 404
+    else still in scope
+        U->>DB: guarded UPDATE where status and record_version match, returns progress_seq
+        U->>T: signal approve_outline (after the row commit, LD-88)
+        U-->>C: 202
+    end
+    OB->>OB: relay publishes outbox rows to SNS

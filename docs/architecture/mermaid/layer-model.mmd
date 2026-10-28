@@ -1,0 +1,50 @@
+graph TD
+    subgraph entry["Entry points  -  one image"]
+        api["presentation/main.py create_app\nFastAPI app factory over fastapicommon.create_platform_app\nlifespan: open both pools, build Container, start relays and consumers when EVENTS_ENABLED\nassert_isolation_config: PG_BOUNCER_MODE must be exactly true"]
+        sweeps["infrastructure/sweeps/__main__.py\npython -m rag.infrastructure.sweeps name or all\nten sweeps, one advisory lock per instance\nexit 0 clean, 1 tenant failed, 2 alert, 64 usage"]
+        migrate["infrastructure/persistence/migrate.py\nmigrate_all: eventcommon outbox schema first, then numbered sets\nDDL DSN direct to Postgres, never PgBouncer"]
+    end
+
+    subgraph pres["presentation/"]
+        routers["api/public, api/internal, api/operator\n35 routes, one auth dependency each\nSSE responses for R-2, R-3, A-6"]
+        deps["*_dependencies.py\ncomposition of use cases per module\nContainer holds services, pools, peers"]
+        errs["errors.py + identity.py\nDomainError to RFC 9457\nx-* gateway headers to RequestIdentity"]
+        docs["api_docs.py\n/swagger /asyncapi /asyncapi.yaml"]
+    end
+
+    subgraph infra["infrastructure/"]
+        persistence["persistence/\nasyncpg repositories per module\nPgTransactionRunner, CorpusTransactionRunner (503 on unreachable)\npools.py: request_guc_provider, bind_tenant_scope"]
+        gateway["gateway/\nHttpModelGateway (embed, rerank, complete, stream, count)\nmodel catalogue"]
+        peers["tender/ iam/ temporal/ cache/ storage/\npack resolver, principals, TAC-4, workflow client\nValkey, S3 content store"]
+        events["events/\nrouting publisher, relay per database\nSQS consumers, DLQ, runtime"]
+        obs["observability/ + config.py\nmetrics, logs, tracing wrappers\nSettings: every LLD section 17 variable"]
+    end
+
+    subgraph app["application/  -  use cases and ports"]
+        corpus["corpus/\nresolve, generations, lifecycle, retention, queries"]
+        retrieval["retrieval/\npipeline, search, refiner, classify, required_input, record"]
+        generation["generation/\nflow, generate, extract, regenerate, queries, frames"]
+        verification["verification/\nverify ladder, gateway entailer, judge, resampler"]
+        workflows["workflows/\nstart, signals, state, operator, bridges"]
+        evt["events/ + sweeps/\ncontracts, consumers use cases, ten sweeps"]
+    end
+
+    subgraph dom["domain/  -  standard library only"]
+        entities["shared corpus retrieval generation verification workflows packs\nentities, value objects, enums, state machines\nrepository ports, DomainError and ErrorCode"]
+    end
+
+    scopelib["corpusscope/  -  vendored library\nScopeToken, ScopeResolver, every Qdrant filter\nonly importer of qdrant_client"]
+
+    api --> routers
+    api --> deps
+    routers --> deps
+    routers --> errs
+    deps --> app
+    deps --> infra
+    sweeps --> infra
+    sweeps --> evt
+    migrate --> persistence
+    infra --> app
+    app --> dom
+    infra --> scopelib
+    persistence --> dom

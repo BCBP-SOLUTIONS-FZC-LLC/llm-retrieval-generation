@@ -1,0 +1,20 @@
+flowchart TD
+    subgraph keys["Valkey keys (every key tenant-prefixed, no durable state)"]
+        k1["scope cache\nwhole resolution, keyed on tenant, principal, roles\nTTL 60 s (SCOPE_CACHE_TTL_SECONDS)"]
+        k2["pack cache\ntenant:pack:domain:language:concern:version\nfilled from Tender, dropped by DomainProfilePublished"]
+        k3["retrieval-set cache\nTTL 15 min, a document revision does not invalidate it (LD-38)"]
+        k4["placement cache\ntenant:coll:collection_id\nDEL on a purge-epoch bump"]
+        k5["IAM user context\nTTL 300 s, 300 ms budget"]
+        k6["idempotency keys\nTTL 1 h (IDEMPOTENCY_TTL_SECONDS), swept in Postgres"]
+    end
+
+    read["read path"] --> hit{"hit?"}
+    hit -->|yes| use["serve from cache"]
+    hit -->|"no, or Valkey error"| src["read the source of truth\n(Postgres, Tender, IAM)"]
+    src --> fill["best-effort SET with TTL"]
+    note["An outage is a miss, never an error (section 11.4). Correctness never depends on the cache."]
+
+    inval["invalidation"] --> e1["TenderPurged / purge-epoch bump -> placement DEL, epoch rides the next scope token"]
+    inval --> e2["DomainProfilePublished -> SCAN tenant:pack:domain:language:concern:* then DEL"]
+    inval --> e3["tenant offboarding -> tenant prefix wipe is NOT built yet (section 21.1 gap)"]
+    e1 -.->|"a cached scope may make a purge visible up to 60 s late"| k1

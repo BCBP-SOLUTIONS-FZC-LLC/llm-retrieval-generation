@@ -1,0 +1,34 @@
+sequenceDiagram
+    autonumber
+    participant C as Caller
+    participant R as Router R-2 answers
+    participant E as ShortFormEngine.start
+    participant A as AdmitGeneration
+    participant RT as RetrievalPipeline
+    participant GW as Model Gateway
+    participant PR as Producer task
+    participant V as VerifySection
+    participant S3 as S3 content store
+    participant DB as llm_generation
+
+    C->>R: POST /api/v1/answers
+    R->>E: start(identity, request)
+    Note over E: everything that can still be an HTTP problem runs here (API-6)
+    E->>A: admission: tenant status, store probe, scope, tender gate, packs, VER-3, eligibility, budget
+    A->>DB: one tx: idempotency lookup, shell, run, section, GenerationStarted outbox row
+    E->>RT: retrieve evidence
+    alt insufficient or refused
+        E-->>C: 200 verdict frame with refusal, run closed cancelled
+    else sufficient
+        E->>PR: spawn producer (strong reference on the engine)
+        E-->>C: 200 text/event-stream begins (status committed, LD-2)
+        PR->>GW: stream draft (deadline 12 s)
+        GW-->>PR: deltas
+        PR-->>C: draft frames (provisional citations)
+        PR->>V: verify claims in tiers 0 to 3
+        V->>GW: entail, judge, resample calls
+        PR->>S3: put section text under tenants/tenant/artefacts/id/
+        PR->>DB: one tx: version, section version, report, claims, completeness, audit entry, GenerationCompleted
+        PR-->>C: one terminal verdict frame (evidence tier), or one error frame
+    end
+    Note over PR,C: a client disconnect never stops the producer (GEN-2), the SSE body only drains its queue

@@ -1,0 +1,55 @@
+erDiagram
+    %% llm_corpus (5 tables) and llm_generation (19 tables + the library's outbox). No foreign key crosses the two databases.
+
+    collections ||--o{ collection_grants : "overlay answers"
+    collections ||--o{ index_generations : "generations"
+    collections ||--o| retention_policies : "retention"
+    tenant_lifecycle }o--|| collections : "consulted by C-I1 when no row exists"
+
+    artefacts ||--o{ artefact_versions : "document versions"
+    artefacts ||--o{ artefact_sections : "sections"
+    artefacts ||--o{ generation_runs : "runs"
+    artefact_versions ||--o{ artefact_version_sections : "composition"
+    artefact_sections ||--o{ artefact_section_versions : "section versions"
+    artefact_section_versions ||--o{ artefact_version_sections : "included in"
+    generation_runs ||--o{ artefact_versions : "produced by"
+    retrieval_sets ||--o{ retrieval_set_chunks : "chunks"
+    retrieval_sets ||--o{ retrieval_set_purges : "purge markers"
+    artefact_section_versions }o--|| retrieval_sets : "evidence"
+    artefact_section_versions ||--o{ groundedness_reports : "verdicts"
+    groundedness_reports ||--o{ claim_verifications : "claims"
+    artefact_section_versions ||--o{ completeness_checks : "checklist"
+    artefact_sections ||--o{ document_facts : "facts"
+    document_facts ||--o{ fact_conflicts : "conflicts"
+    artefacts ||--o{ artefact_audit_chain : "append-only hash chain"
+    generation_runs ||--o{ graph_checkpoints : "activity-written, pruned"
+    query_refinements }o--|| retrieval_sets : "first attempt"
+    instruction_refinements }o--|| artefact_section_versions : "regeneration"
+
+    collections {
+        uuid id PK "UUIDv5 of type, tenant, tender, restricted"
+        uuid tenant_id "RLS"
+        text physical_collection
+        text status "provisioning, active, frozen, purging, migration_failed, superseded"
+        int active_index_generation
+        int purge_epoch
+        bool restricted
+        bigint record_version
+    }
+    artefacts {
+        uuid id PK "uuidv7"
+        uuid tenant_id "RLS"
+        text status "pending, generating, complete, cancelled, failed, superseded"
+        bigint record_version
+    }
+    generation_runs {
+        uuid id PK
+        text workflow_id "unique (RUN-2)"
+        text status "pending, outline_building, awaiting_outline_approval, generating, suspended, complete, failed, cancelled"
+        jsonb run_input "no authority, no content"
+        bigint record_version "also the progress_seq"
+    }
+    processed_events {
+        text consumer PK
+        uuid event_id PK "no tenant RLS"
+    }

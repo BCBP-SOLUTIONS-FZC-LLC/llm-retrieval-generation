@@ -16,7 +16,7 @@ Two Postgres instances: `llm_corpus` (collections, grants, index_generations, re
 |---|---|---|
 | S-1 | Temporal workflow/activity **logic** is the Worker Pool's. This service implements only start/signal client, run-row admission, state reads | §2.3, §9 |
 | S-2 | Ingestion write path, chunking, embedding, Qdrant writes | §2.2, DEP-5 |
-| S-3 | Model Gateway config (Envoy AI Gateway) - only an HTTP client port + adapter | §22.1, LD-68 |
+| S-3 | Model Gateway config (Agent Router, formerly Envoy AI Gateway) - only an HTTP client port + adapter | §22.1, LD-68 |
 | S-4 | Tender / IAM / Domain Profile services - outbound ports + HTTP adapters only | §22 |
 | S-5 | Activity-written tables (`graph_checkpoints`, `fact_conflicts` detection, `document_facts` writes by activities, `groundedness_reports`, `claim_verifications`, `completeness_checks`) are **schema + repository only** here | §4.5, GC-3 |
 | S-6 | A-8 render is reserved: returns `503 RENDERER_UNAVAILABLE` | §5.4 |

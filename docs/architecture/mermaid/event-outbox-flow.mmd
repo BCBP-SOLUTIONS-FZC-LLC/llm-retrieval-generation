@@ -1,0 +1,34 @@
+flowchart LR
+    subgraph write["State change (one transaction per database)"]
+        uc["use case\nrun_in_tx"] --> biz["business rows"]
+        uc --> enq["OutboxEventPublisher.publish\nvalidate type is registered and payload fits its schema\nfail closed inside the tx (EVT-9)"]
+        enq --> obc[("llm_corpus.outbox_events")]
+        enq --> obg[("llm_generation.outbox_events")]
+    end
+
+    subgraph relay["Relays (one claim loop per table, SKIP LOCKED)"]
+        rc["relay corpus"]
+        rg["relay generation"]
+        rp["RoutingPublisher\nroute by event type name\nunknown type goes to llm-generation-events with a warning, never raises"]
+    end
+
+    obc --> rc --> rp
+    obg --> rg --> rp
+    rp --> tg(["SNS llm-generation-events\n10 types"])
+    rp --> ti(["SNS llm-index-events\n7 types"])
+    tg --> probe[["llm-events-probe-q (dev only)"]]
+    ti --> probe
+    tg --> tenderq["Tender and other subscribers"]
+    ti --> ingq["Ingestion and other subscribers"]
+
+    subgraph consume["Consumers (six queues, one ledger name each)"]
+        q1["llm-document-rag-q"] --> h
+        q2["domainprofile-llm-invalidate-q"] --> h
+        q3["iam-rag-purge-q (Glue)"] --> h
+        q4["iam-rag-membership-q (Glue)"] --> h
+        q5["tender-rag-q"] --> h
+        q6["usage-rag-q"] --> h
+        h["poison_safe handler\ntenant must be a UUID that agrees with the payload\nschema check, one use case, ledger row (PE-1)"]
+        h -->|"poison"| dlq["queue DLQ at the fourth receive, then ack"]
+        h -->|"other error"| redeliver["raise, SQS redelivers"]
+    end

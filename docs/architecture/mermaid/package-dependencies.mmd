@@ -1,0 +1,28 @@
+graph LR
+    domain["rag.domain\nstdlib only"]
+    application["rag.application\nimports domain\n+ fastapicommon.logging"]
+    contracts["rag.application.events.contracts\nstdlib only"]
+    infrastructure["rag.infrastructure\nimports application, domain"]
+    presentation["rag.presentation\nimports application, domain, infrastructure config"]
+    corpusscope["rag.corpusscope\nstdlib + pydantic + qdrant_client + itself"]
+
+    application --> domain
+    contracts -.->|"part of application"| application
+    infrastructure --> application
+    infrastructure --> domain
+    presentation --> application
+    presentation --> domain
+    presentation --> infrastructure
+    infrastructure -->|"CorpusScopeAdapter implements the application ports"| corpusscope
+
+    qdrant["qdrant_client\nDEP-1: corpusscope only"]
+    gw["HTTP client toward an inference backend\nDEP-2: infrastructure/gateway only"]
+
+    corpusscope --> qdrant
+    infrastructure --> gw
+
+    corpus_mod["module corpus\nDEP-3: a leaf"] -. "never imports" .-> other_mods["retrieval, generation, verification"]
+    verification_mod["module verification\nDEP-4"] -. "never imports" .-> retrieval_mod["module retrieval"]
+    domain -. "never" .-> application
+    application -. "never" .-> infrastructure
+    application -. "never" .-> presentation

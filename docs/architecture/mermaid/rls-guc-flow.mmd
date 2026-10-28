@@ -1,0 +1,27 @@
+sequenceDiagram
+    autonumber
+    participant H as Request or consumer
+    participant CTX as Context
+    participant POOL as pgcommon Pool (GUC provider)
+    participant PGB as PgBouncer (transaction mode)
+    participant PG as Postgres (FORCE RLS)
+
+    alt HTTP request
+        H->>CTX: ExtraIdentity / require_identity binds tenant and user
+        Note over POOL: request_guc_provider reads the request context
+    else consumer or sweep
+        H->>CTX: bind_tenant_scope(tenant: UUID) context manager
+        Note over CTX: a string such as system raises TypeError (LD-19)
+        Note over POOL: request_guc_provider falls back to guc_set_from_context
+    end
+    H->>POOL: run_in_tx(fn)
+    POOL->>PGB: acquire backend
+    PGB->>PG: BEGIN
+    POOL->>PG: set_config app.tenant_id, tenant, true (transaction-local, RLS-6)
+    H->>PG: queries
+    PG->>PG: policy: tenant_id = current_setting app.tenant_id
+    PG-->>H: only that tenant's rows
+    POOL->>PG: COMMIT
+    Note over PG,PGB: the GUC dies with the transaction, so the next client on this backend sees none
+    Note over PG: superusers bypass RLS even with FORCE, so the app logs in as rag_app_login, a non-superuser
+    Note over POOL,PGB: sweeps enumerate tenants on a separate pool as rag_sweeper (column-limited SELECT, no writes)

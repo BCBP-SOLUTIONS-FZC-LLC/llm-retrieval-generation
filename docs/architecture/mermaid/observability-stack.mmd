@@ -1,0 +1,21 @@
+flowchart LR
+    subgraph svc["retrieval-generation process"]
+        mw["fastapicommon middleware\nrequest id, correlation id, trace id, access log"]
+        uc["use cases and adapters"]
+        lo["Logging observers\nstructured logs, never query or chunk text (OBS-2)"]
+        tr["Tracing observers\none span per pipeline stage\nerror recorded by type only"]
+        pm["Prometheus observers (built only when ENABLE_METRICS)\nllm_retrieval_generation_* Tier 3\nplus platform_* from eventcommon and pgcommon"]
+    end
+
+    mw --> uc
+    uc --> lo
+    uc --> tr
+    uc --> pm
+    lo --> stdout[("stdout JSON logs")]
+    tr --> otel["OTLP exporter\n(ENABLE_TRACING)"]
+    pm --> metrics["/metrics scrape"]
+    metrics --> prom["Prometheus"]
+    otel --> collector["OTel collector"]
+    prom --> alerts["alert rules and dashboards"]
+
+    gap["Metrics stay off by default: the llm domain is not registered in the platform registry yet (OQ-103).\nOBSERVABILITY_DOMAIN stays unset until it is, then set OBSERVABILITY_DOMAIN=llm and ENABLE_METRICS=true."]
