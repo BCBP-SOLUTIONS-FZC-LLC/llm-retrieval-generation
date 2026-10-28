@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from typing import Any
 
 from fastapi.responses import StreamingResponse
+from fastapicommon.problem import TYPE_INTERNAL_ERROR, build_problem
 from starlette.types import Receive, Scope, Send
 
 from rag.application.generation.frames import (
@@ -23,7 +23,8 @@ from rag.application.generation.frames import (
     VerdictFrame,
 )
 from rag.domain.generation.eligibility import EligibilityVerdict
-from rag.domain.shared.errors import ERROR_TAXONOMY, PROBLEM_DOMAIN, ErrorCode
+from rag.domain.shared.errors import ErrorCode
+from rag.presentation.errors import PROBLEM_TYPES
 
 HEARTBEAT = ": heartbeat\n\n"
 """An SSE comment: keeps an idle proxy from reaping the connection (§5.6)."""
@@ -113,22 +114,20 @@ class ErrorContext:
 
 def error_json(f: ErrorFrame, ctx: ErrorContext) -> dict[str, Any]:
     """The ``error`` event data: the problem detail its code would have had before byte one."""
-    if f.code == ErrorCode.INFERENCE_UNAVAILABLE.value:
-        spec = ERROR_TAXONOMY[ErrorCode.INFERENCE_UNAVAILABLE]
-        domain, slug, title, status = PROBLEM_DOMAIN, spec.slug, spec.title, spec.status
-    else:
-        domain, slug, title, status = "platform", "internal-error", "Internal error", 500
-    return {
-        "type": f"{ctx.base}/{domain}/{slug}",
-        "title": title,
-        "status": status,
-        "detail": f.detail,
-        "instance": ctx.instance,
-        "traceId": ctx.trace_id,
-        "errorCode": f.code,
-        "tenantId": ctx.tenant_id,
-        "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-    }
+    problem = (
+        PROBLEM_TYPES[ErrorCode.INFERENCE_UNAVAILABLE]
+        if f.code == ErrorCode.INFERENCE_UNAVAILABLE.value
+        else TYPE_INTERNAL_ERROR
+    )
+    return build_problem(
+        problem,
+        base=ctx.base,
+        detail=f.detail,
+        error_code=f.code,
+        instance=ctx.instance,
+        trace_id=ctx.trace_id,
+        tenant_id=ctx.tenant_id,
+    )
 
 
 def encode(frame: Frame, ctx: ErrorContext) -> str:

@@ -173,7 +173,7 @@ def test_a_failure_after_the_first_frame_is_the_terminal_error_frame_on_a_200(h:
     assert err["errorCode"] == "INFERENCE_UNAVAILABLE" and err["status"] == 503
     assert err["type"].endswith("/retrieval-generation/inference-unavailable")
     assert err["instance"] == "/api/v1/answers" and err["tenantId"] == str(TENANT)
-    assert set(err) >= {"title", "detail", "traceId", "timestamp"}
+    assert set(err) >= {"title", "detail", "timestamp"}  # traceId only when the request has one
 
 
 def test_a_completion_failure_is_the_internal_error_frame(h: Harness) -> None:

@@ -8,6 +8,7 @@ This service has never been deployed to any environment — there is no released
 
 ### Changed
 
+- `tests/architecture/test_metrics_standard.py` enforces the Enterprise Platform Observability Standard over every declared collector (tier, naming, suffixes, labels, registry rules, inventory match). The SSE `error` frame is built with `fastapicommon.problem.build_problem` and `tests/architecture/test_problems_only_through_fastapicommon.py` forbids hand-built problem bodies
 - Events, the outbox and dedup go through `eventcommon` only: `eventcommon.inbox.apply_schema` now creates `processed_events` (migration `0002_generation_tables` no longer does; `0003` grants on it), every relay/publisher/consumer config is built in `infrastructure/events/config.py` from `eventcommon.config`, and `tests/architecture/test_events_only_through_eventcommon.py` guards it. Pre-release migration edit (never deployed); dev databases adopt the existing table
 - Env renames (durations now need a unit): `OUTBOX_POLL_INTERVAL_SECONDS` to `OUTBOX_POLL_INTERVAL`, `OUTBOX_PUBLISH_TIMEOUT_SECONDS` to `OUTBOX_PUBLISH_TIMEOUT`, `SQS_VISIBILITY_TIMEOUT_SECONDS` to `SQS_VISIBILITY_TIMEOUT`, `SQS_QUEUE_DEPTH_INTERVAL_SECONDS` to `SQS_QUEUE_DEPTH_INTERVAL`; `OUTBOX_BATCH_SIZE`, `OUTBOX_MAX_ATTEMPTS`, `SQS_CONCURRENCY` keep their names but are the library's
 

@@ -30,6 +30,20 @@ How this service implements the platform observability standard through [`platfo
 | `environment` | `dev`, `test`, `staging`, `production` | `APP_ENV` |
 | `domain` | `llm` — **not yet registered** (OQ-103) | `OBSERVABILITY_DOMAIN` |
 
+## Conformance with the Enterprise Platform Observability Standard
+
+| Tier | Here | How it is held |
+|---|---|---|
+| 1, `platform_*` | Emitted by the libraries only (`platform_http_*`, `platform_messages_*`, `platform_outbox_*`, `platform_dlq_messages_total`, `platform_db_*`). This service declares none. | `tests/architecture/test_metrics_standard.py` fails on a `platform_*` literal or any `new_shared_*` call |
+| 2, `<domain>_*` | None. `llm` has one service in this repo; a metric shared with Ingestion or the Worker Pool would need the domain registry first. | Same test |
+| 3, `llm_retrieval_generation_*` | Every collector in [`metric-registry.md`](metric-registry.md). | Prefix, `_total` / `_seconds` suffixes, label vocabulary and `check_custom` registry rules, for all three modules |
+
+- `domain`, `service` and `environment` are injected by the library's registry, never declared (the test rejects them, and `tenant_id`, `user_id`, `email`, `request_id`, `event_id`, `session_id`, as labels).
+- The inventory document must list exactly the declared collectors, in both directions.
+- **Proposed platform metrics not used** (`platform_dependency_request_seconds`, `platform_queue_depth`, `platform_dlq_depth`, `platform_duplicate_messages_total`, `platform_event_propagation_seconds`): awaiting registry ratification, so no service-side stand-ins exist. When ratified, create them with `new_shared_*` and add the use here.
+- **Backward compatibility:** no legacy metric exists (the service has never been deployed or scraped), so there is no old-and-new parallel emission, sunset period or removal to run.
+- **Dashboards, alert rules, recording rules, SLOs and HPA references do not exist yet.** They are blocked on the `llm` domain registration (OQ-103); the proposed alerts are in [`runbooks.md`](runbooks.md). Nothing to migrate until then.
+
 ## Rules this service follows
 
 - **Names:** Tier-3 metrics are `llm_retrieval_generation_<metric>` (LLD §16, OBS-3). `fastapicommon` rejects any service metric that does not start with `<domain>_<service>_`.
