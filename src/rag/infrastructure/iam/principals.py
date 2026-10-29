@@ -1,11 +1,12 @@
 """IAM principal re-read for the quota-restored consumer (ASYNC-11, §22.5).
 
-``GET /users/:id/memberships`` with ``x-tenant-id``. The LLD names no such route (its IAM reads
-are ``llm-context`` and the Tender ACL), so path and body are assumed:
-``{"roles": [str], "departments": [{"department_id": uuid, "role": str}]}``. A ``404`` is a
-principal IAM no longer knows: an identity with no membership, which scope resolution then finds
-empty (the run ends ``scope_revoked``). Any other failure refuses (``SCOPE_STORE_UNAVAILABLE``)
-rather than guess: an empty department list built from an outage would end live runs.
+``GET /api/v1/internal/users/:id/memberships?tenant_id=`` (I-8, ``iam-lld-org-membership-service``):
+the tenant is a query parameter, and the body carries ``roles`` and
+``departments: [{department_id, code, role_level}]`` among other fields. A ``404`` is a principal
+with no active membership in the tenant: an identity with no membership, which scope resolution
+then finds empty (the run ends ``scope_revoked``). Any other failure refuses
+(``SCOPE_STORE_UNAVAILABLE``) rather than guess: an empty department list built from an outage
+would end live runs.
 """
 
 from __future__ import annotations
@@ -45,7 +46,8 @@ class HttpPrincipalDirectory:
                 base_url=self._base_url, timeout=TIMEOUT_SECONDS
             ) as client:
                 response = await client.get(
-                    f"/users/{principal_id}/memberships", headers={"x-tenant-id": str(tenant_id)}
+                    f"/api/v1/internal/users/{principal_id}/memberships",
+                    params={"tenant_id": str(tenant_id)},
                 )
             if response.status_code == 404:
                 body: dict[str, Any] = {}
@@ -55,7 +57,7 @@ class HttpPrincipalDirectory:
             if not isinstance(body, dict):
                 raise ValueError("memberships is not an object")
             departments = tuple(
-                DepartmentRole(UUID(str(d["department_id"])), str(d["role"]))
+                DepartmentRole(UUID(str(d["department_id"])), str(d["role_level"]))
                 for d in body.get("departments") or []
             )
             roles = frozenset(str(r) for r in body.get("roles") or [])

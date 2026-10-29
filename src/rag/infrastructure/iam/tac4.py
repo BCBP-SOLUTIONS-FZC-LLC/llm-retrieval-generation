@@ -15,9 +15,10 @@ TAC4_PATH = "/internal/tenants/{tenant}/tenders/{tender}/acl/{user}"
 class HttpTenderAccess:
     """``corpusscope.TenderAccess`` over IAM's Tender ACL service.
 
-    Assumed body (the LLD names the path, not the shape): ``{"level": "view"|"edit"|"approve"}``
-    or ``{"level": null}`` for a successful no-access answer (CG-5). Anything else, including a
-    non-200, raises, so the resolver refuses the request (CG-4).
+    Body per ``iam-lld-tender-acl-service`` §8.4 (TAC-4): ``{"has_access": true, "access_level":
+    "view"|"edit"|"approve", "expires_at": ...}``, or ``{"has_access": false, "access_level":
+    null}`` for a successful no-access answer, which IAM never sends as a 404 (CG-5). Anything
+    else, including a non-200, raises, so the resolver refuses the request (CG-4).
     """
 
     def __init__(self, base_url: str, timeout_seconds: float = 0.1) -> None:
@@ -37,9 +38,13 @@ class HttpTenderAccess:
                     "TAC-4 refused", request=response.request, response=response
                 )
             body = response.json()
-        level = body["level"]
-        if level is not None and not isinstance(level, str):
-            raise ValueError("TAC-4 level is not a string")
+        if not isinstance(body, dict) or not isinstance(body.get("has_access"), bool):
+            raise ValueError("TAC-4 has_access is not a boolean")
+        if not body["has_access"]:
+            return None
+        level = body.get("access_level")
+        if not isinstance(level, str):
+            raise ValueError("TAC-4 access_level is not a string")
         return level
 
 

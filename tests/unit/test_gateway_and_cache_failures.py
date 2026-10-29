@@ -125,8 +125,10 @@ def _tac4(handler: Any, monkeypatch: pytest.MonkeyPatch) -> tac4.HttpTenderAcces
 async def test_tac4_returns_the_level(monkeypatch: pytest.MonkeyPatch) -> None:
     """A level string, or null for a successful no-access answer."""
     ids = (uuid4(), uuid4(), uuid4())
-    assert await _tac4(reply({"level": "edit"}), monkeypatch).level(*ids) == "edit"
-    assert await _tac4(reply({"level": None}), monkeypatch).level(*ids) is None
+    granted = {"has_access": True, "access_level": "edit", "expires_at": None}
+    assert await _tac4(reply(granted), monkeypatch).level(*ids) == "edit"
+    none = {"has_access": False, "access_level": None}
+    assert await _tac4(reply(none), monkeypatch).level(*ids) is None
 
 
 async def test_tac4_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -135,7 +137,9 @@ async def test_tac4_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(httpx.HTTPStatusError):
         await _tac4(reply({}, 503), monkeypatch).level(*ids)
     with pytest.raises(ValueError, match="not a string"):
-        await _tac4(reply({"level": 3}), monkeypatch).level(*ids)
+        await _tac4(reply({"has_access": True, "access_level": 3}), monkeypatch).level(*ids)
+    with pytest.raises(ValueError, match="not a boolean"):
+        await _tac4(reply({"level": "edit"}), monkeypatch).level(*ids)
     with pytest.raises(RuntimeError, match="not configured"):
         await tac4.UnconfiguredTenderAccess().level(*ids)
 

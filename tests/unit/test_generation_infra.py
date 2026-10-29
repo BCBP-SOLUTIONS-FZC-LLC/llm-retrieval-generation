@@ -281,18 +281,26 @@ async def test_llm_context_builds_layer_3_caches_it_and_degrades_on_failure() ->
 
         def ok(req: httpx.Request) -> httpx.Response:
             calls.append(req.url.path)
+            assert req.headers["x-user-id"] == str(IDENT.principal_id)
             return httpx.Response(
                 200,
-                json={"tone": "formal", "credentials": ["PE"], "snippets": ["s1"],
-                      "preferred_model": "gen-xl"},
+                json={"display_name": "Alice", "job_title": "Engineer", "writing_tone": "formal",
+                      "templates": ["t1"], "context_documents": ["d1"], "preferred_model": "gen-xl",
+                      "credentials": {"certifications": "P.Eng"}, "locale": "en-US"},
             )  # fmt: skip
 
         cache = DictKV()
         provider = llm_context(ok, cache)
         got = await provider.get(IDENT)
-        assert got == UserContext("Preferred tone: formal\nCredential: PE\nSnippet: s1", "gen-xl")
+        assert got == UserContext(
+            "Name: Alice\nJob title: Engineer\nPreferred tone: formal\nTemplate: t1\n"
+            "Context document: d1",
+            "gen-xl",
+        )
         await provider.get(IDENT)
-        assert len(calls) == 1 and f"{TENANT}:llmctx:" in next(iter(cache.data))  # cached 300 s
+        assert calls == [f"/api/v1/internal/users/{IDENT.principal_id}/llm-context"]
+        assert f"{TENANT}:llmctx:" in next(iter(cache.data))  # cached 300 s
+        assert "P.Eng" not in next(iter(cache.data.values()))  # credentials never reach the cache
 
         none = llm_context(lambda r: httpx.Response(404))
         assert await none.get(IDENT) is None

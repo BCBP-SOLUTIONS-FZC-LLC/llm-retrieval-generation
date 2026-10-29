@@ -120,15 +120,17 @@ async def test_the_principal_is_re_read_from_iam_and_never_taken_from_the_run() 
                 200,
                 json={
                     "roles": ["tender_user"],
-                    "departments": [{"department_id": str(DEPT), "role": "editor"}],
+                    "departments": [
+                        {"department_id": str(DEPT), "code": "ENG", "role_level": "editor"}
+                    ],
                 },
             )
 
         got = await directory(ok).identity_for(
             TENANT, USER, plan="enterprise", residency_mode="strict"
         )
-        assert seen[0].url.path == f"/users/{USER}/memberships"
-        assert seen[0].headers["x-tenant-id"] == str(TENANT)
+        assert seen[0].url.path == f"/api/v1/internal/users/{USER}/memberships"
+        assert seen[0].url.params["tenant_id"] == str(TENANT)
         assert got.roles == {"tender_user"} and got.departments == (DepartmentRole(DEPT, "editor"),)
         assert (got.plan, got.residency_mode, got.principal_id) == (
             "enterprise",
@@ -157,7 +159,7 @@ async def test_an_unknown_principal_is_an_identity_with_no_membership_so_scope_c
     [
         lambda r: httpx.Response(503),
         lambda r: httpx.Response(200, json=["not", "an", "object"]),
-        lambda r: httpx.Response(200, json={"departments": [{"role": "x"}]}),
+        lambda r: httpx.Response(200, json={"departments": [{"role_level": "x"}]}),
         lambda r: (_ for _ in ()).throw(httpx.ConnectError("refused")),
     ],
 )
