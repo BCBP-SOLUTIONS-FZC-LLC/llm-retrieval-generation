@@ -40,8 +40,8 @@ def build_scope_services(settings: Settings, corpus_tx: TransactionRunner) -> Sc
     """Construct the resolver over ``llm_corpus``, TAC-4, Valkey (60 s) and Qdrant."""
     cache = build_cache(settings)
     tac4: TenderAccess = (
-        HttpTenderAccess(settings.iam_base_url, settings.grant_read_timeout_ms / 1000)
-        if settings.iam_base_url
+        HttpTenderAccess(settings.tender_acl_url(), settings.grant_read_timeout_ms / 1000)
+        if settings.tender_acl_url()
         else UnconfiguredTenderAccess()
     )
     resolver = ScopeResolver(

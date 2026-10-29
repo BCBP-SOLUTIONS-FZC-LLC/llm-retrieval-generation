@@ -143,6 +143,11 @@ class Settings(PlatformSettings):
     gateway_base_url: str = "http://model-gateway.internal"
     tender_base_url: str = "http://tender.internal"
     iam_base_url: str = "http://iam.internal"
+    """Org & Membership (I-8); also the fallback for the two below when one route fronts all IAM."""
+    tender_acl_base_url: str = ""
+    """IAM's Tender ACL service (TAC-4); empty uses ``iam_base_url``."""
+    user_profile_base_url: str = ""
+    """IAM's User Profile service (``llm-context``); empty uses ``iam_base_url``."""
     # The Model Gateway's wire details live here, not in the code, so a different gateway is a
     # configuration change. The task classes (the seven virtual model names) are the contract and
     # stay constants. Defaults are Agent Router's (it serves rerank as Cohere's v2 API).
@@ -260,6 +265,14 @@ class Settings(PlatformSettings):
         if problems:
             raise ValueError("; ".join(problems))
         return self
+
+    def tender_acl_url(self) -> str:
+        """Where TAC-4 is called: its own service, else the shared IAM address."""
+        return self.tender_acl_base_url or self.iam_base_url
+
+    def user_profile_url(self) -> str:
+        """Where ``llm-context`` is read: its own service, else the shared IAM address."""
+        return self.user_profile_base_url or self.iam_base_url
 
     def migration_dsn(self, instance: str) -> str:
         """The DDL DSN for ``"corpus"`` or ``"generation"``.

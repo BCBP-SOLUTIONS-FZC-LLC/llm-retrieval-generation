@@ -158,3 +158,19 @@ def test_valid_optional_values_are_still_accepted() -> None:
         refinement_retention_days=30,
     )
     assert s.events_enabled and s.refinement_retention_days == 30
+
+
+def test_iam_services_have_their_own_address_and_fall_back_to_the_shared_one() -> None:
+    """Tender ACL, User Profile and Org & Membership are separate services (IAM LLD §21.5)."""
+    shared = Settings(iam_base_url="http://iam.test")
+    assert shared.tender_acl_url() == shared.user_profile_url() == "http://iam.test"
+    split = Settings(
+        iam_base_url="http://om.test",
+        tender_acl_base_url="http://acl.test",
+        user_profile_base_url="http://up.test",
+    )
+    assert (split.tender_acl_url(), split.user_profile_url()) == (
+        "http://acl.test",
+        "http://up.test",
+    )
+    assert split.iam_base_url == "http://om.test"

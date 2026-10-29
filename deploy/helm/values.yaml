@@ -82,7 +82,12 @@ env:
   QDRANT_URL: "http://qdrant.llm.svc.cluster.local:6333"
   GATEWAY_BASE_URL: "http://model-gateway.llm.svc.cluster.local:1975"
   TENDER_BASE_URL: "http://tender.tender.svc.cluster.local:8080"
+  # IAM is separate services in the `iam` namespace: Org & Membership (memberships, I-8), Tender ACL
+  # (TAC-4, address per its LLD §21.5) and User Profile (llm-context, address assumed by the same
+  # naming). Confirm the User Profile address with IAM. We must also be on Tender ACL's allow-list.
   IAM_BASE_URL: "http://iam-org-membership.iam.svc.cluster.local:8080"
+  TENDER_ACL_BASE_URL: "http://iam-tender-acl.iam.svc.cluster.local:8080"
+  USER_PROFILE_BASE_URL: "http://iam-user-profile.iam.svc.cluster.local:8080"
   # Empty keeps async routes answering 503 WORKFLOW_ENGINE_UNAVAILABLE: the Worker Pool owns the
   # workflow code and the engine address.
   TEMPORAL_ADDRESS: ""

@@ -100,8 +100,8 @@ def build_generate_services(
     repo, clock = PgGenerationWriteRepository(), SystemClock()
     audit = AppendAuditEntry(PgAuditChainRepository())
     binder, reads = ContextTenantBinder(), PgArtefactReadRepository()
-    if user_context is None and settings.iam_base_url:
-        user_context = HttpUserContext(settings.iam_base_url, scope.cache)
+    if user_context is None and settings.user_profile_url():
+        user_context = HttpUserContext(settings.user_profile_url(), scope.cache)
     admit = AdmitGeneration(
         generation_tx,
         repo,
