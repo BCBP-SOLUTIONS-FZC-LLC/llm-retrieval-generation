@@ -20,7 +20,7 @@ Critical implementation files for `llm-retrieval-generation`. See also [`archite
 - **`src/rag/infrastructure/persistence/migrate.py`** — `migrate_all`: outbox schema on each database **first**, then the numbered sets.
 - **`src/rag/infrastructure/events/publisher.py`** — `OutboxEventPublisher`: fails closed on an unregistered type or off-schema payload (EVT-9).
 - **`src/rag/infrastructure/events/routing.py`** — `RoutingPublisher`: topic by event type name; never raises on an unknown type (it would dead-letter and delete the row), logs and counts instead.
-- **`src/rag/infrastructure/events/{relay,consumers,runtime}.py`** — one claim loop per database; six consumers (tenant bound from a UUID, contract check, one use case, ledger row, poison to DLQ at the fourth receive); `start_consumers` only for queues whose URL is set.
+- **`src/rag/infrastructure/events/{relay,consumers,runtime}.py`** — one claim loop per database; five consumers (tenant bound from a UUID, contract check, one use case, ledger row, poison to DLQ at the fourth receive); `start_consumers` only for queues whose URL is set.
 - **`src/rag/infrastructure/gateway/client.py`** — `HttpModelGateway`: embed (300 ms, one retry, breaker), rerank (no retry), complete, SSE stream, tokenize with an over-estimate fallback. **The paths and header names are settings (`gateway_*`), defaulting to Agent Router's; this file is the only place that knows them.**
 - **`src/rag/infrastructure/sweeps/runner.py`** — pools, per-instance advisory lock, `build_sweep`, `run_sweep`; `__main__.py` maps outcomes to exit codes 0/1/2/64.
 - **`src/rag/infrastructure/storage/artefact_content_store.py`** — tenant-prefixed keys, SSE-KMS with the tenant in the encryption context, batched prefix delete.

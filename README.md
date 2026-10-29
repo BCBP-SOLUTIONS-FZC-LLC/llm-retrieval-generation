@@ -162,7 +162,7 @@ Peer contracts that the LLD does not fix (Tender pack JSON, IAM bodies, Gateway 
 
 Published (17): `llm-generation-events` — `GenerationStarted`, `GenerationGapReported`, `OutlineReady`, `SectionCompleted`, `GenerationProgressed`, `GenerationCompleted`, `GenerationFailed`, `GenerationCancelled`, `ArtefactRegenerated`, `ExtractionCompleted`; `llm-index-events` — `IndexGenerationActivated`, `IndexGenerationFailed`, `CorpusConflictDetected`, `CollectionProvisioned`, `CollectionPromoted`, `CollectionStatusChanged`, `ProfileCacheRefreshed`.
 
-Consumed (11 types on 6 queues): `llm-document-rag-q`, `domainprofile-llm-invalidate-q`, `iam-rag-purge-q`, `iam-rag-membership-q`, `tender-rag-q`, `usage-rag-q`. Poison messages go to the queue's DLQ at the fourth receive and are acknowledged.
+Consumed (11 types on 5 queues): `llm-document-rag-q`, `domainprofile-llm-invalidate-q`, `membership-rag-q`, `tender-rag-q`, `usage-rag-q`. Poison messages go to the queue's DLQ at the fourth receive and are acknowledged.
 
 Events are written to the outbox **in the same transaction** as the state change (EVT-8) and relayed by one claim loop per database through a routing publisher. An unregistered type or an off-schema payload fails closed inside that transaction.
 

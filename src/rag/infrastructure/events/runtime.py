@@ -1,7 +1,7 @@
 """Starts the SQS consumers (§12.1, §12.4) and stops them before the relays.
 
 One consumer per queue and one DLQ forwarder per consumer (LD-75): a malformed or schema-violating
-message reaches the DLQ and §16.4's alerts see it. The two IAM queues decode Glue-framed payloads
+message reaches the DLQ and §16.4's alerts see it. The IAM queue decodes Glue-framed payloads
 with eventcommon's decode-only codec. A queue whose URL is unset is not started, so local runs and
 tests need no AWS. Lag, depth and DLQ counts are eventcommon's own ``platform_*`` metrics
 (``queue_depth_interval``, ``platform_dlq_messages_total``), nothing hand-rolled.
@@ -51,17 +51,10 @@ QUEUES = (
         h.pack_invalidation,
     ),
     QueueSpec(
-        "iam-rag-purge-q",
-        "iam_purge_queue_url",
-        c.CONSUMER_TENANT_OFFBOARDING,
-        h.tenant_offboarding,
-        glue=True,
-    ),
-    QueueSpec(
-        "iam-rag-membership-q",
+        "membership-rag-q",
         "iam_membership_queue_url",
-        c.CONSUMER_TENANT_STATE,
-        h.tenant_state,
+        c.CONSUMER_MEMBERSHIP,
+        h.membership,
         glue=True,
     ),
     QueueSpec("tender-rag-q", "tender_queue_url", c.CONSUMER_TENDER_LIFECYCLE, h.tender_lifecycle),

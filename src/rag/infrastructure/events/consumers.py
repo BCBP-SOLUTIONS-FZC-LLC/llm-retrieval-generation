@@ -155,7 +155,7 @@ def pack_invalidation(svc: ConsumerServices, store: Store) -> Handler:
 
 
 def tenant_offboarding(svc: ConsumerServices, store: Store) -> Handler:
-    """``iam-rag-purge-q``: ``TenantMembershipsPurged``, phase one only (EVT-15).
+    """``TenantMembershipsPurged``, phase one only (EVT-15).
 
     Nothing is deleted here: collections go to `purging` and the lifecycle row to `purged`; the
     scheduled ``tenant-purge`` sweep deletes after the soak. It is the *only* consumer that purges
@@ -179,7 +179,7 @@ def tenant_offboarding(svc: ConsumerServices, store: Store) -> Handler:
 
 
 def tenant_state(svc: ConsumerServices, store: Store) -> Handler:
-    """``iam-rag-membership-q``: ``TenantStateChanged`` (freeze/restore; ``offboarded`` ignored)."""
+    """``TenantStateChanged`` (freeze/restore; ``offboarded`` ignored)."""
 
     async def handle(env: Envelope[Any]) -> None:
         if env.type != c.TENANT_STATE_CHANGED:
@@ -190,6 +190,21 @@ def tenant_state(svc: ConsumerServices, store: Store) -> Handler:
             await svc.apply_tenant_state.execute(tenant, p.status, p.cause)
 
     return ledger_handler(store, handle)
+
+
+def membership(svc: ConsumerServices, store: Store) -> Handler:
+    """``membership-rag-q`` (IAM CD-44): one queue carrying both of IAM's tenant events.
+
+    The offboarding and state handlers each ignore a type that is not theirs, so the queue
+    routes on ``Envelope.type`` and both share the one ledger name.
+    """
+    offboarding = tenant_offboarding(svc, store)
+    state = tenant_state(svc, store)
+
+    async def handle(env: Envelope[Any]) -> None:
+        await (offboarding if env.type == c.TENANT_MEMBERSHIPS_PURGED else state)(env)
+
+    return handle
 
 
 def tender_lifecycle(svc: ConsumerServices, store: Store) -> Handler:

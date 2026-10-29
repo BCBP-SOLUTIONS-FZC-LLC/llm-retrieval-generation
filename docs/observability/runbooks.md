@@ -55,7 +55,7 @@ Domain events are being lost to dead letters. See [`runbook-outbox-dead-letter.m
 **Meaning.** Messages reached a queue's DLQ at the fourth receive.
 
 **Triage.**
-1. Which queue (`llm-document-rag-q`, `domainprofile-llm-invalidate-q`, `iam-rag-purge-q`, `iam-rag-membership-q`, `tender-rag-q`, `usage-rag-q`) and why: the consumer forwards **poison** (a non-UUID tenant such as `system`, a schema violation, a forged event) and acknowledges it; an unknown type is acknowledged and logged.
+1. Which queue (`llm-document-rag-q`, `domainprofile-llm-invalidate-q`, `membership-rag-q`, `tender-rag-q`, `usage-rag-q`) and why: the consumer forwards **poison** (a non-UUID tenant such as `system`, a schema violation, a forged event) and acknowledges it; an unknown type is acknowledged and logged.
 2. A handler that raises is redelivered, not dead-lettered by us; the queue's own redrive policy (five receives) is the backstop.
 3. For a payload the producer changed, compare with `schemas/events/` and `api/asyncapi.yaml`.
 

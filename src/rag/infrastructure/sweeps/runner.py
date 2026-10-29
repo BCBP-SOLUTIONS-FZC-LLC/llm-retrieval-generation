@@ -210,8 +210,7 @@ def build_sweep(settings: Settings, pools: Pools, name: str) -> Any:
                 for n in (
                     c.CONSUMER_PURGE_PROJECTION,
                     c.CONSUMER_PACK_INVALIDATION,
-                    c.CONSUMER_TENANT_OFFBOARDING,
-                    c.CONSUMER_TENANT_STATE,
+                    c.CONSUMER_MEMBERSHIP,
                     c.CONSUMER_TENDER_LIFECYCLE,
                     c.CONSUMER_QUOTA_RESUME,
                 )

@@ -6,18 +6,6 @@ channels:
     messages:
       DomainProfilePublished:
         $ref: '#/components/messages/DomainProfilePublished'
-  iam-rag-membership-q:
-    address: iam-rag-membership-q
-    description: SQS queue `iam-rag-membership-q`.
-    messages:
-      TenantStateChanged:
-        $ref: '#/components/messages/TenantStateChanged'
-  iam-rag-purge-q:
-    address: iam-rag-purge-q
-    description: SQS queue `iam-rag-purge-q`.
-    messages:
-      TenantMembershipsPurged:
-        $ref: '#/components/messages/TenantMembershipsPurged'
   llm-document-rag-q:
     address: llm-document-rag-q
     description: SQS queue `llm-document-rag-q`.
@@ -66,6 +54,14 @@ channels:
         $ref: '#/components/messages/IndexGenerationFailed'
       ProfileCacheRefreshed:
         $ref: '#/components/messages/ProfileCacheRefreshed'
+  membership-rag-q:
+    address: membership-rag-q
+    description: SQS queue `membership-rag-q`.
+    messages:
+      TenantMembershipsPurged:
+        $ref: '#/components/messages/TenantMembershipsPurged'
+      TenantStateChanged:
+        $ref: '#/components/messages/TenantStateChanged'
   tender-rag-q:
     address: tender-rag-q
     description: SQS queue `tender-rag-q`.
@@ -1900,21 +1896,16 @@ operations:
     channel:
       $ref: '#/channels/domainprofile-llm-invalidate-q'
     summary: Consume DomainProfilePublished.
-  consume-iam-rag-membership-q:
-    action: receive
-    channel:
-      $ref: '#/channels/iam-rag-membership-q'
-    summary: Consume TenantStateChanged.
-  consume-iam-rag-purge-q:
-    action: receive
-    channel:
-      $ref: '#/channels/iam-rag-purge-q'
-    summary: Consume TenantMembershipsPurged.
   consume-llm-document-rag-q:
     action: receive
     channel:
       $ref: '#/channels/llm-document-rag-q'
     summary: Consume DocumentPurged.
+  consume-membership-rag-q:
+    action: receive
+    channel:
+      $ref: '#/channels/membership-rag-q'
+    summary: Consume TenantMembershipsPurged, TenantStateChanged.
   consume-tender-rag-q:
     action: receive
     channel:

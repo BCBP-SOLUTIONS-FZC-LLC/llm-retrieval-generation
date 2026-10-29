@@ -89,15 +89,13 @@ TENANT_QUOTA_RESTORED = "TenantQuotaRestored"
 # consumer names in the ``processed_events`` ledger (§12.4, EVT-6)
 CONSUMER_PURGE_PROJECTION = "purge_projection"
 CONSUMER_PACK_INVALIDATION = "pack_invalidation"
-CONSUMER_TENANT_OFFBOARDING = "tenant_offboarding"
-CONSUMER_TENANT_STATE = "tenant_state"
+CONSUMER_MEMBERSHIP = "membership"
 CONSUMER_TENDER_LIFECYCLE = "tender_lifecycle"
 CONSUMER_QUOTA_RESUME = "quota_resume"
 DESTRUCTIVE_CONSUMERS = frozenset(
     {
         CONSUMER_PURGE_PROJECTION,
-        CONSUMER_TENANT_OFFBOARDING,
-        CONSUMER_TENANT_STATE,
+        CONSUMER_MEMBERSHIP,
         CONSUMER_TENDER_LIFECYCLE,
     }
 )

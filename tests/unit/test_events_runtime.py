@@ -44,18 +44,17 @@ def test_a_scope_cannot_be_bound_from_a_string() -> None:
         pass
 
 
-def test_six_queues_with_glue_decoding_on_the_two_iam_queues_only() -> None:
+def test_five_queues_with_glue_decoding_on_the_iam_queue_only() -> None:
     names = {q.queue: q for q in runtime.QUEUES}
     assert set(names) == {
         "llm-document-rag-q",
         "domainprofile-llm-invalidate-q",
-        "iam-rag-purge-q",
-        "iam-rag-membership-q",
+        "membership-rag-q",
         "tender-rag-q",
         "usage-rag-q",
     }
-    assert {n for n, q in names.items() if q.glue} == {"iam-rag-purge-q", "iam-rag-membership-q"}
-    assert len({q.consumer for q in runtime.QUEUES}) == 6  # one ledger name each (EVT-6)
+    assert {n for n, q in names.items() if q.glue} == {"membership-rag-q"}
+    assert len({q.consumer for q in runtime.QUEUES}) == 5  # one ledger name each (EVT-6)
 
 
 def consumer_for(queue: str) -> Any:

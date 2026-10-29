@@ -410,8 +410,7 @@ async def test_destructive_consumers_keep_their_ledger_rows_longer_evt_16() -> N
     from rag.application.events.contracts import DESTRUCTIVE_CONSUMERS
 
     ledgers = {
-        n: Ledger()
-        for n in ("purge_projection", "pack_invalidation", "tenant_state", "quota_resume")
+        n: Ledger() for n in ("purge_projection", "pack_invalidation", "membership", "quota_resume")
     }
     out = await s.PruneProcessedEvents(
         ledgers, DESTRUCTIVE_CONSUMERS, ordinary_days=8, destructive_days=90
@@ -420,7 +419,7 @@ async def test_destructive_consumers_keep_their_ledger_rows_longer_evt_16() -> N
     assert ledgers["pack_invalidation"].retention == timedelta(days=8)
     assert ledgers["quota_resume"].retention == timedelta(days=8)
     assert ledgers["purge_projection"].retention == timedelta(days=90)
-    assert ledgers["tenant_state"].retention == timedelta(days=90)
+    assert ledgers["membership"].retention == timedelta(days=90)
 
 
 # --- tenant purge, phase two --------------------------------------------------------------------

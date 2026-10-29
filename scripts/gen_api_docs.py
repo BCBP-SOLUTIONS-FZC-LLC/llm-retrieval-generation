@@ -42,8 +42,7 @@ ASYNCAPI_HTML = ROOT / "api" / "asyncapi.html"
 QUEUES: dict[str, list[str]] = {
     "llm-document-rag-q": ["DocumentPurged"],
     "domainprofile-llm-invalidate-q": ["DomainProfilePublished"],
-    "iam-rag-purge-q": ["TenantMembershipsPurged"],
-    "iam-rag-membership-q": ["TenantStateChanged"],
+    "membership-rag-q": ["TenantMembershipsPurged", "TenantStateChanged"],
     "tender-rag-q": sorted(
         t for t in CONSUMED if t.startswith("Tender") and not t.startswith("Tenant")
     ),

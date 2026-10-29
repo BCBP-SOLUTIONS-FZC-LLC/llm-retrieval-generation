@@ -178,6 +178,19 @@ async def test_offboarding_is_phase_one_only_and_alerts(monkeypatch: pytest.Monk
     assert alert["tenant_id"] == str(TENANT)
 
 
+# --- membership (one IAM queue, two event types) ---------------------------------------------
+async def test_the_one_iam_queue_routes_each_event_type_to_its_handler() -> None:
+    """CD-44: ``membership-rag-q`` carries both; the type decides, the ledger name is shared."""
+    bench = Bench()
+    col = bench.world.add_collection(status=CollectionStatus.ACTIVE)
+    rig = Rig(bench, h.membership)
+    await rig.send(envelope(c.TENANT_STATE_CHANGED, {"status": "suspended", "cause": "x"}))
+    assert bench.world.state.collections[col.id].status is CollectionStatus.FROZEN
+    await rig.send(envelope(c.TENANT_MEMBERSHIPS_PURGED, {"actor_id": "iam"}))
+    assert bench.world.state.collections[col.id].status is CollectionStatus.PURGING
+    assert bench.world.state.lifecycle[TENANT].purged and rig.dlq.sent == []
+
+
 # --- tender_lifecycle -----------------------------------------------------------------------
 async def test_tender_restricted_promotes_once() -> None:
     bench = Bench()

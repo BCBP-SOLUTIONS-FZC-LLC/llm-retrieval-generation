@@ -332,13 +332,12 @@ flowchart LR
     tg --> tenderq["Tender and other subscribers"]
     ti --> ingq["Ingestion and other subscribers"]
 
-    subgraph consume["Consumers (six queues, one ledger name each)"]
+    subgraph consume["Consumers (five queues, one ledger name each)"]
         q1["llm-document-rag-q"] --> h
         q2["domainprofile-llm-invalidate-q"] --> h
-        q3["iam-rag-purge-q (Glue)"] --> h
-        q4["iam-rag-membership-q (Glue)"] --> h
-        q5["tender-rag-q"] --> h
-        q6["usage-rag-q"] --> h
+        q3["membership-rag-q (Glue)"] --> h
+        q4["tender-rag-q"] --> h
+        q5["usage-rag-q"] --> h
         h["poison_safe handler\ntenant must be a UUID that agrees with the payload\nschema check, one use case, ledger row (PE-1)"]
         h -->|"poison"| dlq["queue DLQ at the fourth receive, then ack"]
         h -->|"other error"| redeliver["raise, SQS redelivers"]

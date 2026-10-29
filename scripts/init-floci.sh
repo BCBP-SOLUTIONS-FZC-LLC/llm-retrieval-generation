@@ -11,8 +11,8 @@ aws s3api head-bucket --bucket rag-artefacts 2>/dev/null || aws s3api create-buc
 for topic in llm-generation-events llm-index-events; do
   aws sns create-topic --name "$topic" >/dev/null
 done
-for queue in llm-document-rag-q domainprofile-llm-invalidate-q iam-rag-purge-q \
-             iam-rag-membership-q tender-rag-q usage-rag-q; do
+for queue in llm-document-rag-q domainprofile-llm-invalidate-q membership-rag-q \
+             tender-rag-q usage-rag-q; do
   aws sqs create-queue --queue-name "$queue" >/dev/null
 done
 # Dev probe: a queue subscribed to both outbound topics (raw delivery), so published events can be
@@ -23,4 +23,4 @@ for topic in llm-generation-events llm-index-events; do
     --notification-endpoint arn:aws:sqs:eu-west-1:000000000000:llm-events-probe-q \
     --attributes RawMessageDelivery=true >/dev/null
 done
-echo "floci: rag-artefacts bucket, 2 topics, 6 queues ready"
+echo "floci: rag-artefacts bucket, 2 topics, 5 queues ready"

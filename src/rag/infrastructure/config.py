@@ -169,8 +169,9 @@ class Settings(PlatformSettings):
     index_topic_arn: str = ""  # llm-index-events
     document_queue_url: str = ""  # llm-document-rag-q
     domainprofile_queue_url: str = ""  # domainprofile-llm-invalidate-q
-    iam_purge_queue_url: str = ""  # iam-rag-purge-q
-    iam_membership_queue_url: str = ""  # iam-rag-membership-q
+    iam_membership_queue_url: str = (
+        ""  # membership-rag-q: TenantStateChanged + TenantMembershipsPurged
+    )
     tender_queue_url: str = ""  # tender-rag-q
     usage_queue_url: str = ""  # usage-rag-q
     # LD-86: a message dead-letters at the fourth receive. eventcommon forwards a message whose

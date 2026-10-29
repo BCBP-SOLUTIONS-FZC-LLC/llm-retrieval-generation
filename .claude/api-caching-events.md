@@ -73,14 +73,13 @@ The pack-cache key shape is an **assumption** (§11.1 does not fix the identity)
 
 Emitted today: the corpus events, `ProfileCacheRefreshed`, `GenerationFailed` (sweeps and `scope_revoked`), `GenerationStarted` (every admission), `GenerationProgressed` (W-3/W-4/W-7), `GenerationCancelled` (W-5), `SectionCompleted` with `origin = regeneration` (A-6). **Still the Worker Pool's:** `OutlineReady`, `GenerationGapReported`, the activities' `GenerationProgressed` / `SectionCompleted` / `GenerationCompleted` / `ArtefactRegenerated`. `CorpusConflictDetected` is deferred past v1 (LD-52). No event is published for a failed or cancelled run beyond the cases above (audit entries only).
 
-### 7.3 Consumed (11 types, 6 queues)
+### 7.3 Consumed (11 types, 5 queues)
 
 | Queue | Consumer ledger | Codec | Events |
 |---|---|---|---|
 | `llm-document-rag-q` | `purge_projection` | plain | `DocumentPurged` |
 | `domainprofile-llm-invalidate-q` | `pack_invalidation` | plain | `DomainProfilePublished` |
-| `iam-rag-purge-q` | `tenant_offboarding` | Glue | `TenantMembershipsPurged` |
-| `iam-rag-membership-q` | `tenant_state` | Glue | `TenantStateChanged` |
+| `membership-rag-q` | `membership` | Glue | `TenantMembershipsPurged`, `TenantStateChanged` |
 | `tender-rag-q` | `tender_lifecycle` | plain | `TenderRestricted`, `TenderPurged`, the four terminal outcomes (`TenderDeclined/Won/Lost/Withdrawn`, names assumed) |
 | `usage-rag-q` | `quota_resume` | plain | `TenantQuotaRestored` |
 
