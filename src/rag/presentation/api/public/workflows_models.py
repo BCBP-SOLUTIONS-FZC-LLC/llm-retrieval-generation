@@ -26,9 +26,9 @@ Mode = Literal["assistance", "automation"]
 
 
 class RecipientBody(BaseModel):
-    """``{kind, id}`` echoed on the run's events (LD-83, provisional)."""
+    """``{kind, id}`` echoed on the run's events (LD-83)."""
 
-    kind: str = Field(min_length=1, max_length=64)
+    kind: Literal["user", "department"]
     id: str = Field(min_length=1, max_length=128)
 
 

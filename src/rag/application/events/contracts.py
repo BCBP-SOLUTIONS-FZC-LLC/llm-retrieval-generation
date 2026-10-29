@@ -116,7 +116,10 @@ def tender_subject(tender_id: UUID | str | None) -> str:
 
 @dataclass(frozen=True, slots=True)
 class Recipient:
-    """``{kind, id}`` echoed from the request that started the run (LD-83, provisional)."""
+    """``{kind, id}`` echoed from the request that started the run (LD-83).
+
+    ``kind`` is ``user`` or ``department``; the request refuses any other.
+    """
 
     kind: str
     id: str
@@ -214,6 +217,8 @@ class GenerationProgressed:
     observed_at: str
     tender_id: str | None = _opt()
     stage: RunStage | None = _opt()
+    reason: RunFailureReason | None = _opt()
+    """Why the run is ``suspended`` (``quota_exhausted`` today); absent in every other state."""
     recipients: list[Recipient] = field(default_factory=list)
 
 

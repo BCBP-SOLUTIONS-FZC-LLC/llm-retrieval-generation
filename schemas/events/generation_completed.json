@@ -65,7 +65,7 @@
     },
     "Recipient": {
       "additionalProperties": true,
-      "description": "``{kind, id}`` echoed from the request that started the run (LD-83, provisional).",
+      "description": "``{kind, id}`` echoed from the request that started the run (LD-83).\n\n``kind`` is ``user`` or ``department``; the request refuses any other.",
       "properties": {
         "id": {
           "title": "Id",

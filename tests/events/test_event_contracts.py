@@ -334,3 +334,11 @@ def test_consumed_payloads_ignore_unknown_keys_and_reject_missing_fields() -> No
 def test_domain_event_default_has_no_correlation() -> None:
     """Additive field: existing positional constructions are unchanged."""
     assert DomainEvent("X", TENANT, "s").correlation_id == ""
+
+
+def test_a_suspended_progress_event_names_its_reason_and_other_states_omit_it() -> None:
+    """N9: the quota suspension is a signal on the progress event, absent unless suspended."""
+    args = (A, G, P, 7, RunStatus.SUSPENDED, 3, 8, OutlineState.APPROVED, "2026-10-12T08:41:12Z")
+    suspended = c.GenerationProgressed(*args, reason=RunFailureReason.QUOTA_EXHAUSTED)
+    assert c.payload_of(suspended)["reason"] == "quota_exhausted"
+    assert "reason" not in c.payload_of(c.GenerationProgressed(*args))

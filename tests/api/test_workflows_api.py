@@ -95,6 +95,20 @@ def test_w1_idempotency_key_is_required(h: Harness) -> None:
     assert h.rig.world.runs == {}
 
 
+def test_w1_recipient_kind_is_user_or_department(h: Harness) -> None:
+    """N8: the shape is fixed here; any other kind is refused before a run is written."""
+    ok = {"kind": "department", "id": "d-1"}
+    assert (
+        h.post("/api/v1/generations", {**W1, "recipients": [ok]}, {**HEADERS, **KEY}).status_code
+        == 202
+    )
+    bad = {"kind": "team", "id": "t-1"}
+    r = h.post(
+        "/api/v1/generations", {**W1, "recipients": [bad]}, {**HEADERS, "Idempotency-Key": "k2"}
+    )
+    assert r.status_code == 400 and r.json()["errorCode"] == "VALIDATION_FAILED"
+
+
 def test_w1_replay_is_200_and_a_different_body_is_409(h: Harness) -> None:
     first = h.post("/api/v1/generations", W1, {**HEADERS, **KEY}).json()
     run = h.rig.world.runs[UUID(first["generation_id"])]

@@ -14,7 +14,7 @@
     },
     "Recipient": {
       "additionalProperties": true,
-      "description": "``{kind, id}`` echoed from the request that started the run (LD-83, provisional).",
+      "description": "``{kind, id}`` echoed from the request that started the run (LD-83).\n\n``kind`` is ``user`` or ``department``; the request refuses any other.",
       "properties": {
         "id": {
           "title": "Id",
@@ -31,6 +31,20 @@
       ],
       "title": "Recipient",
       "type": "object"
+    },
+    "RunFailureReason": {
+      "description": "Why a run failed (lower snake case, unlike error codes).",
+      "enum": [
+        "scope_revoked",
+        "quota_exhausted",
+        "inference_unavailable",
+        "residency_capacity",
+        "artefact_store_unwritable",
+        "gate_expired",
+        "internal"
+      ],
+      "title": "RunFailureReason",
+      "type": "string"
     },
     "RunStage": {
       "description": "The run workflow's phase names (LD-77).",
@@ -85,6 +99,17 @@
     "progress_seq": {
       "title": "Progress Seq",
       "type": "integer"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RunFailureReason"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "recipients": {
       "items": {

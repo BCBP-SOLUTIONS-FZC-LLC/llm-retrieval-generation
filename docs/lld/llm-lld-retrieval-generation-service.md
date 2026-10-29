@@ -2997,7 +2997,7 @@ These additions are on the requests and responses named. Each is optional and ad
 | R-4, W-6 | `trigger_document_version_id`, `regime`, `structure` | `generation_id`, `trigger_document_version_id`. A field gap carries `gap_reason` `not_applicable` where the profile marks the field conditional and its condition is false, and `no_supporting_evidence` otherwise |
 | R-3 (the verdict frame) | None | `generation_id`, stable for the run that produced the draft |
 
-`recipients` is `{ kind, id }` pairs and is provisional until Tender confirms the stream gateway's shape (§20 OQ-68).
+`recipients` is `{ kind, id }` pairs, `kind` being `user` or `department` (any other is refused with `VALIDATION_FAILED`). The shape is this service's to define and Tender accepts it as sent (2026-10-29, closes the provisional note under §20 OQ-68); the shared relay's owner still has to declare `recipients` as the recipient field for these event types (Tender HLD TND-Q20). `GenerationProgressed` also carries an optional `reason`, set to `quota_exhausted` while the run is `suspended` and absent otherwise, so a watching user can tell a quota pause from a stall (Tender N9).
 
 ### 5.8 Status codes
 
@@ -4166,7 +4166,7 @@ The clamp is on the event as well as the artefact, because `API-5` and MD-23 req
 
 **Both types fire for a regeneration that mints a document version** (LD-78). `GenerationCompleted` is published by every generation that writes a version (`GEN-10`) and `ArtefactRegenerated` carries the regeneration detail. They name the same `artefact_version_id`, and a consumer keys on that field so one version is never counted twice.
 
-**Recipients (LD-83).** Every event on `llm.generation.events` carries `recipients`, an array of `{ kind, id }` that names who should see the event in a browser. This service echoes what the Tender Service sent on the request that started the run. It never infers a recipient from the actor. A request that names none produces an empty array. The shape is provisional until Tender and the stream gateway fix it (§20 OQ-68).
+**Recipients (LD-83).** Every event on `llm.generation.events` carries `recipients`, an array of `{ kind, id }` that names who should see the event in a browser. This service echoes what the Tender Service sent on the request that started the run. It never infers a recipient from the actor. A request that names none produces an empty array. The shape is fixed by this service and accepted by Tender (§5.7.19, §20 OQ-68).
 
 `ExtractionCompleted`, when a structured extraction finishes, from R-4's and W-6's write transaction (LD-84):
 

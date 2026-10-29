@@ -166,6 +166,7 @@ class RunActions:
                     observed_at=self.clock.now().isoformat().replace("+00:00", "Z"),
                     tender_id=None if run.tender_id is None else str(run.tender_id),
                     stage=run.current_stage,
+                    reason=run.failure_reason if run.status is RunStatus.SUSPENDED else None,
                     recipients=recipients_of(run),
                 ),
                 correlation_id=str((run.run_input or {}).get("correlation_id") or ""),

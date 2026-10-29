@@ -1897,7 +1897,7 @@
         "type": "object"
       },
       "RecipientBody": {
-        "description": "``{kind, id}`` echoed on the run's events (LD-83, provisional).",
+        "description": "``{kind, id}`` echoed on the run's events (LD-83).",
         "properties": {
           "id": {
             "maxLength": 128,
@@ -1906,8 +1906,10 @@
             "type": "string"
           },
           "kind": {
-            "maxLength": 64,
-            "minLength": 1,
+            "enum": [
+              "user",
+              "department"
+            ],
             "title": "Kind",
             "type": "string"
           }

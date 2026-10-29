@@ -507,7 +507,10 @@ components:
       type: string
     ArtefactRegenerated_Recipient:
       additionalProperties: true
-      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83).
+
+
+        ``kind`` is ``user`` or ``department``; the request refuses any other.'
       properties:
         id:
           title: Id
@@ -793,7 +796,10 @@ components:
       type: string
     ExtractionCompleted_Recipient:
       additionalProperties: true
-      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83).
+
+
+        ``kind`` is ``user`` or ``department``; the request refuses any other.'
       properties:
         id:
           title: Id
@@ -854,7 +860,10 @@ components:
       type: object
     GenerationCancelled_Recipient:
       additionalProperties: true
-      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83).
+
+
+        ``kind`` is ``user`` or ``department``; the request refuses any other.'
       properties:
         id:
           title: Id
@@ -988,7 +997,10 @@ components:
       type: string
     GenerationCompleted_Recipient:
       additionalProperties: true
-      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83).
+
+
+        ``kind`` is ``user`` or ``department``; the request refuses any other.'
       properties:
         id:
           title: Id
@@ -1055,7 +1067,10 @@ components:
       type: object
     GenerationFailed_Recipient:
       additionalProperties: true
-      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83).
+
+
+        ``kind`` is ``user`` or ``department``; the request refuses any other.'
       properties:
         id:
           title: Id
@@ -1144,7 +1159,10 @@ components:
       type: object
     GenerationGapReported_Recipient:
       additionalProperties: true
-      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83).
+
+
+        ``kind`` is ``user`` or ``department``; the request refuses any other.'
       properties:
         id:
           title: Id
@@ -1178,6 +1196,11 @@ components:
         progress_seq:
           title: Progress Seq
           type: integer
+        reason:
+          anyOf:
+          - $ref: '#/components/schemas/GenerationProgressed_RunFailureReason'
+          - type: 'null'
+          default: null
         recipients:
           items:
             $ref: '#/components/schemas/GenerationProgressed_Recipient'
@@ -1226,7 +1249,10 @@ components:
       type: string
     GenerationProgressed_Recipient:
       additionalProperties: true
-      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83).
+
+
+        ``kind`` is ``user`` or ``department``; the request refuses any other.'
       properties:
         id:
           title: Id
@@ -1239,6 +1265,18 @@ components:
       - id
       title: Recipient
       type: object
+    GenerationProgressed_RunFailureReason:
+      description: Why a run failed (lower snake case, unlike error codes).
+      enum:
+      - scope_revoked
+      - quota_exhausted
+      - inference_unavailable
+      - residency_capacity
+      - artefact_store_unwritable
+      - gate_expired
+      - internal
+      title: RunFailureReason
+      type: string
     GenerationProgressed_RunStage:
       description: The run workflow's phase names (LD-77).
       enum:
@@ -1362,7 +1400,10 @@ components:
       type: string
     GenerationStarted_Recipient:
       additionalProperties: true
-      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83).
+
+
+        ``kind`` is ``user`` or ``department``; the request refuses any other.'
       properties:
         id:
           title: Id
@@ -1480,7 +1521,10 @@ components:
       type: object
     OutlineReady_Recipient:
       additionalProperties: true
-      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83).
+
+
+        ``kind`` is ``user`` or ``department``; the request refuses any other.'
       properties:
         id:
           title: Id
@@ -1638,7 +1682,10 @@ components:
       type: string
     SectionCompleted_Recipient:
       additionalProperties: true
-      description: '``{kind, id}`` echoed from the request that started the run (LD-83, provisional).'
+      description: '``{kind, id}`` echoed from the request that started the run (LD-83).
+
+
+        ``kind`` is ``user`` or ``department``; the request refuses any other.'
       properties:
         id:
           title: Id
