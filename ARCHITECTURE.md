@@ -528,7 +528,7 @@ sequenceDiagram
 - The tenant GUC is set **transaction-locally** by the pool's GUC provider. Behind PgBouncer in transaction mode a session-scoped `SET` would survive into the next client on that backend. CI greps `src/` and `migrations/` for a non-`LOCAL` `SET app.tenant_id` and fails (RLS-6).
 - **`PG_BOUNCER_MODE` is a string that must be exactly `true`.** pgcommon parses booleans leniently, and a typo would silently turn transaction-local GUCs into session-scoped ones — a cross-tenant leak. `assert_isolation_config` runs in the app factory, before any pool exists.
 - **Superusers bypass RLS even with `FORCE`.** The application and the tests log in as a non-superuser (`rag_app_login`, a member of `rag_app`); migrations use a separate DDL DSN directly against Postgres.
-- **Cross-tenant sweeps** enumerate tenants as `rag_sweeper`: column-limited `SELECT`, a `FOR SELECT … USING (true)` policy per table, no writes, no `BYPASSRLS`. The runner refuses to start without the enumeration DSNs, because an empty tenant list looks like a healthy sweep.
+- **Cross-tenant sweeps** enumerate tenants as `rag_sweeper`: column-limited `SELECT`, a `FOR SELECT … USING (true)` policy per table, no writes, no `BYPASSRLS`. The runner refuses to start without the enumeration DSNs, because an empty tenant list looks like a healthy sweep. The enumeration DSNs go through PgBouncer like every other application connection (decision, 2026-10-29): the pool binds no tenant GUC and each listing is one statement in its own transaction, so transaction pooling is safe. Only migrations connect direct.
 
 ---
 

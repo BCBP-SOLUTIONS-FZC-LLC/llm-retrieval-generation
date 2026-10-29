@@ -275,7 +275,7 @@ vllm-down:  ## stop vLLM and put the gateway back on the stub (models stay in th
 
 .PHONY: chat-up
 chat-up:  ## Open WebUI over the gateway; pulls a large image the first time
-	docker compose --profile gateway up -d open-webui
+	docker compose --profile gateway up -d --no-recreate open-webui
 	@for i in $$(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/health && break; sleep 3; done
 	python3 scripts/open-webui/document_mode.py
 	@echo "chat UI on http://localhost:3000 - choose a task class (draft, judge, ...) as the model"
