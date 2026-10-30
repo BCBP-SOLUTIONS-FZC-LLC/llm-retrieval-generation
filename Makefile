@@ -22,6 +22,7 @@ export APP_NAME APP_ENV BUILD_VERSION
 TEST_UNIT_PATHS := tests/unit tests/usecase tests/architecture tests/api tests/events \
                    tests/isolation tests/repository
 
+TRIVY_IMAGE ?= ghcr.io/aquasecurity/trivy:latest
 SCHEMA_GOV_IMAGE ?= ghcr.io/bcbp-solutions-fzc-llc/platform-schemagov:0.4
 # Image is published linux/amd64 only; Apple Silicon needs this for pull/run.
 SCHEMA_GOV_PLATFORM ?= linux/amd64
@@ -54,8 +55,8 @@ setup:
 .PHONY: install-hooks
 install-hooks:
 	@if [ -d .git ]; then \
-	  mkdir -p .git/hooks && cp .githooks/pre-commit .git/hooks/pre-commit \
-	    && chmod +x .git/hooks/pre-commit && echo "Installed git hooks"; \
+	  mkdir -p .git/hooks && cp .githooks/pre-commit .githooks/pre-push .git/hooks/ \
+	    && chmod +x .git/hooks/pre-commit .git/hooks/pre-push && echo "Installed git hooks"; \
 	else echo "not a git checkout; skipping hooks"; fi
 
 .PHONY: help
@@ -99,6 +100,7 @@ help:
 	@echo "  make docker-down     - stop local containers"
 	@echo "  make helm-check      - helm lint + template (all overlays) + kubeconform"
 	@echo "  make docker-build    - build the service image (retrieval-generation:dev)"
+	@echo "  make trivy           - build the image, then CVE-scan it as release.yml does (CRITICAL,HIGH, fixed only)"
 	@echo "  make pin-base-images - fetch and pin SHA digests for the Dockerfile base images"
 	@echo "  make vuln-check      - pip-audit on the locked deps"
 	@echo "  make clean           - remove build artefacts"
@@ -134,6 +136,18 @@ fmt-check:
 .PHONY: docker-build
 docker-build:
 	docker build --build-arg BUILD_VERSION=$(BUILD_VERSION) -t retrieval-generation:dev .
+
+# trivy: the release.yml CVE gate, locally. Scans the image docker-build just made for CRITICAL/HIGH
+# findings that have a fix; exits non-zero on any. Uses a local trivy if installed, else the
+# TRIVY_IMAGE container (the Docker socket is mounted so it can read the local image).
+.PHONY: trivy
+trivy: docker-build
+	@if command -v trivy >/dev/null 2>&1; then \
+	  trivy image --ignore-unfixed --vuln-type os,library --severity CRITICAL,HIGH --exit-code 1 retrieval-generation:dev; \
+	 else \
+	  docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $$HOME/.cache/trivy:/root/.cache/ "$(TRIVY_IMAGE)" \
+	    image --ignore-unfixed --vuln-type os,library --severity CRITICAL,HIGH --exit-code 1 retrieval-generation:dev; \
+	 fi
 
 # pin-base-images: fetch and pin the current SHA digests for the Dockerfile base images. Writes the
 # digests to the Dockerfile FROM lines and to .docker-digests (a checked-in provenance record).
