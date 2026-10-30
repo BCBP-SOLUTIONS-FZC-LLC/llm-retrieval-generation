@@ -202,6 +202,7 @@ make run          # API on :8080 (kills anything already listening there)
 | `make swag` / `swag-check` | `extract-schemas` + regenerate / verify the OpenAPI, AsyncAPI and event schemas |
 | `make lock` / `lock-check` | Refresh / verify `uv.lock` |
 | `make vuln-check` | `pip-audit` on the locked dependencies |
+| `make trivy` | Build the image, then Trivy-scan it as `release.yml` does (CRITICAL/HIGH with a fix fail); local `trivy` if installed, else the `TRIVY_IMAGE` container (Docker) |
 | `make sweeps` | Run the sweep runner locally |
 | `make events-peek` | Print the events waiting in the dev probe queue |
 | `make gateway-up` / `gateway-down` | Start / stop the model gateway (Agent Router, pinned image) in front of a model stub (opt-in) |
@@ -322,7 +323,7 @@ Logs, spans and metrics go through `fastapicommon` and nothing else. Every log l
 
 ## Deployment
 
-**Partly planned.** A `Dockerfile` exists (`make docker-build`: digest-pinned `python:3.15.2-slim-bookworm`, `uv sync --locked`, non-root uid 10001, port 8080); a Helm chart exists in `deploy/helm/` (`make helm-check`; the IRSA policy is in `deploy/irsa/`) but has never been applied to a cluster, and there is no release workflow yet — see the table in [`VERSIONING.md`](VERSIONING.md#planned-not-yet-in-place). The chart runs:
+**Partly planned.** A `Dockerfile` exists (`make docker-build`: digest-pinned `python:3.15.2-slim-bookworm`, `uv sync --locked`, non-root uid 10001, port 8080); a Helm chart exists in `deploy/helm/` (`make helm-check`; the IRSA policy is in `deploy/irsa/`) but has never been applied to a cluster, and `.github/workflows/release.yml` builds, scans, boot-tests, pushes and signs the image on a version tag (never run) — see the table in [`VERSIONING.md`](VERSIONING.md#planned-not-yet-in-place). The chart runs:
 
 - One image carrying the API (`uvicorn --factory rag.presentation.main:create_app`), the migration entrypoint (`python -m rag.infrastructure.persistence.migrate`) and the sweep runner (`python -m rag.infrastructure.sweeps <name>|all`).
 - Migrations run from a one-shot job, directly against Postgres (never through PgBouncer: the advisory lock is session-scoped), before the new image takes traffic, and must be safe while the previous image still serves.
@@ -332,15 +333,24 @@ Logs, spans and metrics go through `fastapicommon` and nothing else. Every log l
 
 ## CI
 
-`.github/workflows/ci.yml` runs two reusable gates on pushes to `main` and on pull requests (skipped for Markdown-only changes), then a PR summary comment.
+`.github/workflows/ci.yml` runs two reusable gates and an image boot test on pushes to `main` and on pull requests (skipped for Markdown-only changes), then a PR summary comment.
 
 | Gate | What runs |
 |---|---|
 | `validate-test` | `make test-ci` (unit + integration, Docker), the 95% coverage gate, then `make test-e2e` |
 | `validate-quality` | lockfile check, `uv sync --locked`, `uv pip check`, the RLS-6 grep check, format, lint, `mypy --strict`, `pip-audit` |
+| `image-boot` | Build the image, then migrate, start and require `/ready` = 200 against Postgres + PgBouncer (`.github/scripts/image-boot-check.sh`) |
 | `changelog-check` | A PR changing `src/`, `migrations/` or `schemas/` must update `CHANGELOG.md` |
 
-Actions are pinned by SHA; private packages are installed with the `CI_REPO_READ_TOKEN` secret. Image build, scan, signing and release jobs are planned (see [`VERSIONING.md`](VERSIONING.md)).
+Actions are pinned by SHA; private packages are installed with the `CI_REPO_READ_TOKEN` secret. `release.yml` (on a version tag) validates, builds, CVE-scans, boot-tests, pushes, adds an SBOM and signs the image; `vuln-scan.yml` audits dependencies weekly; Dependabot proposes pip, Actions and Docker bumps. None of it has run on GitHub yet (see [`VERSIONING.md`](VERSIONING.md)).
+
+**Merge gate, not yet usable:** the repository has no `main` (the working branch is the default), and the organisation ruleset `protect-main-branch` blocks creating it by push, so CI has never run on GitHub. The ruleset requires a PR with a code-owner approval and six checks: `Build image (cache)`, `Trivy CVE scan`, `Smoke tests`, `Validate / Quality / quality`, `Validate / Test / test` and `PR summary`. `ci.yml` produces the last three, plus an `Image boot` job; it has no jobs named for the first three, so a PR could not satisfy the ruleset until they are added (modelled on `iam-org-membership`'s `ci.yml`). `make trivy` and the pre-push hook are the local equivalent of the CVE scan.
+
+### Git hooks and Claude Code automation
+
+`make setup` (or `make install-hooks`) installs two hooks from `.githooks/`: `pre-commit` (`fmt-check`, `lint`, `typecheck`, `swag-check`, and `lock-check` when the lockfile inputs are staged) and `pre-push` (`make trivy`; needs Docker; skips branch deletions; `git push --no-verify` bypasses it).
+
+For Claude Code, `.claude/settings.json` registers two hooks (`format-python.sh` runs `ruff format` on edited project `.py` files; `block-generated.sh` refuses edits to `docs/swagger/*`, `api/asyncapi.*` and `schemas/events/*.json`), `.claude/skills/` holds `pr-check` (the pre-PR gates, user-invoked) and `peer-contract-check` (background rule: peer contracts are assumptions until the peer's doc confirms them), and `.claude/agents/` holds read-only `security-reviewer` and `rls-reviewer`.
 
 ---
 

@@ -52,6 +52,7 @@ make gateway-up-vllm  # embed + rerank on vLLM (CPU) behind the gateway, to test
 make vllm-down        # stop vLLM, gateway back on the stub
 make test-gateway     # contract tests of our client against it (needs gateway-up)
 make vuln-check       # pip-audit on the locked deps
+make trivy            # build the image, then Trivy CVE scan as release.yml does (Docker)
 make schema-validate  # platform-schemagov over schemas/events (Docker, linux/amd64)
 make clean
 ```
@@ -76,6 +77,14 @@ Full per-file descriptions in **[`key-files.md`](key-files.md)**. Most-touched e
 - `src/rag/infrastructure/events/{publisher,routing,relay,consumers,runtime}.py` — outbox, relays, consumers
 - `src/rag/infrastructure/persistence/{pools,migrate}.py` — pools with the tenant GUC provider; migration wiring
 - `scripts/gen_api_docs.py` — generates every committed spec
+
+## Claude Code automation in this repo
+
+- **Hooks** (`.claude/settings.json`): `format-python.sh` runs `ruff format` on edited project `.py` files; `block-generated.sh` refuses edits to generated specs (run `make swag`). Both need `jq`.
+- **Skills**: `/pr-check` runs the pre-PR gates; `peer-contract-check` (background) means cite the peer's doc or record an assumption.
+- **Agents** (read-only): `security-reviewer`, `rls-reviewer`. Use them on changes to scope, identity, IAM clients, migrations or repositories.
+- **Git hooks**: `.githooks/pre-commit` and `pre-push` (`make trivy`, Docker; `--no-verify` bypasses). Install with `make install-hooks`.
+- **Branching**: feature branch and PR into `main`. `main` does not exist yet (the org ruleset blocks creating it by push), so nothing has run in CI; the ruleset's `Build image (cache)`, `Trivy CVE scan` and `Smoke tests` checks have no job in `ci.yml` yet.
 
 ## Reference docs
 

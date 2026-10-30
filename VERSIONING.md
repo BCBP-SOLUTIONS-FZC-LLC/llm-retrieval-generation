@@ -71,13 +71,13 @@ This service is **not** consumed via `pip install` — do not add it as a depend
 
 ### Pull and verify the image
 
-**Planned — the `Dockerfile` exists (`make docker-build`) but no pipeline builds, signs or publishes the image yet.** Once a tag exists:
+**Written, never run — `release.yml` builds, scans, signs and publishes the image on a version tag, but no tag exists yet.** Once one does:
 
 ```bash
 docker pull ghcr.io/bcbp-solutions-fzc-llc/llm-retrieval-generation:v0.1.0
 ```
 
-When the image jobs are added to `ci.yml` and a `release.yml` exists, sign keylessly with Sigstore/Cosign as `iam-org-membership` does, and verify before deploying (`@refs/heads/(main|master)` for `main` builds, `@refs/tags/` for tagged releases):
+`release.yml` signs keylessly with Sigstore/Cosign as `iam-org-membership` does; verify before deploying (`@refs/heads/(main|master)` for `main` builds, `@refs/tags/` for tagged releases):
 
 ```bash
 cosign verify \
@@ -88,7 +88,7 @@ cosign verify \
 
 ### Image tag scheme
 
-When the release workflow exists it should produce, per tag push (same scheme as the sibling services):
+The release workflow produces, per tag push (same scheme as the sibling services):
 
 | Tag pattern | Produced for | Example (from `v1.2.3`) |
 |-------------|--------------|--------------------------|
@@ -118,7 +118,7 @@ The service reports `BUILD_VERSION` (`git describe --tags --always --dirty`, set
 
 ## Maintainer release process
 
-**Planned.** There is no `release.yml` yet: today `.github/workflows/ci.yml` runs `validate-test` and `validate-quality` on pushes to `main` and on pull requests, and nothing is built or published. The process below is the target; steps marked *(manual until automated)* are what you do today.
+**Written, never run.** `release.yml` exists and `.github/workflows/ci.yml` runs `validate-test`, `validate-quality` and `image-boot`, but neither has run on GitHub: there is no `main` yet (an org ruleset blocks creating it by push) and no tag. Steps marked *(manual until automated)* are what you do today.
 
 When cutting a tagged release:
 
@@ -145,7 +145,7 @@ When cutting a tagged release:
    git push origin v0.1.0
    ```
 
-6. **The release workflow** (to be added as `.github/workflows/release.yml`) should run, modeled on `iam-org-membership`'s:
+6. **The release workflow** (`.github/workflows/release.yml`) runs, modeled on `iam-org-membership`'s:
    - `validate-test` / `validate-quality` — the same reusable gates `ci.yml` uses, re-run at the tagged commit.
    - `build` — verify the tag matches HEAD and the CHANGELOG entry exists.
    - `docker` — build and push the semver-tagged image, CVE-scan it (fail on CRITICAL/HIGH), generate an SBOM and provenance, sign with Cosign, verify the signature.

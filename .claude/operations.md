@@ -43,7 +43,7 @@ Logs, spans and `llm_retrieval_generation_*` metrics through `fastapicommon`. **
 
 ## 14. Deployment
 
-**Partly planned** — `Dockerfile` exists (`make docker-build`, `make pin-base-images`); Helm chart in `deploy/helm/` (`make helm-check`; secrets via `existingSecret`, IRSA policy in `deploy/irsa/`; never applied to a cluster, sweep schedules proposed); no release workflow yet ([`VERSIONING.md`](../VERSIONING.md#planned-not-yet-in-place)). CI today only validates (`ci.yml`: `validate-test`, `validate-quality`, `pr-summary`; `changelog-check.yml`). Migrations must run from a one-shot job directly against Postgres before the new image takes traffic, and be safe while the previous image serves.
+**Partly planned** — `Dockerfile` exists (`make docker-build`, `make pin-base-images`); Helm chart in `deploy/helm/` (`make helm-check`; secrets via `existingSecret`, IRSA policy in `deploy/irsa/`; never applied to a cluster, sweep schedules proposed); `release.yml` builds, scans, boot-tests, pushes and signs on a version tag (never run; [`VERSIONING.md`](../VERSIONING.md#planned-not-yet-in-place)). `ci.yml` runs `validate-test`, `validate-quality`, `image-boot` and `pr-summary`; `changelog-check.yml`, `vuln-scan.yml` (weekly) and Dependabot sit beside it. None has run on GitHub: there is no `main` (org ruleset blocks creating it by push), and the ruleset's required checks `Build image (cache)`, `Trivy CVE scan` and `Smoke tests` have no matching job in `ci.yml` yet. Migrations must run from a one-shot job directly against Postgres before the new image takes traffic, and be safe while the previous image serves.
 
 ## 15. Local stack
 
@@ -55,7 +55,7 @@ Layers and markers in [`CONTRIBUTING.md`](../CONTRIBUTING.md#testing-requirement
 
 ## 17. Known gaps
 
-See the CHANGELOG *Known gaps*: no Worker Pool, no real peer exercised, Glue encoder, `/ready` and the relay, unbuilt sweeps, scope-cache invalidation, tenant purge reaching Valkey and evaluation samples, metrics domain, image pipeline.
+See the CHANGELOG *Known gaps*: no Worker Pool, no real peer exercised, Glue encoder, `/ready` and the relay, unbuilt sweeps, scope-cache invalidation, tenant purge reaching Valkey and evaluation samples, metrics domain, image pipeline written but never run (no `main`; required org checks not yet matched).
 
 ## 18. Integration points
 
@@ -69,3 +69,11 @@ See the CHANGELOG *Known gaps*: no Worker Pool, no real peer exercised, Glue enc
 | Temporal | outbound | start and signal | `WORKFLOW_ENGINE_UNAVAILABLE` |
 | Qdrant, Valkey, S3 | outbound | vectors, caches, content | Qdrant `503`; Valkey miss; S3 content `503` |
 | Usage & Metering | inbound | `TenantQuotaRestored` | — |
+
+## 19. Dev workflow and automation
+
+- **Git hooks** (`make install-hooks`, run by `make setup`): `.githooks/pre-commit` (fmt, lint, types, swag, lock) and `.githooks/pre-push` (`make trivy`, Docker needed, `--no-verify` bypasses). Git runs the copies in `.git/hooks/`, so re-install after editing `.githooks/`.
+- **`make trivy`**: builds `retrieval-generation:dev`, scans CRITICAL/HIGH with a fix (`--ignore-unfixed`), same flags as `release.yml`. `TRIVY_IMAGE` defaults to `latest`, not yet pinned.
+- **Claude Code**: `.claude/settings.json` hooks (`hooks/format-python.sh`, `hooks/block-generated.sh`; both need `jq`, the first needs `.venv`), skills `pr-check` and `peer-contract-check`, agents `security-reviewer` and `rls-reviewer` (no shell).
+- **Branching**: feature branch, PR into `main`, code-owner review, six required checks (see §14). `main` does not exist yet.
+

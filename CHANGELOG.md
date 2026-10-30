@@ -8,6 +8,7 @@ This service has never been deployed to any environment — there is no released
 
 ### Changed
 
+- Developer tooling: `make trivy` (build, then Trivy-scan the image with `release.yml`'s flags), `.githooks/pre-push` running it before every push (installed by `make install-hooks`), and Claude Code automation under `.claude/` (format and generated-file hooks, `pr-check` and `peer-contract-check` skills, read-only `security-reviewer` and `rls-reviewer` agents). Documentation aligned: the image pipeline, Helm chart and `image-boot` job are described as written but never run.
 - `make gateway-up-vllm`: `embed` and `rerank` on vLLM (CPU image, small models) behind Agent Router, config `deploy/model-gateway/aigw-vllm.yaml`. First run of the LLD OQ-93 self-hosted check: our `HttpModelGateway` embeds (384 dimensions) and reranks through it with no code change. vLLM's cross-encoder returns raw logits, not 0 to 1; the profile sufficiency thresholds must match the production reranker's scale. `/tokenize`, Bedrock, quota and fail-closed are still untested
 - `Settings.migration_dsn` raises `ConfigError` when `*_MIGRATION_DATABASE_URL` is empty outside `local` / `dev` / `test` (the application DSN is PgBouncer's and the migration lock is session-scoped); *Connection budget* section in `ARCHITECTURE.md`; chart comments now say the sweeps refuse to start without their DSNs
 - Release hardening: every action in `release.yml` pinned to a commit SHA; `.github/dependabot.yml` (pip, github-actions, docker; weekly); scheduled `vuln-scan.yml`; `.github/scripts/image-boot-check.sh` (migrate, start, `/ready` = 200 against Postgres + PgBouncer) run by a CI `image-boot` job and by the release workflow before any push; uvicorn `--timeout-keep-alive 65 --timeout-graceful-shutdown 60` in the image
@@ -75,7 +76,7 @@ Outstanding as of this entry. None of these is a regression; they are what is no
 - **Unbuilt sweeps and checks:** zombie-run and orphan-S3-object sweeps, the retention sweep (LLD-deferred), the corpus-wide conflict check (LD-52, deferred past v1); REGEN-5 reuse; scope-cache invalidation on collection writes; tenant purge reaching Valkey keys and evaluation samples; the reference-collection seed.
 - **A-8 render** answers `503 RENDERER_UNAVAILABLE` by design (scope cut S-6).
 - **Metrics are disabled by default**: the `llm` domain is not registered in the platform registry (OQ-103).
-- **No image pipeline:** no `Dockerfile`, Helm chart or release workflow yet — see the *Planned* table in [VERSIONING.md](./VERSIONING.md).
+- **Image pipeline never run:** `Dockerfile`, Helm chart, `release.yml` and the CI `image-boot` job exist, but nothing has run on GitHub. There is no `main` (the org ruleset `protect-main-branch` blocks creating it by push), and the ruleset requires `Build image (cache)`, `Trivy CVE scan` and `Smoke tests`, which `ci.yml` does not produce yet. See [VERSIONING.md](./VERSIONING.md).
 - **Decisions awaiting sign-off:** the `rag_sweeper` role, `pg_has_role` in the generation trigger, one relay per database, the extra run edges to `scope_revoked`, cancelled-run closure for content refusals.
 
 ### Current architecture notes

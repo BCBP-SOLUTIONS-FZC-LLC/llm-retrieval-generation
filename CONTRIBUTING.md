@@ -29,7 +29,7 @@ make ci         # lock-check + fmt-check + lint + typecheck + rls-check + swag-c
 make test-e2e   # real app over a real RLS Postgres
 ```
 
-`make setup` installs `.githooks/pre-commit`, which runs `fmt-check`, `lint`, `typecheck` and `swag-check` (the generated specs are not stale) before every commit, and `lock-check` when `pyproject.toml` or `uv.lock` is staged. Re-run `make install-hooks` any time `.githooks/pre-commit` changes.
+`make setup` installs `.githooks/pre-commit`, which runs `fmt-check`, `lint`, `typecheck` and `swag-check` (the generated specs are not stale) before every commit, and `lock-check` when `pyproject.toml` or `uv.lock` is staged. `.githooks/pre-push` builds the image and runs `make trivy` (the release CVE gate) before every push; it needs Docker, skips branch deletions, and `git push --no-verify` bypasses it. Re-run `make install-hooks` any time a file in `.githooks/` changes.
 
 Host ports for the local stack are deliberately offset from the IAM services' stacks so both can run side by side: direct Postgres `5535`, PgBouncer `5536`, Valkey `6381`, Qdrant `6335`, floci `4568`, floci-ui `4501`. Container-internal ports are unchanged.
 
@@ -244,6 +244,9 @@ fix(events): fail closed on an unregistered event type at enqueue (EVT-9)
 
 1. `validate-test` runs `make test-ci` (unit + integration), the 95% coverage gate, then `make test-e2e`.
 2. `validate-quality` runs the lockfile check, `uv sync --locked`, `uv pip check`, the RLS-6 grep, format, lint, `mypy --strict` and `pip-audit`, in parallel with `validate-test`.
-3. `pr-summary` posts the results on pull requests.
+3. `image-boot` builds the image and requires `/ready` = 200 against Postgres + PgBouncer.
+4. `pr-summary` posts the results on pull requests.
+
+The organisation ruleset on `main` also requires `Build image (cache)`, `Trivy CVE scan` and `Smoke tests`, which `ci.yml` does not produce yet; run `make trivy` locally (the pre-push hook does) until it does.
 
 **Planned, with the first image:** build, CVE scan and smoke test, push to GHCR with a Cosign keyless signature, and a tag-triggered release with SBOM and provenance. Migrations will run from a one-shot job directly against Postgres before the new image takes traffic. Notify the platform team if a migration, a breaking env-var change or a new event consumer needs coordinated rollout.
