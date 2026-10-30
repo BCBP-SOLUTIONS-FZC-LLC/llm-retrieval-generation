@@ -44,11 +44,11 @@ setup:
 	@command -v uv >/dev/null 2>&1 || test -x $(VENV)/bin/uv || { \
 	  test -x $(PY) || python3 -m venv $(VENV); \
 	  echo "uv not found — installing into $(VENV)"; \
-	  $(PY) -m pip install -q 'uv==0.13.4'; }
+	  $(PY) -m pip install -q 'uv==0.13.6'; }
 	@# uv may have replaced the venv with one on the interpreter requires-python asks for (3.15), and that
 	@# venv has no uv in it (sync deletes the venv's own uv): run sync from a copy, then put the pinned uv back
 	@tmp=$$(mktemp) && cp "$(UV)" "$$tmp" && chmod +x "$$tmp" && "$$tmp" sync --locked && \
-	  { test -x $(VENV)/bin/uv || "$$tmp" pip install -q --python $(PY) 'uv==0.13.4'; }; rc=$$?; rm -f "$$tmp"; exit $$rc
+	  { test -x $(VENV)/bin/uv || "$$tmp" pip install -q --python $(PY) 'uv==0.13.6'; }; rc=$$?; rm -f "$$tmp"; exit $$rc
 	@$(MAKE) --no-print-directory install-hooks
 	@echo "Environment ready ($(VENV))"
 
@@ -154,7 +154,7 @@ trivy: docker-build
 .PHONY: pin-base-images
 pin-base-images:
 	@set -e; \
-	 for img in python:3.15.2-slim-bookworm ghcr.io/astral-sh/uv:0.13.4; do \
+	 for img in python:3.15.2-slim-bookworm ghcr.io/astral-sh/uv:0.13.6; do \
 	   d=$$(docker buildx imagetools inspect $$img --format '{{.Manifest.Digest}}'); \
 	   sed -i.bak -E "s|$$img(@sha256:[0-9a-f]+)?|$$img@$$d|" Dockerfile && rm -f Dockerfile.bak; \
 	   echo "$$img $$d"; \
