@@ -244,7 +244,7 @@ fix(events): fail closed on an unregistered event type at enqueue (EVT-9)
 
 1. `validate-test` runs `make test-ci` (unit + integration), the 95% coverage gate, then `make test-e2e`.
 2. `validate-quality` runs the lockfile check, `uv sync --locked`, `uv pip check`, the RLS-6 grep, format, lint, `mypy --strict` and `pip-audit`, in parallel with `validate-test`.
-3. `build-image` (`Build image (cache)`), then `trivy` (`Trivy CVE scan`, CRITICAL/HIGH with a fix fails) and `smoke` (`Smoke tests`: migrate, start, `/ready` = 200 against Postgres + PgBouncer).
+3. `build-image` (`Build image (cache)`: Hadolint, then the cached build), then `trivy` (`Trivy CVE scan`, CRITICAL/HIGH with a fix fails) and `smoke` (`Smoke tests`: migrate, start, `/ready` = 200 against Postgres + PgBouncer).
 4. `pr-summary` posts the results on pull requests.
 
 The organisation ruleset on `main` requires these checks plus a code-owner approval; the job names above match it. Run `make trivy` locally (the pre-push hook does) to catch a CVE failure before pushing.

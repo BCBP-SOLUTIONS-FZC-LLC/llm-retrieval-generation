@@ -1,5 +1,5 @@
 # Triggered by version tags (v1.0.0, v1.1.0-rc.1).
-# Pipeline: validate -> build the image and scan it (CVE gate) -> push -> SBOM -> sign.
+# Pipeline: validate -> build the image and scan it (CVE gate) -> push -> SBOM -> provenance -> sign -> GitHub Release.
 # Unlike a build-then-scan flow, nothing is pushed until the scan passes.
 # Not deployed from here: no job applies the Helm chart (see VERSIONING.md, Planned).
 name: Release
@@ -46,6 +46,9 @@ jobs:
     name: Docker image -> GHCR
     runs-on: ubuntu-latest
     needs: [validate-test, validate-quality]
+    outputs:
+      digest: ${{ steps.pushed.outputs.digest }}
+      version: ${{ steps.meta.outputs.version }}
     permissions:
       contents: read
       packages: write
@@ -65,6 +68,10 @@ jobs:
       # Block the release if CHANGELOG.md has no section for this tag.
       - name: Verify CHANGELOG entry exists
         run: bash .github/scripts/verify-changelog-entry.sh
+
+      - name: Set SOURCE_DATE_EPOCH
+        id: sde
+        run: bash .github/scripts/set-source-date-epoch.sh
 
       - name: Docker metadata
         id: meta
@@ -90,6 +97,7 @@ jobs:
           tags: scan-candidate:${{ env.RELEASE_TAG }}
           build-args: |
             BUILD_VERSION=${{ env.RELEASE_TAG }}
+            SOURCE_DATE_EPOCH=${{ steps.sde.outputs.SOURCE_DATE_EPOCH }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -157,6 +165,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             BUILD_VERSION=${{ env.RELEASE_TAG }}
+            SOURCE_DATE_EPOCH=${{ steps.sde.outputs.SOURCE_DATE_EPOCH }}
           cache-from: type=gha
 
       # CycloneDX SBOM: component inventory for compliance and audit.
@@ -179,6 +188,18 @@ jobs:
       - name: Install Cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
+      - name: Export SLSA provenance
+        env:
+          IMAGE_DIGEST: ${{ steps.pushed.outputs.digest }}
+        run: bash .github/scripts/export-image-provenance.sh
+
+      - name: Upload provenance artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: provenance-${{ env.RELEASE_TAG }}
+          path: provenance.slsa.json
+          retention-days: 90
+
       - name: Sign image with Cosign
         run: |
           cosign sign --yes "${{ env.IMAGE_NAME }}@${{ steps.pushed.outputs.digest }}"
@@ -189,3 +210,41 @@ jobs:
             --certificate-identity-regexp "^https://github\.com/${{ github.repository }}/.github/workflows/.*@refs/tags/.*$" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             "${{ env.IMAGE_NAME }}@${{ steps.pushed.outputs.digest }}"
+
+  # GitHub Release: notes from CHANGELOG.md plus the SBOM and SLSA provenance. Only after the image
+  # is pushed, scanned and signed. No deploy gate: nothing here applies the Helm chart yet.
+  publish:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    needs: [docker]
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+          token: ${{ secrets.CI_REPO_READ_TOKEN || github.token }}
+
+      - name: Extract release notes from CHANGELOG
+        env:
+          IMAGE_VERSION: ${{ needs.docker.outputs.version }}
+          IMAGE_DIGEST: ${{ needs.docker.outputs.digest }}
+        run: bash .github/scripts/extract-release-notes.sh
+
+      - name: Download SBOM
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sbom-${{ env.RELEASE_TAG }}
+
+      - name: Download provenance
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: provenance-${{ env.RELEASE_TAG }}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_DIGEST: ${{ needs.docker.outputs.digest }}
+        run: bash .github/scripts/create-github-release.sh
