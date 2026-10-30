@@ -118,7 +118,7 @@ The service reports `BUILD_VERSION` (`git describe --tags --always --dirty`, set
 
 ## Maintainer release process
 
-**Written, never run.** `release.yml` exists and `.github/workflows/ci.yml` runs `validate-test`, `validate-quality` and `image-boot`, but neither has run on GitHub: there is no `main` yet (an org ruleset blocks creating it by push) and no tag. Steps marked *(manual until automated)* are what you do today.
+**Written, never run.** `release.yml` exists and `.github/workflows/ci.yml` runs `validate-test`, `validate-quality`, `build-image`, `trivy` and `smoke`, but neither has completed on GitHub: Actions jobs did not start because of an account billing limit, and no tag exists. Steps marked *(manual until automated)* are what you do today.
 
 When cutting a tagged release:
 

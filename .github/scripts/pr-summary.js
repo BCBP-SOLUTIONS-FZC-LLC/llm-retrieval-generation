@@ -15,6 +15,9 @@ const rows = [
   ['Tests & race detector', 'validate-test'],
   ['Coverage ≥ 95%',         'validate-test'],
   ['Code quality',           'validate-quality'],
+  ['Image build',            'build-image'],
+  ['Trivy CVE scan',         'trivy'],
+  ['Smoke tests',            'smoke'],
 ];
 
 const table = rows

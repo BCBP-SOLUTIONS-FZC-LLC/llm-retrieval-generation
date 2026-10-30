@@ -244,9 +244,9 @@ fix(events): fail closed on an unregistered event type at enqueue (EVT-9)
 
 1. `validate-test` runs `make test-ci` (unit + integration), the 95% coverage gate, then `make test-e2e`.
 2. `validate-quality` runs the lockfile check, `uv sync --locked`, `uv pip check`, the RLS-6 grep, format, lint, `mypy --strict` and `pip-audit`, in parallel with `validate-test`.
-3. `image-boot` builds the image and requires `/ready` = 200 against Postgres + PgBouncer.
+3. `build-image` (`Build image (cache)`), then `trivy` (`Trivy CVE scan`, CRITICAL/HIGH with a fix fails) and `smoke` (`Smoke tests`: migrate, start, `/ready` = 200 against Postgres + PgBouncer).
 4. `pr-summary` posts the results on pull requests.
 
-The organisation ruleset on `main` also requires `Build image (cache)`, `Trivy CVE scan` and `Smoke tests`, which `ci.yml` does not produce yet; run `make trivy` locally (the pre-push hook does) until it does.
+The organisation ruleset on `main` requires these checks plus a code-owner approval; the job names above match it. Run `make trivy` locally (the pre-push hook does) to catch a CVE failure before pushing.
 
 **Planned, with the first image:** build, CVE scan and smoke test, push to GHCR with a Cosign keyless signature, and a tag-triggered release with SBOM and provenance. Migrations will run from a one-shot job directly against Postgres before the new image takes traffic. Notify the platform team if a migration, a breaking env-var change or a new event consumer needs coordinated rollout.

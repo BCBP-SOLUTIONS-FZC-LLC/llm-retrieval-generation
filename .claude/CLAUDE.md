@@ -84,7 +84,7 @@ Full per-file descriptions in **[`key-files.md`](key-files.md)**. Most-touched e
 - **Skills**: `/pr-check` runs the pre-PR gates; `peer-contract-check` (background) means cite the peer's doc or record an assumption.
 - **Agents** (read-only): `security-reviewer`, `rls-reviewer`. Use them on changes to scope, identity, IAM clients, migrations or repositories.
 - **Git hooks**: `.githooks/pre-commit` and `pre-push` (`make trivy`, Docker; `--no-verify` bypasses). Install with `make install-hooks`.
-- **Branching**: feature branch and PR into `main`. `main` does not exist yet (the org ruleset blocks creating it by push), so nothing has run in CI; the ruleset's `Build image (cache)`, `Trivy CVE scan` and `Smoke tests` checks have no job in `ci.yml` yet.
+- **Branching**: feature branch and PR into `main` (default; org ruleset: code-owner approval and the six `ci.yml` checks). CI has not completed on GitHub yet: Actions jobs did not start because of an account billing limit.
 
 ## Reference docs
 

@@ -333,18 +333,18 @@ Logs, spans and metrics go through `fastapicommon` and nothing else. Every log l
 
 ## CI
 
-`.github/workflows/ci.yml` runs two reusable gates and an image boot test on pushes to `main` and on pull requests (skipped for Markdown-only changes), then a PR summary comment.
+`.github/workflows/ci.yml` runs two reusable gates and the image build, scan and smoke jobs on pushes to `main` and on pull requests (skipped for Markdown-only changes), then a PR summary comment.
 
 | Gate | What runs |
 |---|---|
 | `validate-test` | `make test-ci` (unit + integration, Docker), the 95% coverage gate, then `make test-e2e` |
 | `validate-quality` | lockfile check, `uv sync --locked`, `uv pip check`, the RLS-6 grep check, format, lint, `mypy --strict`, `pip-audit` |
-| `image-boot` | Build the image, then migrate, start and require `/ready` = 200 against Postgres + PgBouncer (`.github/scripts/image-boot-check.sh`) |
+| `build-image` / `trivy` / `smoke` | `Build image (cache)` builds the image into the GHA cache; `Trivy CVE scan` fails on a CRITICAL or HIGH finding with a fix (same settings as `release.yml` and `make trivy`); `Smoke tests` migrate, start and require `/ready` = 200 against Postgres + PgBouncer (`.github/scripts/image-boot-check.sh`) |
 | `changelog-check` | A PR changing `src/`, `migrations/` or `schemas/` must update `CHANGELOG.md` |
 
 Actions are pinned by SHA; private packages are installed with the `CI_REPO_READ_TOKEN` secret. `release.yml` (on a version tag) validates, builds, CVE-scans, boot-tests, pushes, adds an SBOM and signs the image; `vuln-scan.yml` audits dependencies weekly; Dependabot proposes pip, Actions and Docker bumps. None of it has run on GitHub yet (see [`VERSIONING.md`](VERSIONING.md)).
 
-**Merge gate, not yet usable:** the repository has no `main` (the working branch is the default), and the organisation ruleset `protect-main-branch` blocks creating it by push, so CI has never run on GitHub. The ruleset requires a PR with a code-owner approval and six checks: `Build image (cache)`, `Trivy CVE scan`, `Smoke tests`, `Validate / Quality / quality`, `Validate / Test / test` and `PR summary`. `ci.yml` produces the last three, plus an `Image boot` job; it has no jobs named for the first three, so a PR could not satisfy the ruleset until they are added (modelled on `iam-org-membership`'s `ci.yml`). `make trivy` and the pre-push hook are the local equivalent of the CVE scan.
+**Merge gate:** `main` is the default branch and the organisation ruleset `protect-main-branch` governs it: a PR with a code-owner approval (not from the last pusher) and six checks, `Build image (cache)`, `Trivy CVE scan`, `Smoke tests`, `Validate / Quality / quality`, `Validate / Test / test` and `PR summary`, all produced by `ci.yml`. The checks have not run to completion on GitHub yet: Actions jobs did not start because of an account billing limit. `make trivy` and the pre-push hook are the local equivalent of the CVE scan.
 
 ### Git hooks and Claude Code automation
 
