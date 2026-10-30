@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Local push gate: the image must pass the same CVE scan release.yml runs (make trivy).
+# Needs Docker. Branch deletions skip it; `git push --no-verify` bypasses it.
+set -euo pipefail
+
+zero=0000000000000000000000000000000000000000
+push=false
+while read -r _ local_sha _ _; do
+  [ "$local_sha" = "$zero" ] || push=true
+done
+$push || exit 0
+
+echo "[pre-push] building the image and scanning it for CVEs (make trivy)..."
+make trivy

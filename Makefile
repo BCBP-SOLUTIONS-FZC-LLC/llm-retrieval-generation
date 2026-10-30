@@ -22,6 +22,7 @@ export APP_NAME APP_ENV BUILD_VERSION
 TEST_UNIT_PATHS := tests/unit tests/usecase tests/architecture tests/api tests/events \
                    tests/isolation tests/repository
 
+TRIVY_IMAGE ?= ghcr.io/aquasecurity/trivy:latest
 SCHEMA_GOV_IMAGE ?= ghcr.io/bcbp-solutions-fzc-llc/platform-schemagov:0.4
 # Image is published linux/amd64 only; Apple Silicon needs this for pull/run.
 SCHEMA_GOV_PLATFORM ?= linux/amd64
@@ -43,19 +44,19 @@ setup:
 	@command -v uv >/dev/null 2>&1 || test -x $(VENV)/bin/uv || { \
 	  test -x $(PY) || python3 -m venv $(VENV); \
 	  echo "uv not found — installing into $(VENV)"; \
-	  $(PY) -m pip install -q 'uv==0.13.4'; }
-	$(UV) sync --locked
+	  $(PY) -m pip install -q 'uv==0.13.6'; }
 	@# uv may have replaced the venv with one on the interpreter requires-python asks for (3.15), and that
-	@# venv has no uv in it: put the pinned one back so the other targets find it
-	@test -x $(VENV)/bin/uv || $(UV) pip install -q --python $(PY) 'uv==0.13.4'
+	@# venv has no uv in it (sync deletes the venv's own uv): run sync from a copy, then put the pinned uv back
+	@tmp=$$(mktemp) && cp "$(UV)" "$$tmp" && chmod +x "$$tmp" && "$$tmp" sync --locked && \
+	  { test -x $(VENV)/bin/uv || "$$tmp" pip install -q --python $(PY) 'uv==0.13.6'; }; rc=$$?; rm -f "$$tmp"; exit $$rc
 	@$(MAKE) --no-print-directory install-hooks
 	@echo "Environment ready ($(VENV))"
 
 .PHONY: install-hooks
 install-hooks:
 	@if [ -d .git ]; then \
-	  mkdir -p .git/hooks && cp .githooks/pre-commit .git/hooks/pre-commit \
-	    && chmod +x .git/hooks/pre-commit && echo "Installed git hooks"; \
+	  mkdir -p .git/hooks && cp .githooks/pre-commit .githooks/pre-push .git/hooks/ \
+	    && chmod +x .git/hooks/pre-commit .git/hooks/pre-push && echo "Installed git hooks"; \
 	else echo "not a git checkout; skipping hooks"; fi
 
 .PHONY: help
@@ -99,6 +100,7 @@ help:
 	@echo "  make docker-down     - stop local containers"
 	@echo "  make helm-check      - helm lint + template (all overlays) + kubeconform"
 	@echo "  make docker-build    - build the service image (retrieval-generation:dev)"
+	@echo "  make trivy           - build the image, then CVE-scan it as release.yml does (CRITICAL,HIGH, fixed only)"
 	@echo "  make pin-base-images - fetch and pin SHA digests for the Dockerfile base images"
 	@echo "  make vuln-check      - pip-audit on the locked deps"
 	@echo "  make clean           - remove build artefacts"
@@ -135,12 +137,24 @@ fmt-check:
 docker-build:
 	docker build --build-arg BUILD_VERSION=$(BUILD_VERSION) -t retrieval-generation:dev .
 
+# trivy: the release.yml CVE gate, locally. Scans the image docker-build just made for CRITICAL/HIGH
+# findings that have a fix; exits non-zero on any. Uses a local trivy if installed, else the
+# TRIVY_IMAGE container (the Docker socket is mounted so it can read the local image).
+.PHONY: trivy
+trivy: docker-build
+	@if command -v trivy >/dev/null 2>&1; then \
+	  trivy image --ignore-unfixed --vuln-type os,library --severity CRITICAL,HIGH --exit-code 1 retrieval-generation:dev; \
+	 else \
+	  docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $$HOME/.cache/trivy:/root/.cache/ "$(TRIVY_IMAGE)" \
+	    image --ignore-unfixed --vuln-type os,library --severity CRITICAL,HIGH --exit-code 1 retrieval-generation:dev; \
+	 fi
+
 # pin-base-images: fetch and pin the current SHA digests for the Dockerfile base images. Writes the
 # digests to the Dockerfile FROM lines and to .docker-digests (a checked-in provenance record).
 .PHONY: pin-base-images
 pin-base-images:
 	@set -e; \
-	 for img in python:3.15.2-slim-bookworm ghcr.io/astral-sh/uv:0.13.4; do \
+	 for img in python:3.15.2-slim-bookworm ghcr.io/astral-sh/uv:0.13.6; do \
 	   d=$$(docker buildx imagetools inspect $$img --format '{{.Manifest.Digest}}'); \
 	   sed -i.bak -E "s|$$img(@sha256:[0-9a-f]+)?|$$img@$$d|" Dockerfile && rm -f Dockerfile.bak; \
 	   echo "$$img $$d"; \

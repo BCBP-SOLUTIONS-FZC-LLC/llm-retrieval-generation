@@ -586,7 +586,7 @@ Every dependency failure has one defined behaviour; none is answered with a defa
 
 ## Deployment
 
-**Partly planned.** A `Dockerfile` exists (`make docker-build`); the Helm chart is in `deploy/helm/` (never applied to a cluster) and there is no release workflow yet — see the *Planned* table in [VERSIONING.md](VERSIONING.md#planned-not-yet-in-place). The shape:
+**Partly planned.** A `Dockerfile` exists (`make docker-build`); the Helm chart is in `deploy/helm/` (never applied to a cluster) and `release.yml` builds, scans, boot-tests, pushes and signs the image on a version tag (never run) — see the *Planned* table in [VERSIONING.md](VERSIONING.md#planned-not-yet-in-place). **Merge gate:** `main` is the default branch under the organisation ruleset `protect-main-branch` (PR, code-owner approval, six checks: `Build image (cache)`, `Trivy CVE scan`, `Smoke tests`, `Validate / Quality / quality`, `Validate / Test / test`, `PR summary`, all produced by `ci.yml`). The checks have not completed on GitHub yet: Actions jobs did not start because of an account billing limit. `make trivy` and the pre-push hook are the local equivalent of the CVE scan. The shape:
 
 - **One image, three entrypoints:** the API (`uvicorn --factory rag.presentation.main:create_app`), the migration job (`python -m rag.infrastructure.persistence.migrate`) and the sweep runner (`python -m rag.infrastructure.sweeps <name>|all`) as CronJobs.
 - **Migration safety:** migrations run from a one-shot job directly against Postgres (never PgBouncer: the advisory lock is session-scoped), before the new image takes traffic, and must be safe while the previous image still serves (additive first, destructive in a later release).
@@ -683,7 +683,9 @@ Consequences: do not expose the pod on a `NodePort`/`LoadBalancer`; do not add a
 | floci-ui | http://localhost:4501 (queue and topic counts, not message bodies) |
 | `make events-peek` | Prints events waiting in the dev probe queue without consuming them |
 | `.githooks/pre-commit` | Runs `fmt-check`, `lint`, `typecheck`, `swag-check` (and `lock-check` when the lockfile inputs are staged) before every commit; `make install-hooks` |
-| `.claude/` | Working notes for AI-assisted development: [`.claude/CLAUDE.md`](.claude/CLAUDE.md) |
+| `.githooks/pre-push` | Runs `make trivy` (build the image, CVE-scan it as `release.yml` does) before every push; needs Docker; `--no-verify` bypasses |
+| `make trivy` | The release CVE gate locally: CRITICAL/HIGH findings with a fix fail; local `trivy` or the `TRIVY_IMAGE` container |
+| `.claude/` | AI-assisted development: [`.claude/CLAUDE.md`](.claude/CLAUDE.md) and the reference notes; `settings.json` hooks (format Python on edit, block edits to generated files); skills `pr-check` and `peer-contract-check`; read-only agents `security-reviewer` and `rls-reviewer` |
 
 ---
 

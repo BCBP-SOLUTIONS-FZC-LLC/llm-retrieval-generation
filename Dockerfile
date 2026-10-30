@@ -3,7 +3,7 @@
 # Current digests are tracked in .docker-digests; CI (validate-quality.yml,
 # "Dockerfile base image digest check") fails when the two disagree: a bump to
 # one (e.g. a Dependabot PR) must update the other.
-FROM ghcr.io/astral-sh/uv:0.13.4@sha256:9f130421e930bfbdc563c00740466603f8723158e90297d07957c2294640262b AS uv
+FROM ghcr.io/astral-sh/uv:0.13.6@sha256:af22a52f5eafef3d78e551599d405c02df61919d18028f0cea8eda93bc9986d0 AS uv
 
 FROM python:3.15.2-slim-bookworm@sha256:4e03260adeeebafccd084f3584e6b84823aba5651cfb53ef8a078ed441ddf9cd AS builder
 
@@ -37,6 +37,9 @@ RUN uv sync --locked --no-dev
 FROM python:3.15.2-slim-bookworm@sha256:4e03260adeeebafccd084f3584e6b84823aba5651cfb53ef8a078ed441ddf9cd
 
 ARG BUILD_VERSION=dev
+
+# Nothing installs at runtime: drop pip, whose vendored urllib3 and msgpack the CVE scan flags.
+RUN python -m pip uninstall -y pip && rm -rf /usr/local/lib/python3.15/site-packages/pip*
 ENV BUILD_VERSION=${BUILD_VERSION} \
     PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \

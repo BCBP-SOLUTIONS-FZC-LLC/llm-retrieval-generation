@@ -212,11 +212,12 @@ def test_the_heartbeat_comment_commits_the_blocking_path(settings: Settings) -> 
         await asyncio.sleep(0.1)
         h.rig.stream_gw.hold.set()  # type: ignore[union-attr]
 
-    # the model is held past the heartbeat interval; release it from the app's own loop
+    # held for 25 heartbeat intervals: a CI loop that stalls for 100 ms would otherwise see the
+    # release and the first heartbeat together, and the verdict would arrive first
     original = h.rig.stream_gw.generate_stream
 
     async def releasing(*a, **kw):  # type: ignore[no-untyped-def]
-        asyncio.get_running_loop().call_later(0.1, h.rig.stream_gw.hold.set)  # type: ignore[union-attr]
+        asyncio.get_running_loop().call_later(0.5, h.rig.stream_gw.hold.set)  # type: ignore[union-attr]
         async for c in original(*a, **kw):
             yield c
 
