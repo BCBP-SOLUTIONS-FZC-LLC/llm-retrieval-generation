@@ -75,7 +75,7 @@ jobs:
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6.1.0
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
@@ -85,7 +85,7 @@ jobs:
             type=raw,value=latest,enable=${{ !contains(env.RELEASE_TAG, '-') }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       # Build into the local daemon first: the scan below must pass before anything is pushed.
       - name: Build image (not pushed)
@@ -102,7 +102,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Cache Trivy DB
-        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: /tmp/trivy-cache
           key: trivy-db-${{ runner.os }}
@@ -147,7 +147,7 @@ jobs:
           .github/scripts/image-boot-check.sh scan-candidate:${RELEASE_TAG}
 
       - name: Log in to GHCR
-        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
