@@ -45,10 +45,10 @@ setup:
 	  test -x $(PY) || python3 -m venv $(VENV); \
 	  echo "uv not found — installing into $(VENV)"; \
 	  $(PY) -m pip install -q 'uv==0.13.4'; }
-	$(UV) sync --locked
 	@# uv may have replaced the venv with one on the interpreter requires-python asks for (3.15), and that
-	@# venv has no uv in it: put the pinned one back so the other targets find it
-	@test -x $(VENV)/bin/uv || $(UV) pip install -q --python $(PY) 'uv==0.13.4'
+	@# venv has no uv in it (sync deletes the venv's own uv): run sync from a copy, then put the pinned uv back
+	@tmp=$$(mktemp) && cp "$(UV)" "$$tmp" && chmod +x "$$tmp" && "$$tmp" sync --locked && \
+	  { test -x $(VENV)/bin/uv || "$$tmp" pip install -q --python $(PY) 'uv==0.13.4'; }; rc=$$?; rm -f "$$tmp"; exit $$rc
 	@$(MAKE) --no-print-directory install-hooks
 	@echo "Environment ready ($(VENV))"
 
