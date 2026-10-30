@@ -8,6 +8,7 @@ This service has never been deployed to any environment — there is no released
 
 ### Changed
 
+- Dependabot disabled as in `iam-org-membership`: `.github/dependabot.yml` renamed to `dependabot.yml.disabled` (config kept; rename it back to re-enable). Version bumps are now manual (`uv lock --upgrade`, `make pin-base-images`, Actions SHAs); `vuln-scan.yml` and `make trivy` still catch CVEs.
 - `uv` 0.13.6 in CI, the Dockerfile and `make setup` (0.13.4 only knew Python 3.15.0, so the runner could not install 3.15.2 and `uv sync` / `lock-check` failed); `.docker-digests` now records both base-image digests (it was empty, so the digest check compared nothing).
 - CI and release pipeline aligned with `iam-org-membership`: Hadolint and registry-backed build cache with `SOURCE_DATE_EPOCH` in `Build image (cache)`; SARIF upload and an SBOM artifact from `Trivy CVE scan`; a `push` job publishing signed `main`/`sha-` images to GHCR on merge; `release.yml` also exports the SLSA provenance and adds a `publish` job (GitHub Release with notes from `CHANGELOG.md`, SBOM and provenance). Left out: the Glue schema-registry workflows and the Helm deploy gate (AWS and a cluster, neither in place) and the Go-specific lints.
 - CI image jobs: `image-boot` replaced by `build-image` (`Build image (cache)`, writes the GHA cache), `trivy` (`Trivy CVE scan`, same settings as `release.yml`) and `smoke` (`Smoke tests`, the boot check), matching the checks the org ruleset on `main` requires; `pr-summary` waits on all of them and reports them.
