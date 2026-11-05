@@ -40,6 +40,12 @@ ARG BUILD_VERSION=dev
 
 # Nothing installs at runtime: drop pip, whose vendored urllib3 and msgpack the CVE scan flags.
 RUN python -m pip uninstall -y pip && rm -rf /usr/local/lib/python3.15/site-packages/pip*
+
+# The pinned base ships apt 2.6.1, which the CVE scan flags (CVE-2026-109518, fixed in 2.6.2):
+# upgrade only apt until the base image is republished, then drop this layer.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends --only-upgrade apt libapt-pkg6.0 && \
+    rm -rf /var/lib/apt/lists/*
 ENV BUILD_VERSION=${BUILD_VERSION} \
     PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \

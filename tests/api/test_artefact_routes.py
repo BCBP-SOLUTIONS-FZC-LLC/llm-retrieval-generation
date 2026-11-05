@@ -8,7 +8,16 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from tests.support_generation import (
+    TENANT,
+    FakeRetrievalRepo,
+    FakeScope,
+    FakeTx,
+    denied,
+    make_retrieval_view,
+)
 
+from rag.application.generation.queries import GetRetrievalSet
 from rag.domain.shared.errors import DomainError, ErrorCode
 from rag.infrastructure.config import Settings
 from rag.presentation.generation_dependencies import get_generation
@@ -74,3 +83,65 @@ def test_artefact_routes_require_identity(settings: Settings) -> None:
     client, execute = _client(settings, "get_artefact", ErrorCode.ARTEFACT_NOT_FOUND)
     assert client.get(BASE).status_code == 401
     execute.assert_not_awaited()
+
+
+def _r5_client(settings: Settings, scope: FakeScope, repo: FakeRetrievalRepo) -> TestClient:
+    """The real app, R-5 backed by the real use case over fakes."""
+    services = MagicMock()
+    services.get_retrieval_set = GetRetrievalSet(FakeTx(), repo, scope)
+    app = create_app(settings)
+    app.dependency_overrides[get_generation] = lambda: services
+    return TestClient(app)
+
+
+async def _purge_first_chunk(repo: FakeRetrievalRepo, view: Any) -> None:
+    first = view.chunks[0]
+    await repo.purge_for_document(
+        None,
+        tenant_id=TENANT,
+        collection_id=first.collection_id,
+        document_id=first.document_id,
+        document_version=first.document_version,
+        event_id=uuid4(),
+    )
+
+
+async def test_r5_marks_a_purged_chunk_beside_an_intact_one_and_rechecks_scope(
+    settings: Settings,
+) -> None:
+    """RS-1: the purged chunk is flagged with its excerpt kept; the active one is not."""
+    view = make_retrieval_view()
+    repo, scope = FakeRetrievalRepo(view), FakeScope()
+    await _purge_first_chunk(repo, view)
+    client = _r5_client(settings, scope, repo)
+    headers = {"x-tenant-id": str(TENANT), "x-user-id": str(uuid4())}
+    response = client.get(f"/api/v1/retrieval-sets/{view.retrieval_set.id}", headers=headers)
+    assert response.status_code == 200
+    chunks = {c["chunk_id"]: (c["purged"], c["excerpt"]) for c in response.json()["chunks"]}
+    assert chunks == {"dv1:1": (True, "excerpt 1"), "dv2:2": (False, "excerpt 2")}
+    assert len(response.json()["purges"]) == 1
+    client.get(f"/api/v1/retrieval-sets/{view.retrieval_set.id}", headers=headers)
+    assert len(scope.calls) == 2  # the authorizer ran on every read, not once
+
+
+def test_r5_revoked_grant_and_unknown_set_are_the_same_404(settings: Settings) -> None:
+    """CG-8: a caller whose grant is gone cannot tell the set from one that never existed."""
+    view = make_retrieval_view()
+    headers = {"x-tenant-id": str(TENANT), "x-user-id": str(uuid4())}
+    revoked = _r5_client(settings, FakeScope(denied()), FakeRetrievalRepo(view)).get(
+        f"/api/v1/retrieval-sets/{view.retrieval_set.id}", headers=headers
+    )
+    absent = _r5_client(settings, FakeScope(), FakeRetrievalRepo(view)).get(
+        f"/api/v1/retrieval-sets/{uuid4()}", headers=headers
+    )
+    assert revoked.status_code == absent.status_code == 404
+    assert revoked.json()["errorCode"] == absent.json()["errorCode"] == "RETRIEVAL_SET_NOT_FOUND"
+
+
+def test_r5_requires_identity(settings: Settings) -> None:
+    """No gateway headers: 401, and the scope is never consulted."""
+    view = make_retrieval_view()
+    scope = FakeScope()
+    client = _r5_client(settings, scope, FakeRetrievalRepo(view))
+    assert client.get(f"/api/v1/retrieval-sets/{view.retrieval_set.id}").status_code == 401
+    assert scope.calls == []

@@ -11,9 +11,14 @@ aws s3api head-bucket --bucket rag-artefacts 2>/dev/null || aws s3api create-buc
 for topic in llm-generation-events llm-index-events; do
   aws sns create-topic --name "$topic" >/dev/null
 done
+# Each inbound queue gets a <name>-dlq and a redrive policy of five receives (LLD §12.4). The policy
+# is set after creation, so a rerun against a persisted volume (queue already there) still works.
 for queue in llm-document-rag-q domainprofile-llm-invalidate-q membership-rag-q \
              tender-rag-q usage-rag-q; do
-  aws sqs create-queue --queue-name "$queue" >/dev/null
+  aws sqs create-queue --queue-name "$queue-dlq" >/dev/null
+  url=$(aws sqs create-queue --queue-name "$queue" --query QueueUrl --output text)
+  policy=$(printf '{\\"deadLetterTargetArn\\":\\"arn:aws:sqs:eu-west-1:000000000000:%s-dlq\\",\\"maxReceiveCount\\":\\"5\\"}' "$queue")
+  aws sqs set-queue-attributes --queue-url "$url" --attributes "{\"RedrivePolicy\":\"$policy\"}"
 done
 # Dev probe: a queue subscribed to both outbound topics (raw delivery), so published events can be
 # seen in floci-ui / `aws sqs receive-message`. Nothing in the service consumes it.
@@ -23,4 +28,4 @@ for topic in llm-generation-events llm-index-events; do
     --notification-endpoint arn:aws:sqs:eu-west-1:000000000000:llm-events-probe-q \
     --attributes RawMessageDelivery=true >/dev/null
 done
-echo "floci: rag-artefacts bucket, 2 topics, 5 queues ready"
+echo "floci: rag-artefacts bucket, 2 topics, 5 queues with DLQs ready"

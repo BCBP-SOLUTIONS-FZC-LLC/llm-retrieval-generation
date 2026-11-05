@@ -12,12 +12,17 @@ from rag.application.corpus.dtos import ModelCatalogueDto, ModelDto
 from rag.domain.shared.errors import DomainError, ErrorCode
 from rag.infrastructure.config import Settings
 
-"""Assumption: the Gateway's route-configuration listing. The LLD names no path (§22.1, OQ-92)."""
+"""Verified live against Agent Router 1.2.0 (the LLD names no path, §22.1, OQ-92)."""
 CATALOGUE_TIMEOUT_SECONDS = 2.0
 
 
 def parse_catalogue(body: Any, now: datetime) -> ModelCatalogueDto:
-    """The Gateway's ``{models: [{id, residency, task_classes, plans}], as_of?}`` as a DTO."""
+    """The Gateway's catalogue as a DTO.
+
+    Two shapes: the LLD's ``{models: [{id, residency, task_classes, plans}], as_of?}``, and
+    Agent Router's OpenAI-style ``{data: [{id, ...}]}``, which lists ids only, so the other
+    fields come back empty (``plans`` is the consumer's filter key; see implementation-plan).
+    """
     models = [
         ModelDto(
             id=str(m["id"]),
@@ -25,7 +30,7 @@ def parse_catalogue(body: Any, now: datetime) -> ModelCatalogueDto:
             task_classes=[str(t) for t in m.get("task_classes", [])],
             plans=[str(p) for p in m.get("plans", [])],
         )
-        for m in body["models"]
+        for m in (body["models"] if "models" in body else body["data"])
     ]
     as_of = body.get("as_of")
     return ModelCatalogueDto(
