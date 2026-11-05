@@ -6,6 +6,15 @@ This service has never been deployed to any environment — there is no released
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/init-floci.sh` creates a `-dlq` for each of the five inbound queues and sets a redrive policy of five receives (LLD §12.4), so failed-message handling can be tested locally.
+- Retrieval tests against real infrastructure: `tests/integration/test_qdrant_scope.py` runs the scope filters on a cluster-mode Qdrant (two tenants in one physical collection with custom shard keys: tenant, superseded-version and retired-generation points never match; the filter's `tenant_id` term is the only thing keeping a foreign point in the same shard out, and removing it fails the test). R-5 HTTP tests: purge markers beside intact chunks, scope re-checked on every read, revoked grant and unknown set share one 404, 401 without identity.
+
+### Fixed
+
+- C-M1 against the real gateway: Agent Router 1.2.0 answers `GET /v1/models` as `{data: [{id}]}`, not the LLD's `{models: [...]}`, so the parser raised and C-M1 always returned `503`. It now reads both; the OpenAI shape carries ids only, so `residency`, `task_classes` and `plans` come back empty. Live contract tests added (`tests/gateway`).
+
 ### Changed
 
 - Dependabot disabled as in `iam-org-membership`: `.github/dependabot.yml` renamed to `dependabot.yml.disabled` (config kept; rename it back to re-enable). The open bumps were applied by hand first: `setup-uv` 10.3.2, `actions/cache` 6.1.0, `docker/login-action` 4.7.0, `docker/metadata-action` 6.2.0, `docker/setup-buildx-action` 4.4.1 (and `uv` 0.13.6). Version bumps are now manual (`uv lock --upgrade`, `make pin-base-images`, Actions SHAs); `vuln-scan.yml` and `make trivy` still catch CVEs.

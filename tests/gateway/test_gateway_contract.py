@@ -21,8 +21,10 @@ from rag.application.shared.gateway import (
     GatewayResidencyRefused,
     GatewayUnavailable,
 )
+from rag.domain.shared.errors import DomainError, ErrorCode
 from rag.infrastructure.config import Settings
 from rag.infrastructure.gateway.client import HttpModelGateway
+from rag.infrastructure.gateway.model_catalogue import HttpModelCatalogue
 
 pytestmark = pytest.mark.gateway
 
@@ -36,11 +38,14 @@ CTX = GatewayContext(plan="pro", residency_mode="standard", tenant_id=TENANT)
 async def gw() -> AsyncIterator[HttpModelGateway]:
     try:
         httpx.get(f"{BACKEND}/health", timeout=2).raise_for_status()
-        httpx.post(
+        probe = httpx.post(
             f"{GATEWAY}/v1/embeddings", json={"model": "embed", "input": ["ping"]}, timeout=5
-        ).raise_for_status()
+        )
+        probe.raise_for_status()
     except httpx.HTTPError as exc:
         pytest.skip(f"gateway or model stub not running (make gateway-up): {exc}")
+    if len(probe.json()["data"][0]["embedding"]) != 8:
+        pytest.skip("gateway is not on the stub config (make ollama-down or vllm-down)")
     gateway = HttpModelGateway(Settings(gateway_base_url=GATEWAY))
     yield gateway
     await gateway.aclose()
@@ -132,3 +137,16 @@ async def test_our_headers_are_forwarded_to_the_backend_with_the_task_class_adde
     assert headers["x-ai-eg-model"] == "embed"
     assert headers["x-tenant-id"] == str(TENANT)
     assert headers["x-residency-mode"] == "standard" and headers["x-plan"] == "pro"
+
+
+async def test_the_catalogue_lists_the_task_classes(gw: HttpModelGateway) -> None:
+    """C-M1's adapter reads the real ``GET /v1/models`` (OpenAI shape, ids only)."""
+    dto = await HttpModelCatalogue(Settings(gateway_base_url=GATEWAY)).list_models()
+    assert {"embed", "draft", "judge", "rerank"} <= {m.id for m in dto.models}
+
+
+async def test_a_gateway_that_is_down_is_inference_unavailable(gw: HttpModelGateway) -> None:
+    """C-M1 maps an unreachable gateway to 503 INFERENCE_UNAVAILABLE, not a crash."""
+    with pytest.raises(DomainError) as err:
+        await HttpModelCatalogue(Settings(gateway_base_url="http://localhost:9")).list_models()
+    assert err.value.code is ErrorCode.INFERENCE_UNAVAILABLE

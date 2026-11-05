@@ -50,6 +50,15 @@ def test_parse_catalogue_shape() -> None:
     assert parse_catalogue({"models": []}, datetime(2030, 1, 1, tzinfo=UTC)).as_of.year == 2030
 
 
+def test_parse_agent_router_openai_shape() -> None:
+    """Agent Router 1.2.0 lists ids only (`data`); residency, task classes, plans are empty."""
+    body = {"data": [{"id": "embed", "object": "model", "owned_by": "Envoy AI Gateway"}]}
+    dto = parse_catalogue(body, datetime(2030, 1, 1, tzinfo=UTC))
+    [m] = dto.models
+    assert (m.id, m.residency, m.task_classes, m.plans) == ("embed", "", [], [])
+    assert dto.as_of.year == 2030
+
+
 async def test_list_models_reads_the_gateway(
     monkeypatch: pytest.MonkeyPatch, settings: Settings
 ) -> None:
