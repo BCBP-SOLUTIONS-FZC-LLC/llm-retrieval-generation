@@ -356,7 +356,7 @@ components:
       name: TenantQuotaRestored
       payload:
         $ref: '#/components/schemas/TenantQuotaRestored'
-      summary: Only ``resource = tokens`` acts, because only a token quota suspends a run (LD-70).
+      summary: Only a token ``resource`` acts, because only a token quota suspends a run (LD-70).
       tags:
       - $ref: '#/components/tags/consumed'
       title: TenantQuotaRestored
@@ -1723,7 +1723,10 @@ components:
       title: TenantMembershipsPurged
       type: object
     TenantQuotaRestored:
-      description: Only ``resource = tokens`` acts, because only a token quota suspends a run (LD-70).
+      description: 'Only a token ``resource`` acts, because only a token quota suspends a run (LD-70).
+
+
+        ``cause`` is ``window_reset`` or ``limit_raised`` (Commercial HLD v0.48 §9.4) and is not read.'
       properties:
         cause:
           anyOf:
