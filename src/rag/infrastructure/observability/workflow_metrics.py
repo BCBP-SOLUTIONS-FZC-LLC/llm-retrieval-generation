@@ -4,7 +4,8 @@
 ``workflow_signal_total``, ``gate_action_total`` and ``fact_conflict_resolution_total`` are not
 named by it (design additions, CFG-1).
 
-Built only when metrics are enabled (the platform registry has no ``llm`` domain yet, OQ-103).
+Built only when metrics are enabled (``ENABLE_METRICS=true``, ``OBSERVABILITY_DOMAIN=llm``,
+OQ-103).
 """
 
 from __future__ import annotations

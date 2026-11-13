@@ -126,7 +126,7 @@ class PipelineObserver(Protocol):
 
 
 class NullObserver:
-    """The observer when metrics are off (the default until OQ-103 registers ``llm``)."""
+    """The observer when metrics are off, the default (``ENABLE_METRICS=false``)."""
 
     @asynccontextmanager
     async def stage(self, name: str) -> AsyncIterator[None]:

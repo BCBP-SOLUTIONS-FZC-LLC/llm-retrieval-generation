@@ -2,7 +2,7 @@
 
 How this service implements the platform observability standard through [`platform-fastapicommon`](https://github.com/BCBP-SOLUTIONS-FZC-LLC/platform-fastapicommon). Logs, spans and Tier-3 metrics all go through the library; this service builds only its own collectors.
 
-> **Status: metrics are disabled by default.** The platform metrics registry has no `llm` domain yet (LLD OQ-103), and `create_platform_app` raises on any configured domain outside it. Until it is registered, `OBSERVABILITY_DOMAIN` stays unset and `ENABLE_METRICS` stays `false`; the Prometheus observers are never built, and logs and traces are the only signal. No alert rules, dashboards or SLO rules exist yet — the alerts in [`runbooks.md`](runbooks.md) are **proposed** and keyed on logs and database state where no metric can be used.
+> **Status: metrics are disabled by default in code.** The platform metrics registry has the `llm` domain from `fastapicommon` 0.6.0 (LLD OQ-103, resolved). With `OBSERVABILITY_DOMAIN=llm` and `ENABLE_METRICS=true` (the Helm chart sets both) the Prometheus observers are built and `/metrics` is served; otherwise they are never built and logs and traces are the only signal. No alert rules, dashboards or SLO rules exist yet — the alerts in [`runbooks.md`](runbooks.md) are **proposed** and keyed on logs and database state where no metric can be used.
 
 | Piece | Location |
 |---|---|
@@ -28,7 +28,7 @@ How this service implements the platform observability standard through [`platfo
 |---|---|---|
 | `service` | `retrieval-generation` | `Settings.app_name` |
 | `environment` | `dev`, `test`, `staging`, `production` | `APP_ENV` |
-| `domain` | `llm` — **not yet registered** (OQ-103) | `OBSERVABILITY_DOMAIN` |
+| `domain` | `llm` — registered from `fastapicommon` 0.6.0 (OQ-103) | `OBSERVABILITY_DOMAIN` |
 
 ## Conformance with the Enterprise Platform Observability Standard
 
@@ -42,7 +42,7 @@ How this service implements the platform observability standard through [`platfo
 - The inventory document must list exactly the declared collectors, in both directions.
 - **Proposed platform metrics not used** (`platform_dependency_request_seconds`, `platform_queue_depth`, `platform_dlq_depth`, `platform_duplicate_messages_total`, `platform_event_propagation_seconds`): awaiting registry ratification, so no service-side stand-ins exist. When ratified, create them with `new_shared_*` and add the use here.
 - **Backward compatibility:** no legacy metric exists (the service has never been deployed or scraped), so there is no old-and-new parallel emission, sunset period or removal to run.
-- **Dashboards, alert rules, recording rules, SLOs and HPA references do not exist yet.** They are blocked on the `llm` domain registration (OQ-103); the proposed alerts are in [`runbooks.md`](runbooks.md). Nothing to migrate until then.
+- **Dashboards, alert rules, recording rules, SLOs and HPA references do not exist yet.** They were blocked on the `llm` domain registration (OQ-103, now resolved) and have not been built; the proposed alerts are in [`runbooks.md`](runbooks.md). Nothing to migrate until they are.
 
 ## Rules this service follows
 

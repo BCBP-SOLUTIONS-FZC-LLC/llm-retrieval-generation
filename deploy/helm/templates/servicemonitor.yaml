@@ -1,6 +1,6 @@
 {{- if .Values.serviceMonitor.enabled }}
-# Dormant until ENABLE_METRICS=true and OBSERVABILITY_DOMAIN is a registered domain (OQ-103): the
-# app serves /metrics only then. Metrics share the API port, so the NetworkPolicy admits the
+# Needs ENABLE_METRICS=true and a registered OBSERVABILITY_DOMAIN (`llm`, OQ-103): the app serves
+# /metrics only then. Metrics share the API port, so the NetworkPolicy admits the
 # monitoring namespace to that port.
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

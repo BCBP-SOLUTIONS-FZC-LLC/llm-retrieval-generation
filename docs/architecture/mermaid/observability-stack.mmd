@@ -18,4 +18,4 @@ flowchart LR
     otel --> collector["OTel collector"]
     prom --> alerts["alert rules and dashboards"]
 
-    gap["Metrics stay off by default: the llm domain is not registered in the platform registry yet (OQ-103).\nOBSERVABILITY_DOMAIN stays unset until it is, then set OBSERVABILITY_DOMAIN=llm and ENABLE_METRICS=true."]
+    gap["Metrics are off by default in code (ENABLE_METRICS=false). The llm domain is in the platform registry from fastapicommon 0.6.0 (OQ-103),\nso set OBSERVABILITY_DOMAIN=llm and ENABLE_METRICS=true; the Helm chart does."]

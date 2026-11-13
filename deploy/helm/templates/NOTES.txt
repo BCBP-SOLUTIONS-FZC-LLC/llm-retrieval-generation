@@ -14,8 +14,8 @@ tenant. Enable it in production.
 
 {{ end -}}
 {{ if not (index .Values.env "OBSERVABILITY_DOMAIN") -}}
-NOTE: metrics are off (OBSERVABILITY_DOMAIN unset). Set it and ENABLE_METRICS=true once the `llm`
-domain is registered in the Platform Observability Registry (OQ-103).
+NOTE: metrics are off (OBSERVABILITY_DOMAIN unset). Set OBSERVABILITY_DOMAIN=llm and
+ENABLE_METRICS=true (the `llm` domain is registered from fastapicommon 0.6.0, OQ-103).
 
 {{ end -}}
 Verify:

@@ -1,7 +1,8 @@
 """§16.2 pipeline metrics, Tier 3 (``llm_retrieval_generation_<metric>``), OBS-1/OBS-3.
 
-Collectors are built only when metrics are enabled (the platform registry has no ``llm`` domain
-yet, OQ-103; until it does ``ENABLE_METRICS`` stays false and the observer is a no-op).
+Collectors are built only when metrics are enabled (``ENABLE_METRICS=true`` with
+``OBSERVABILITY_DOMAIN=llm``, registered from ``fastapicommon`` 0.6.0, OQ-103; otherwise the
+observer is a no-op).
 Labels are bounded vocabularies: stage names, marker reasons, verdicts, pack-declared section
 types (anything else is ``other``), pack roles. Never a tenant, user, query or id.
 

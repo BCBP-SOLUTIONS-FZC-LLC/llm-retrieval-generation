@@ -63,4 +63,4 @@ Not constructed here. `platform-fastapicommon` records `platform_http_*` and bui
 
 - `refiner_edit_rate` (needs `user_action` capture, not built).
 - Event-consumer and relay lag beyond what `eventcommon` emits.
-- Names added beyond the LLD table (`workflow_*`, `gate_action_total`, `fact_conflict_resolution_total`, the generation additions) are **additions, not LLD names**; confirm them with the platform team when the domain is registered.
+- Names added beyond the LLD table (`workflow_*`, `gate_action_total`, `fact_conflict_resolution_total`, the generation additions) are **additions, not LLD names**; confirm them with the platform team (the `llm` domain is registered from `fastapicommon` 0.6.0, OQ-103).

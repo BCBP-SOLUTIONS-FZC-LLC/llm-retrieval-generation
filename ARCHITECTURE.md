@@ -482,10 +482,10 @@ flowchart LR
     otel --> collector["OTel collector"]
     prom --> alerts["alert rules and dashboards"]
 
-    gap["Metrics stay off by default: the llm domain is not registered in the platform registry yet (OQ-103).\nOBSERVABILITY_DOMAIN stays unset until it is, then set OBSERVABILITY_DOMAIN=llm and ENABLE_METRICS=true."]
+    gap["Metrics are off by default in code (ENABLE_METRICS=false). The llm domain is in the platform registry from fastapicommon 0.6.0 (OQ-103),\nso set OBSERVABILITY_DOMAIN=llm and ENABLE_METRICS=true; the Helm chart does."]
 ```
 
-Logs, spans and metrics go through `fastapicommon` and nothing else: every module logs with `get_logger` (the application layer is allowed that one platform import; `domain` imports nothing from the platform), and no module imports a logging, metrics or tracing SDK directly (`tests/architecture/test_shared_libs_only.py`). The adapters (`infrastructure/observability/`) wrap a Null observer with logging and tracing and add Prometheus collectors only when metrics are enabled and the registry is initialised. **Never logged or labelled:** query text, chunk text, refinement content, ids as message text, tenant or user as a label (OBS-2). Metric names are `llm_retrieval_generation_<metric>` (OBS-3); counters per band replace ratios and gauges stand in for running rates. Metrics are **off by default** until the `llm` domain is registered (OQ-103). See [`docs/observability/README.md`](docs/observability/README.md).
+Logs, spans and metrics go through `fastapicommon` and nothing else: every module logs with `get_logger` (the application layer is allowed that one platform import; `domain` imports nothing from the platform), and no module imports a logging, metrics or tracing SDK directly (`tests/architecture/test_shared_libs_only.py`). The adapters (`infrastructure/observability/`) wrap a Null observer with logging and tracing and add Prometheus collectors only when metrics are enabled and the registry is initialised. **Never logged or labelled:** query text, chunk text, refinement content, ids as message text, tenant or user as a label (OBS-2). Metric names are `llm_retrieval_generation_<metric>` (OBS-3); counters per band replace ratios and gauges stand in for running rates. Metrics are **off by default** in code; the `llm` domain is in the platform registry from `fastapicommon` 0.6.0 (OQ-103), and the Helm chart sets `OBSERVABILITY_DOMAIN=llm` and `ENABLE_METRICS=true`. See [`docs/observability/README.md`](docs/observability/README.md).
 
 ---
 

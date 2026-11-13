@@ -12,7 +12,7 @@ spec:
     name: {{ include "llm-retrieval-generation.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
-  # CPU and memory only. A request-rate metric needs the `llm` metrics domain registered (OQ-103)
+  # CPU and memory only. A request-rate metric needs the ServiceMonitor and a metrics adapter; the `llm` domain itself is registered from `fastapicommon` 0.6.0 (OQ-103)
   # and a prometheus-adapter rule; add it here when that exists.
   metrics:
     - type: Resource
