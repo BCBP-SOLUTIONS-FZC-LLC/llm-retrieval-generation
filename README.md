@@ -4,7 +4,7 @@ The Retrieval & Generation Service of the LLM subsystem — the **only component
 
 **Repository:** `github.com/BCBP-SOLUTIONS-FZC-LLC/llm-retrieval-generation`
 **Stack:** Python 3.15 · FastAPI · asyncpg (`pgcommon`) · `eventcommon` · `platform-fastapicommon` · deployed as one service plus CronJob sweeps from one image (image pipeline is planned — see [Deployment](#deployment))
-**Design:** the LLD, `docs/lld/llm-lld-retrieval-generation-service.md` (6,673 lines); where the LLD and the LLM HLD disagree, the HLD is authoritative. Build status, deviations and the traceability matrix are in [`docs/implementation-plan.md`](docs/implementation-plan.md).
+**Design:** the LLD, `docs/lld/llm-lld-retrieval-generation-service.md`; where the LLD and the LLM HLD disagree, the HLD is authoritative. Build status, deviations and the traceability matrix are in [`docs/implementation-plan.md`](docs/implementation-plan.md).
 
 > **Status: pre-release (`v0.x`), never deployed.** All 35 routes are mounted and tested against fakes, a real Postgres 18 and an e2e stack. The Worker Pool, the Model Gateway and the other peer services are not wired, so long-form generation and anything that calls a model cannot run end to end. See [Out of scope](#out-of-scope) and [`VERSIONING.md`](VERSIONING.md).
 
