@@ -350,6 +350,18 @@ async def test_tokens_restored_resumes_in_batches_and_a_repeat_resumes_nothing_t
     assert len(bench.runs.resumed) == 5
 
 
+async def test_limit_raised_cause_resumes_like_any_other_cause() -> None:
+    """A token add-on emits ``cause = limit_raised`` (Commercial AI-6); the cause is never read."""
+    bench = Bench()
+    bench.runs.runs = suspended(5)
+    rig = Rig(bench, h.quota_resume)
+    env = envelope(c.TENANT_QUOTA_RESTORED, {"resource": "tokens", "cause": "limit_raised"})
+    await rig.send(env)
+    assert sorted(bench.runs.resumed) == sorted(r.run_id for r in bench.runs.runs)
+    await rig.send(env)
+    assert len(bench.runs.resumed) == 5
+
+
 async def test_only_the_tokens_resource_acts() -> None:
     bench = Bench()
     bench.runs.runs = suspended(3)
