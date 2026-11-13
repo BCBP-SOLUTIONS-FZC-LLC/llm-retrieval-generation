@@ -1,6 +1,6 @@
 # Implementation Plan — retrieval-generation (Python 3.15 / FastAPI)
 
-Source of truth: `docs/lld/llm-lld-retrieval-generation-service.md` (6,664 lines, "LLD"). This file is the resume point
+Source of truth: `docs/lld/llm-lld-retrieval-generation-service.md` (6,673 lines, "LLD"). This file is the resume point
 and, at the end, the traceability matrix. Status legend: `[ ]` not started, `[~]` partial, `[x]` done and tested.
 
 ## Phase 1 — Analysis
