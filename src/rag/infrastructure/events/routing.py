@@ -10,9 +10,9 @@ It **never raises on an unrecognised type**: the relay treats any error that is 
 retryable as non-retryable and dead-letters the row, deleting it from ``outbox_events``. An event
 on the wrong topic can be recovered; one in a dead-letter table nobody alerts on cannot. So an
 unknown type takes the default branch (``llm-generation-events``) with a warning. The LLD's
-warning *metric* is Tier 3 (``llm_retrieval_generation_*``), and the ``llm`` domain is not
-registered in the platform registry yet (OQ-103), so for now it is a counter attribute plus a log
-line.
+warning *metric* is Tier 3 (``llm_retrieval_generation_*``), and the ``llm`` domain is
+registered from ``fastapicommon`` 0.6.0 (OQ-103), but this warning is still only a counter attribute
+plus a log line, not a collector.
 """
 
 from __future__ import annotations

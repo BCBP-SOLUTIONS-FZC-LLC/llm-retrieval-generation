@@ -39,7 +39,7 @@ Run as `python -m rag.infrastructure.sweeps <name>|all`, intended as CronJobs fr
 
 ## 13. Observability
 
-Logs, spans and `llm_retrieval_generation_*` metrics through `fastapicommon`. **Metrics are off by default** (OQ-103). See [`docs/observability/`](../docs/observability/README.md) and the runbooks under `docs/`.
+Logs, spans and `llm_retrieval_generation_*` metrics through `fastapicommon`. **Metrics are off by default in code**; the Helm chart turns them on with `OBSERVABILITY_DOMAIN=llm` (the `llm` domain is in the platform registry from `fastapicommon` 0.6.0, OQ-103). See [`docs/observability/`](../docs/observability/README.md) and the runbooks under `docs/`.
 
 ## 14. Deployment
 

@@ -1,7 +1,7 @@
 """Metric, log and tracing observers: every method runs and reaches its collector or delegate.
 
-The platform registry has no ``llm`` domain (OQ-103), so the collector factories are replaced
-with mocks; what is checked is the wiring, not Prometheus.
+The collector factories are replaced with mocks (``test_metrics_llm_domain.py`` covers the real
+registry, OQ-103); what is checked is the wiring, not Prometheus.
 """
 
 from __future__ import annotations

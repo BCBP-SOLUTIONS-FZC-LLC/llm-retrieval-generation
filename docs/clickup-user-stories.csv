@@ -209,7 +209,7 @@ S10,E1,Observability: metrics and readiness,"As an SRE I want metrics and a trut
 Includes:
 
 Register llm metrics domain and enable Tier-3 metrics [not started] (LLD §16, OQ-103)
-- [ ] llm domain registered in platform registry (OQ-103)
+- [x] llm domain registered in platform registry (OQ-103)
 - [ ] Metrics enabled by default
 - [ ] Dashboards for §16 metrics
 

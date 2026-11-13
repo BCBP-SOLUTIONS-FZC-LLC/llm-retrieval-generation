@@ -41,10 +41,11 @@ class Settings(PlatformSettings):
     problem_type_base: str = "https://errors.bcbp.io"
     # §17: must exceed R-4's 90 s synchronous budget.
     request_timeout_seconds: PosFloat = 120.0
-    # The platform metrics registry has no "llm" domain yet (LLD OQ-103), and create_platform_app
-    # raises on any configured domain outside it, even with metrics off. Until it is registered
-    # OBSERVABILITY_DOMAIN stays unset and metrics stay off; then set OBSERVABILITY_DOMAIN=llm
-    # and ENABLE_METRICS=true (Tier-3 names are llm_retrieval_generation_*, LLD §16).
+    # The platform metrics registry carries the "llm" domain from fastapicommon 0.6.0 (LLD OQ-103);
+    # create_platform_app raises on any configured domain outside it, even with metrics off, so an
+    # older library refuses OBSERVABILITY_DOMAIN=llm. Metrics stay off by default: set
+    # OBSERVABILITY_DOMAIN=llm and ENABLE_METRICS=true to serve /metrics (Tier-3 names are
+    # llm_retrieval_generation_*, LLD §16).
     enable_metrics: bool = False
 
     # --- LLD §17 ------------------------------------------------------------------------

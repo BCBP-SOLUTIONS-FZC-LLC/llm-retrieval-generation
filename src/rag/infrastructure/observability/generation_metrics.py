@@ -1,6 +1,7 @@
 """§16.1 and §16.2 generation, verification and streaming metrics, Tier 3, OBS-1 and OBS-3.
 
-Built only when metrics are enabled (the platform registry has no ``llm`` domain yet, OQ-103).
+Built only when metrics are enabled (``ENABLE_METRICS=true``, ``OBSERVABILITY_DOMAIN=llm``,
+OQ-103).
 Labels are bounded vocabularies: claim outcomes, ladder tiers, delivery states, bands,
 pack-declared section types and items, Gateway model profiles. Never a tenant, user or id.
 

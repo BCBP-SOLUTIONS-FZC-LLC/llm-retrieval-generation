@@ -47,10 +47,10 @@ env:
   # The observability environment label: local | dev | test | staging | prod (no aliases).
   APP_ENV: "prod"
   LOG_LEVEL: "info"
-  # Metrics are off until the `llm` domain is registered (OQ-103); create_platform_app raises on an
-  # unregistered domain, so leave both unset until then.
-  ENABLE_METRICS: "false"
-  OBSERVABILITY_DOMAIN: ""
+  # The `llm` domain is in the platform metrics registry from fastapicommon 0.6.0 (OQ-103);
+  # create_platform_app raises on an unregistered domain.
+  ENABLE_METRICS: "true"
+  OBSERVABILITY_DOMAIN: "llm"
   ENABLE_TRACING: "true"
   OTLP_ENDPOINT: "otel-collector.observability.svc.cluster.local:4317"
 
@@ -285,8 +285,8 @@ callers:
       kubernetes.io/metadata.name: tender
     podSelector: {}
 
-# ServiceMonitor needs kube-prometheus-stack; the app serves /metrics only once ENABLE_METRICS is
-# true and the `llm` domain is registered, so this is off until then.
+# ServiceMonitor needs kube-prometheus-stack, so it is off until that is installed. The app serves
+# /metrics once ENABLE_METRICS is true with OBSERVABILITY_DOMAIN=llm (the default above).
 serviceMonitor:
   enabled: false
   interval: "30s"

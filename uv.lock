@@ -908,7 +908,7 @@ structlog = [
 
 [[package]]
 name = "platform-fastapicommon"
-version = "0.4.1"
+version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fastapi" },
@@ -923,9 +923,9 @@ dependencies = [
     { name = "starlette" },
     { name = "structlog" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b0/b6/35e0cfe864fb7faaa5507569eb09d92cac8a75d5ab08d01e07ab84008b1e/platform_fastapicommon-0.4.1.tar.gz", hash = "sha256:d9c6d5db0ad7c09a0d9d4fbfed5c75059b5e4df43bce9cc47bd367deb3a884b3", size = 587625, upload-time = "2026-10-26T18:53:50.257Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d4/af/ea0d1e2524a5cad0035e7e212ac3d22a935bb23d8253d89fc4f6c8af3b39/platform_fastapicommon-0.6.0.tar.gz", hash = "sha256:afe7455832709ccf7003ae31757345cd3115e9f87dcf636782bafb28f4ad1965", size = 587508, upload-time = "2026-11-13T14:34:07.564Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f3/a1/b9ed06d55c956e9f49b8b9d7aa43b16b2e9dd8b85ed57cc6e029948d0f16/platform_fastapicommon-0.4.1-py3-none-any.whl", hash = "sha256:7c5427bfec159d6f69eb5343b219a5cc61468cb16ce8aba01da9fcbb52c64e6d", size = 140523, upload-time = "2026-10-26T18:53:48.915Z" },
+    { url = "https://files.pythonhosted.org/packages/28/46/8f947018b5c73ebe3e4bbe3b2b0febd44226dead00d46782be96e7ac9a28/platform_fastapicommon-0.6.0-py3-none-any.whl", hash = "sha256:79dc3f47a6746ad9d5eeb51173a980d14faf1af05b087366087fded1a20ccd5c", size = 141397, upload-time = "2026-11-13T14:34:05.421Z" },
 ]
 
 [[package]]
@@ -1250,7 +1250,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.10" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "pgcommon", extras = ["fastapi", "structlog"], specifier = ">=0.4.1,<0.5" },
-    { name = "platform-fastapicommon", specifier = ">=0.4.1,<0.5" },
+    { name = "platform-fastapicommon", specifier = ">=0.6.0,<0.7" },
     { name = "pydantic-settings", specifier = ">=2.2" },
     { name = "qdrant-client", specifier = ">=1.9" },
     { name = "redis", specifier = ">=5.0" },

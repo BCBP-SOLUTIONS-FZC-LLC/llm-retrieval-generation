@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "LLM retrieval-generation service (LLD: docs/lld/llm-lld-retrieval-generation-service.md)"
 requires-python = ">=3.15"
 dependencies = [
-    "platform-fastapicommon>=0.4.1,<0.5",
+    "platform-fastapicommon>=0.6.0,<0.7",
     "pgcommon[fastapi,structlog]>=0.4.1,<0.5",
     "eventcommon>=0.4.0,<0.5",
     "fastapi>=0.115.10",
