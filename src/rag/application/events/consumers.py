@@ -19,6 +19,7 @@ from rag.application.corpus.generations import BumpPurgeEpoch
 from rag.application.corpus.lifecycle import BeginTenderPurge, CloseTender
 from rag.application.corpus.ports import Clock, CorpusRepositories, utc_now
 from rag.application.events.contracts import (
+    TOKEN_QUOTA_RESOURCES,
     ProfileCacheRefreshed,
     build_event,
 )
@@ -240,11 +241,12 @@ class PropagateTenderPurge:
 class ResumeSuspendedRuns:
     """``quota_resume``: ``TenantQuotaRestored`` -> resume the tenant's quota-suspended runs.
 
-    Only ``resource = tokens`` acts. Runs resume in small batches so a restored tenant does not
-    spend its new allowance in one burst; a run the Gateway still refuses suspends again. The
-    signal is refused on a run that is no longer ``suspended``, and the event id is ledgered
-    (EVT-6), so a repeat resumes nothing twice. While no workflow client is wired nothing may be
-    reported as resumed, so the use case refuses and the message retries rather than being lost.
+    Only a token ``resource`` acts (``TOKEN_QUOTA_RESOURCES``). Runs resume in small batches so a
+    restored tenant does not spend its new allowance in one burst; a run the Gateway still
+    refuses suspends again. The signal is refused on a run that is no longer ``suspended``, and
+    the event id is ledgered (EVT-6), so a repeat resumes nothing twice. While no workflow client
+    is wired nothing may be reported as resumed, so the use case refuses and the message retries
+    rather than being lost.
     """
 
     tx: TransactionRunner
@@ -262,7 +264,7 @@ class ResumeSuspendedRuns:
 
     async def execute(self, *, resource: str) -> int:
         """Runs signalled."""
-        if resource != "tokens":
+        if resource not in TOKEN_QUOTA_RESOURCES:
             return 0
         if not self.resumer.available:
             raise DomainError(

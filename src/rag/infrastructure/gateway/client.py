@@ -16,6 +16,7 @@ import math
 import time
 from collections.abc import AsyncIterator
 from typing import Any
+from uuid import uuid4
 
 import httpx
 from fastapicommon.logging import get_logger
@@ -81,6 +82,17 @@ def _chunk(payload: str, tier: str) -> StreamChunk | None:
         raise GatewayUnavailable("the stream carried a malformed frame") from exc
 
 
+async def _fresh_call_id(request: httpx.Request) -> None:
+    """One UUID v4 ``x-request-id`` per Gateway call: the usage record's ``call_id``.
+
+    Runs after the platform client's propagation, which stamps the inbound request's id on every
+    outbound call; left alone, every call of one request would share a ``call_id`` and a feed
+    deduplicating on it would count them once (Commercial HLD v0.48 §10.2). ``x-correlation-id``
+    and ``traceparent`` still carry the link back to the request.
+    """
+    request.headers["x-request-id"] = str(uuid4())
+
+
 class HttpModelGateway:
     """``ModelGateway`` over HTTP. One lazy client; call ``aclose`` at shutdown."""
 
@@ -103,7 +115,9 @@ class HttpModelGateway:
 
     def _http(self) -> httpx.AsyncClient:
         if self._client is None:
-            self._client = create_platform_http_client(base_url=self._base_url)
+            self._client = create_platform_http_client(
+                base_url=self._base_url, event_hooks={"request": [_fresh_call_id]}
+            )
         return self._client
 
     async def aclose(self) -> None:
