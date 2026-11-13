@@ -10,3 +10,10 @@ htmlcov/
 .env
 coverage.xml
 dist/
+
+# Local testing notes, not for the repo
+docs/open-questions-c-i1.md
+docs/gap-reply-sharmila.md
+docs/gap-reply-commercial.md
+docs/gap-reply-commercial-2.md
+docs/gap-reply-commercial-3.md
