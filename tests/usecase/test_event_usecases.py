@@ -120,6 +120,16 @@ async def test_quota_resume_pauses_between_batches_not_after_the_last() -> None:
     assert pauses == [3.0, 3.0]  # after the 1st and 2nd full batches only
 
 
+@pytest.mark.parametrize(
+    ("resource", "resumed"), [("tokens", 2), ("llm_tokens", 2), ("api_requests", 0)]
+)
+async def test_quota_resume_acts_only_on_a_token_resource(resource: str, resumed: int) -> None:
+    """Commercial HLD v0.48 names ``llm_tokens`` on its add-on event; either spelling acts."""
+    runs = FakeRuns([SuspendedRun(uuid4(), uuid4(), uuid4()) for _ in range(2)])
+    uc = ResumeSuspendedRuns(FakeTx(), runs, runs, batch_size=5, pause_seconds=0.0)
+    assert await uc.execute(resource=resource) == resumed
+
+
 async def test_quota_resume_refuses_while_no_workflow_client_is_wired() -> None:
     runs = FakeRuns([SuspendedRun(uuid4(), uuid4(), uuid4())], available=False)
     with pytest.raises(DomainError):

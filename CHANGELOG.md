@@ -13,6 +13,8 @@ This service has never been deployed to any environment — there is no released
 
 ### Fixed
 
+- Each Gateway call now sends its own UUID v4 `x-request-id` (the usage record's `call_id`, Commercial HLD v0.48 §10.2). The platform HTTP client had stamped the inbound request's id on every call of a request, so one request's calls shared a single id and a feed deduplicating on it would have counted them once; `x-correlation-id` and `traceparent` still go on every call. `tests/unit/test_gateway_call_id.py` fails without the change.
+- `ResumeSuspendedRuns` (`quota_resume`) acts on `llm_tokens` as well as `tokens`: Commercial HLD v0.48 uses `llm_tokens` on its add-on event and does not state the value for the quota events. The assumption is recorded in `docs/implementation-plan.md`.
 - C-M1 against the real gateway: Agent Router 1.2.0 answers `GET /v1/models` as `{data: [{id}]}`, not the LLD's `{models: [...]}`, so the parser raised and C-M1 always returned `503`. It now reads both; the OpenAI shape carries ids only, so `residency`, `task_classes` and `plans` come back empty. Live contract tests added (`tests/gateway`).
 
 ### Changed
