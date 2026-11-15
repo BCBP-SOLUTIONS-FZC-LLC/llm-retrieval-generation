@@ -342,7 +342,7 @@ async def test_tokens_restored_resumes_in_batches_and_a_repeat_resumes_nothing_t
     bench = Bench()
     bench.runs.runs = suspended(5)
     rig = Rig(bench, h.quota_resume)
-    env = envelope(c.TENANT_QUOTA_RESTORED, {"resource": "tokens", "cause": "plan_upgrade"})
+    env = envelope(c.TENANT_QUOTA_RESTORED, {"resource": "tokens", "cause": "window_reset"})
     await rig.send(env)
     assert sorted(bench.runs.resumed) == sorted(r.run_id for r in bench.runs.runs)
     assert bench.runs.pages == 3  # 2 + 2 + 1

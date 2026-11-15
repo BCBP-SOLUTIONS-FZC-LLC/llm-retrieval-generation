@@ -517,9 +517,18 @@ class TenderEvent:
     tenant_id: UUID | None = None
 
 
+# ASSUMPTION (docs/implementation-plan.md): Commercial HLD v0.48 does not give the ``resource``
+# value of the quota events. Its add-on event and table use ``llm_tokens`` (§8.6.2, §9.4, §7.3);
+# the LLD (LD-70) assumed ``tokens``. Both name the token quota, so both act.
+TOKEN_QUOTA_RESOURCES = frozenset({"tokens", "llm_tokens"})
+
+
 @dataclass(frozen=True, slots=True)
 class TenantQuotaRestored:
-    """Only ``resource = tokens`` acts, because only a token quota suspends a run (LD-70)."""
+    """Only a token ``resource`` acts, because only a token quota suspends a run (LD-70).
+
+    ``cause`` is ``window_reset`` or ``limit_raised`` (Commercial HLD v0.48 §9.4) and is not read.
+    """
 
     resource: str
     cause: str | None = None
