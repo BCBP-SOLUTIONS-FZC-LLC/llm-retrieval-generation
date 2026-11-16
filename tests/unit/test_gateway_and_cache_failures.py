@@ -252,8 +252,9 @@ async def test_rerank_uses_the_cohere_v2_path_the_gateway_serves() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         paths.append(request.url.path)
-        return httpx.Response(200, json={"results": [{"index": 1, "relevance_score": 0.9}]})
+        results = [{"index": 1, "relevance_score": 0.9}, {"index": 0, "relevance_score": 0.4}]
+        return httpx.Response(200, json={"results": results})
 
     scores = await gw(handler).rerank("q", ["a", "b"], ctx=CTX, deadline_seconds=1)
     assert paths == ["/cohere/v2/rerank"]
-    assert scores == [0.0, 0.9]
+    assert scores == [0.4, 0.9]

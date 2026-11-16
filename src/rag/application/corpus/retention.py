@@ -10,6 +10,7 @@ from rag.application.corpus.ports import CorpusRepositories, ScopeResolver
 from rag.application.shared.ports import TransactionRunner, TxHandle
 from rag.domain.corpus.errors import CollectionNotFound, OptimisticLockConflict
 from rag.domain.corpus.retention import RetentionPolicy
+from rag.domain.shared.errors import DomainError, ErrorCode
 
 
 def _dto(p: RetentionPolicy) -> RetentionDto:
@@ -62,6 +63,13 @@ class PutRetention:
             collection = await self._r.collections.get(tx, cmd.collection_id)
             if collection is None:
                 raise CollectionNotFound(f"No granted collection {cmd.collection_id}.")
+            if collection.tenant_id != identity.tenant_id:
+                # The reference collection is visible to every tenant but belongs to the platform:
+                # the database refuses the write (RLS), which used to surface as a 500 or a 409.
+                raise DomainError(
+                    ErrorCode.GRANT_LEVEL_INSUFFICIENT,
+                    "A tenant cannot set retention on a platform collection.",
+                )
             current = await self._r.retention.get(tx, cmd.collection_id, lock=True)
 
             if cmd.record_version is None:

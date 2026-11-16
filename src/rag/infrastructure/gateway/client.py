@@ -203,11 +203,18 @@ class HttpModelGateway:
         )
         try:
             scores = [0.0] * len(passages)
+            seen: set[int] = set()
             for item in data["results"]:
-                scores[int(item["index"])] = float(item["relevance_score"])
-            return scores
+                index = int(item["index"])
+                if not 0 <= index < len(passages):  # a negative index would wrap to a real slot
+                    raise IndexError(index)
+                scores[index] = float(item["relevance_score"])
+                seen.add(index)
         except (KeyError, TypeError, ValueError, IndexError) as exc:
             raise GatewayUnavailable("rerank body is malformed") from exc
+        if len(seen) != len(passages):  # no top_n is sent, so a short answer is a broken one
+            raise GatewayUnavailable(f"rerank scored {len(seen)} of {len(passages)} passages")
+        return scores
 
     async def complete(
         self,

@@ -350,6 +350,16 @@ def test_p1_pagination_rules(h: Harness) -> None:
     assert h.client.get(f"{url}{2**63 - 1}", headers=public()).status_code == 200
 
 
+def test_p6_refuses_retention_on_another_tenants_collection(h: Harness) -> None:
+    """The reference collection is visible but the platform's: 403 for both forms, not 500/409."""
+    c = h.world.add_collection(tenant_id=uuid4())
+    h.scope.ids = (c.id,)
+    url = f"/api/v1/collections/{c.id}/retention"
+    for body in ({"retain_days": 30}, {"retain_days": 30, "record_version": 1}):
+        r = h.client.put(url, json=body, headers=public("tenant_admin"))
+        assert (r.status_code, r.json()["errorCode"]) == (403, "GRANT_LEVEL_INSUFFICIENT")
+
+
 def test_p6_retention_bounds_and_strict_legal_hold(h: Harness) -> None:
     """retain_days fits the 32-bit column; a legal hold is only true or false (not 0 or 'no')."""
     c = h.world.add_collection()

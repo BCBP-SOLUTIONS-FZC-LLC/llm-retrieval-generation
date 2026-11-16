@@ -141,3 +141,25 @@ def test_retry_after_is_seconds_or_an_http_date() -> None:
     in_a_minute = format_datetime(datetime.now(UTC) + timedelta(seconds=60), usegmt=True)
     assert 58 <= (_retry_after(in_a_minute) or 0) <= 60
     assert _retry_after(format_datetime(datetime.now(UTC) - timedelta(hours=1), usegmt=True)) == 0
+
+
+@pytest.mark.parametrize(
+    "results",
+    [
+        [{"index": 0, "relevance_score": 0.9}],  # a score for only one of three
+        [{"index": 0, "relevance_score": 0.9}] * 3,  # the same passage three times
+        [{"index": i, "relevance_score": 0.1} for i in (-1, 1, 2)],  # -1 would wrap
+        [],
+    ],
+)
+async def test_a_short_or_repeated_rerank_answer_is_malformed(results: list[Any]) -> None:
+    """No top_n is sent, so every passage must be scored once; a padded 0.0 hid a broken answer."""
+    from rag.application.shared.gateway import GatewayUnavailable
+
+    g = HttpModelGateway(Settings())
+    g._client = httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={"results": results})),
+        base_url="http://gw.test",
+    )
+    with pytest.raises(GatewayUnavailable):
+        await g.rerank("q", ["a", "b", "c"], ctx=CTX, deadline_seconds=1)
