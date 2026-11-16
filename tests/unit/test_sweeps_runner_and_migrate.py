@@ -43,12 +43,14 @@ async def test_open_pools_builds_four_pools(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(runner.Pool, "create", create)
     pools = await runner.open_pools(Settings(**SWEEP_DSNS))
     assert [c.pool_name for c in configs] == [
-        "sweep-corpus",
-        "sweep-generation",
-        "sweep-corpus-enum",
-        "sweep-generation-enum",
+        "sweep_corpus",
+        "sweep_generation",
+        "sweep_corpus_enum",
+        "sweep_generation_enum",
     ]
     assert [c.guc_provider is not None for c in configs] == [True, True, False, False]
+    for c in configs:
+        c.validate()  # the library's own pool-name rule; a fake pool never ran it
     await pools.close()
     assert pools.corpus.drain_and_close.await_count == 1
 
