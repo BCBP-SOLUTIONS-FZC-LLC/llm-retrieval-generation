@@ -55,7 +55,7 @@ Layers and markers in [`CONTRIBUTING.md`](../CONTRIBUTING.md#testing-requirement
 
 ## 17. Known gaps
 
-See the CHANGELOG *Known gaps*: no Worker Pool, no real peer exercised, Glue encoder, `/ready` and the relay, unbuilt sweeps, scope-cache invalidation, tenant purge reaching Valkey and evaluation samples, metrics domain, image pipeline written but never completed on GitHub (Actions billing limit).
+See the CHANGELOG *Known gaps*: no Worker Pool, no real peer exercised, Glue encoder, unbuilt sweeps, scope-cache invalidation, tenant purge reaching Valkey and evaluation samples, metrics domain, image pipeline written but never completed on GitHub (Actions billing limit).
 
 ## 18. Integration points
 

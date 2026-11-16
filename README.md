@@ -362,7 +362,7 @@ For Claude Code, `.claude/settings.json` registers two hooks (`format-python.sh`
 
 ### Health and readiness
 
-`/health` and `/live` are liveness; `/ready` is readiness. **Known gap:** `/ready` does not yet reflect the outbox relay (the signal exists as `app.state.relay_ready`, the probe is not wired).
+`/health` and `/live` are liveness. `/ready` is readiness: 503 unless both `llm_corpus` and `llm_generation` accept a write transaction on their primary (the GEN-3 `PgStoreProbe`, 0.6 s, run concurrently, answer cached for 1 s). When `EVENTS_ENABLED=true` it also needs every outbox relay to have polled and to have completed a store round trip within `3 x OUTBOX_POLL_INTERVAL + 30 s`. `/live` and `/health` are unaffected, so an outage takes the pod out of rotation without a restart.
 
 ---
 
