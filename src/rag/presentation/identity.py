@@ -7,6 +7,7 @@ are ours: a pure-ASGI middleware parses them into a request-scoped carrier (a ``
 
 from __future__ import annotations
 
+import re
 from contextvars import ContextVar
 from dataclasses import dataclass
 from uuid import UUID
@@ -20,6 +21,8 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from rag.domain.shared.identity import DepartmentRole, RequestIdentity, ResidencyMode
 
+TENANT_HEADER = "x-tenant-id"
+USER_HEADER = "x-user-id"
 DEPARTMENTS_HEADER = "x-departments"
 PLAN_HEADER = "x-plan"
 FEATURE_FLAGS_HEADER = "x-feature-flags"
@@ -108,12 +111,18 @@ class ExtraIdentityMiddleware:
             _extra_identity.reset(token)
 
 
-def _parse_uuid(value: str | None) -> UUID:
-    """The identity header value as a uuid, else 401."""
-    try:
-        return UUID(value or "")
-    except ValueError:
-        raise UnauthorizedException("x-tenant-id must be a uuid.") from None
+_CANONICAL_UUID = re.compile(r"[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}", re.IGNORECASE | re.ASCII)
+
+
+def _parse_uuid(value: str | None, header: str) -> UUID:
+    """The identity header value as a uuid, else 401 naming ``header``.
+
+    Only the 36-character hyphenated form: ``UUID()`` alone also takes ``urn:uuid:``, braces and
+    unhyphenated hex, which then fail deeper (a 503 on the scope read) instead of here.
+    """
+    if value is None or not _CANONICAL_UUID.fullmatch(value):
+        raise UnauthorizedException(f"{header} must be a uuid.")
+    return UUID(value)
 
 
 def require_tenant() -> UUID:
@@ -125,7 +134,7 @@ def require_tenant() -> UUID:
     context = get_request_context()
     if context.identity_rejection is not None or context.tenant_id is None:
         raise UnauthorizedException("x-tenant-id is required.")
-    return _parse_uuid(context.tenant_id)
+    return _parse_uuid(context.tenant_id, TENANT_HEADER)
 
 
 def require_identity(user: CurrentUser = Depends(require_authenticated_user)) -> RequestIdentity:
@@ -136,8 +145,8 @@ def require_identity(user: CurrentUser = Depends(require_authenticated_user)) ->
     """
     extra = get_extra_identity()
     return RequestIdentity(
-        tenant_id=_parse_uuid(user.tenant_id),
-        principal_id=_parse_uuid(user.user_id),
+        tenant_id=_parse_uuid(user.tenant_id, TENANT_HEADER),
+        principal_id=_parse_uuid(user.user_id, USER_HEADER),
         roles=frozenset(user.roles),
         departments=extra.departments,
         plan=extra.plan,
