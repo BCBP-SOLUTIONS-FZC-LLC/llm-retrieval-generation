@@ -332,15 +332,17 @@ class RetrievalPipeline:
             markers.append(DegradationMarker("embed", dense_res.reason, "lexical_only"))
             obs.marker("embed", dense_res.reason)
         elif isinstance(dense_res, SearchHalfError):
-            markers.append(DegradationMarker("dense_search", "unavailable", "lexical_only"))
-            obs.marker("dense_search", "unavailable")
+            markers.append(DegradationMarker("dense_search", dense_res.reason, "lexical_only"))
+            obs.marker("dense_search", dense_res.reason)
         elif isinstance(dense_res, BaseException):
             raise dense_res
         else:
             lists.append(RankedList("dense", dense_res))
         lexical_ok = False
+        lexical_reason = "unavailable"
         for (name, _), res in zip(lexical_queries, lexical_res, strict=True):
             if isinstance(res, SearchHalfError):
+                lexical_reason = res.reason
                 continue
             if isinstance(res, BaseException):
                 raise res
@@ -349,8 +351,8 @@ class RetrievalPipeline:
         if not lexical_ok:
             if not dense_ok:
                 raise DomainError(ErrorCode.RETRIEVAL_FAILED, "Both search halves are unavailable.")
-            markers.append(DegradationMarker("lexical_search", "unavailable", "dense_only"))
-            obs.marker("lexical_search", "unavailable")
+            markers.append(DegradationMarker("lexical_search", lexical_reason, "dense_only"))
+            obs.marker("lexical_search", lexical_reason)
 
         async with obs.stage("fusion"):
             fused = rrf_fuse(lists, self._cfg.rrf_k)

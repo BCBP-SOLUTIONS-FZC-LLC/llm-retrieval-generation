@@ -100,6 +100,10 @@ class GrantRepository(Protocol):
         """Rows with ``deleted_at IS NULL``, oldest first."""
         ...
 
+    async def latest_projected_at(self, tx: Tx, collection_id: UUID) -> datetime | None:
+        """Newest ``projected_at`` over ALL live rows of the collection, not one page."""
+        ...
+
 
 class RetentionRepository(Protocol):
     """``retention_policies``."""

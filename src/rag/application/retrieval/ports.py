@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from typing import Protocol
+from typing import Literal, Protocol
 
 from rag.domain.retrieval.candidate import Candidate
 from rag.domain.retrieval.plan import StructuralFilters
@@ -12,7 +12,24 @@ from rag.domain.retrieval.scope import ResolvedScope
 
 
 class SearchHalfError(Exception):
-    """One search half (dense or lexical) is unavailable: breaker open, timeout, store down."""
+    """One search half (dense or lexical) is unavailable: breaker open, timeout, store down.
+
+    ``reason`` is the §5.5 marker reason: ``deadline_exceeded`` for a timeout, like the Gateway
+    stages, else ``unavailable``.
+    """
+
+    def __init__(
+        self, message: str = "", reason: Literal["unavailable", "deadline_exceeded"] = "unavailable"
+    ) -> None:
+        super().__init__(message)
+        self.reason = reason
+
+
+def half_failure(message: str, exc: BaseException) -> SearchHalfError:
+    """The error a search half raises for ``exc``, with the marker reason a timeout deserves."""
+    return SearchHalfError(
+        message, "deadline_exceeded" if isinstance(exc, TimeoutError) else "unavailable"
+    )
 
 
 class DenseSearch(Protocol):

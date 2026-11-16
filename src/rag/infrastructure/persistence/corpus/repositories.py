@@ -335,6 +335,15 @@ class PgIndexGenerationRepository:
 class PgGrantRepository:
     """``collection_grants`` (read only: this service mints no grant, CG-2)."""
 
+    async def latest_projected_at(self, tx: Any, collection_id: UUID) -> datetime | None:
+        """Newest ``projected_at`` over all live rows (the freshness of the whole projection)."""
+        value = await tx.fetchval(
+            "SELECT max(projected_at) FROM collection_grants "
+            "WHERE collection_id = $1 AND deleted_at IS NULL",
+            collection_id,
+        )
+        return value  # type: ignore[no-any-return]
+
     async def list_active(
         self, tx: Any, collection_id: UUID, *, limit: int, offset: int
     ) -> list[CollectionGrant]:

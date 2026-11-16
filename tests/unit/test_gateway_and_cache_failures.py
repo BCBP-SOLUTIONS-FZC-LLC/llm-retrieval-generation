@@ -144,6 +144,33 @@ async def test_tac4_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
         await tac4.UnconfiguredTenderAccess().level(*ids)
 
 
+async def test_tac4_logs_an_invalid_body_with_the_status_and_no_content(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A malformed IAM answer was a bare 503 with no line saying IAM's answer was the problem."""
+    seen: list[tuple[str, dict[str, Any]]] = []
+
+    class Rec:
+        def warning(self, name: str, **kw: Any) -> None:
+            seen.append((name, kw))
+
+    monkeypatch.setattr(tac4, "log", Rec())
+    ids = (uuid4(), uuid4(), uuid4())
+    bodies = ({"level": "secret-ish"}, {"has_access": True, "access_level": 3})
+    for body in bodies:
+        with pytest.raises(ValueError):
+            await _tac4(reply(body), monkeypatch).level(*ids)
+    not_json = httpx.Response(200, content=b"<html>secret</html>")
+    with pytest.raises(ValueError):
+        await _tac4(lambda r: not_json, monkeypatch).level(*ids)
+    assert [(n, kw["why"]) for n, kw in seen] == [
+        ("tac4_invalid_body", "has_access"),
+        ("tac4_invalid_body", "access_level"),
+        ("tac4_invalid_body", "not_json"),
+    ]
+    assert all(set(kw) == {"status", "why"} for _, kw in seen)  # nothing from the body
+
+
 # ---- Valkey -----------------------------------------------------------------------------
 
 
@@ -197,6 +224,73 @@ async def test_valkey_cache_swallows_every_failure() -> None:
     assert await cache.get("k") is None
     await cache.set("k", "v", 5)
     await cache.aclose()
+
+
+async def test_valkey_outage_is_logged_once_and_the_recovery_too(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fail-open stays, but it is no longer silent: one line per outage, no key, no value."""
+    from rag.infrastructure.cache import valkey
+
+    events: list[tuple[str, dict[str, Any]]] = []
+
+    class Rec:
+        def warning(self, name: str, **kw: Any) -> None:
+            events.append((name, kw))
+
+        def info(self, name: str, **kw: Any) -> None:
+            events.append((name, kw))
+
+    monkeypatch.setattr(valkey, "log", Rec())
+    cache = ValkeyCache("redis://localhost:1/0")
+    cache._client = BrokenRedis()  # type: ignore[assignment]
+    for _ in range(3):
+        await cache.get("secret-key")
+    await cache.set("secret-key", "secret-value", 5)
+    assert events == [("cache_unavailable", {"op": "get", "error_type": "ConnectionError"})]
+
+    class Healthy:
+        async def get(self, key: str) -> Any:
+            return None
+
+    cache._client = Healthy()  # type: ignore[assignment]
+    await cache.get("k")
+    assert events[-1] == ("cache_recovered", {})
+
+
+async def test_a_flapping_valkey_logs_one_outage_a_minute_not_one_per_flap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from rag.infrastructure.cache import valkey
+
+    events: list[str] = []
+
+    class Rec:
+        def warning(self, name: str, **kw: Any) -> None:
+            events.append(name)
+
+        def info(self, name: str, **kw: Any) -> None:
+            events.append(name)
+
+    class Healthy:
+        async def get(self, key: str) -> Any:
+            return None
+
+    clock = [1000.0]
+    monkeypatch.setattr(valkey, "log", Rec())
+    monkeypatch.setattr(valkey.time, "monotonic", lambda: clock[0])
+    cache = ValkeyCache("redis://localhost:1/0")
+    for _ in range(3):  # three flaps inside one minute
+        cache._client = BrokenRedis()  # type: ignore[assignment]
+        await cache.get("k")
+        cache._client = Healthy()  # type: ignore[assignment]
+        await cache.get("k")
+        clock[0] += 5
+    assert events == ["cache_unavailable", "cache_recovered"]  # the later flaps stay quiet
+    clock[0] += 120
+    cache._client = BrokenRedis()  # type: ignore[assignment]
+    await cache.get("k")
+    assert events[-1] == "cache_unavailable"
 
 
 async def test_valkey_cache_get_ignores_non_string_values() -> None:

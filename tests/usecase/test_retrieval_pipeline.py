@@ -220,6 +220,23 @@ async def test_dense_failure_falls_to_lexical_and_lexical_failure_to_dense() -> 
     assert {c.source_half for c in out2.chunks} == {"dense"}
 
 
+async def test_a_search_half_that_missed_its_deadline_says_so_like_the_other_stages() -> None:
+    """The Gateway stages say deadline_exceeded; a timed-out half used to say unavailable."""
+    from rag.application.retrieval.ports import half_failure
+
+    assert half_failure("x", TimeoutError()).reason == "deadline_exceeded"
+    assert half_failure("x", ConnectionError()).reason == "unavailable"
+    rig = Rig()
+    rig.dense.error = half_failure("dense", TimeoutError())
+    rig.lexical.error = None
+    out = await rig.pipeline.run(identity(), REQ)
+    assert ("dense_search", "deadline_exceeded", "lexical_only") in marks(out)
+    rig2 = Rig()
+    rig2.lexical.error = half_failure("lexical", TimeoutError())
+    out2 = await rig2.pipeline.run(identity(), REQ)
+    assert ("lexical_search", "deadline_exceeded", "dense_only") in marks(out2)
+
+
 async def test_both_halves_down_is_retrieval_failed_and_never_a_verdict() -> None:
     """MD-14: a failed retrieval is a 503, not a body."""
     rig = Rig()

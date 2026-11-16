@@ -16,6 +16,19 @@ from rag.infrastructure.config import Settings
 CATALOGUE_TIMEOUT_SECONDS = 2.0
 
 
+def _strings(value: Any, field: str) -> list[str]:
+    """A list of strings; ``null`` or absent is empty.
+
+    A string or a mixed list is refused: a bare ``"pro"`` used to come out as ``['p', 'r', 'o']``,
+    and ``plans`` is the consumer's filter key.
+    """
+    if value is None:
+        return []
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise ValueError(f"{field} must be a list of strings")
+    return value
+
+
 def parse_catalogue(body: Any, now: datetime) -> ModelCatalogueDto:
     """The Gateway's catalogue as a DTO.
 
@@ -26,9 +39,9 @@ def parse_catalogue(body: Any, now: datetime) -> ModelCatalogueDto:
     models = [
         ModelDto(
             id=str(m["id"]),
-            residency=str(m.get("residency", "")),
-            task_classes=[str(t) for t in m.get("task_classes", [])],
-            plans=[str(p) for p in m.get("plans", [])],
+            residency=str(m.get("residency") or ""),
+            task_classes=_strings(m.get("task_classes"), "task_classes"),
+            plans=_strings(m.get("plans"), "plans"),
         )
         for m in (body["models"] if "models" in body else body["data"])
     ]

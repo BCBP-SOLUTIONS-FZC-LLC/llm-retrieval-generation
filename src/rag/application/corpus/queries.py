@@ -101,7 +101,7 @@ class ListGrants:
                 )
                 for g in rows
             ]
-            as_of = max((g.projected_at for g in rows), default=None)
+            as_of = await self._r.grants.latest_projected_at(tx, query.collection_id)
             return GrantPageDto(entries, query.limit, query.offset, as_of, self._bound)
 
         return await self._tx.run_in_tx(work, read_only=True)
