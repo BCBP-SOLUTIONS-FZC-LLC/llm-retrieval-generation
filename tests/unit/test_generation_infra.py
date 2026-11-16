@@ -9,6 +9,7 @@ from uuid import UUID
 import httpx
 import pytest
 from fastapicommon.metrics import default_registry
+from pydantic import ValidationError
 from tests.support_retrieval import DictKV, bundle, section_profile
 
 from rag.application.generation.ports import UserContext, UserContextUnavailable
@@ -35,7 +36,11 @@ from rag.infrastructure.observability.generation_metrics import (
     ratio_band,
     score_band,
 )
-from rag.infrastructure.persistence.generation.probes import CorpusTenderGate, PgStoreProbe
+from rag.infrastructure.persistence.generation.probes import (
+    PROBE_TIMEOUT_SECONDS,
+    CorpusTenderGate,
+    PgStoreProbe,
+)
 from rag.infrastructure.tender.pack_codec import bundle_from_dict, bundle_to_dict
 
 CTX = GatewayContext(plan="pro", residency_mode="strict", preferred_model="m1")
@@ -309,3 +314,14 @@ async def test_llm_context_builds_layer_3_caches_it_and_degrades_on_failure() ->
             await down.get(IDENT)
     finally:
         mod.create_platform_http_client = original  # type: ignore[assignment]
+
+
+async def test_the_store_probe_bound_is_the_one_it_is_given() -> None:
+    """STORE_PROBE_TIMEOUT_SECONDS: a 0.3 s store passes a 1 s bound and fails the 0.1 s default."""
+    await PgStoreProbe(Runner("off", delay=0.3), 1.0).require_writable()  # type: ignore[arg-type]
+    with pytest.raises(DomainError):
+        await PgStoreProbe(Runner("off", delay=0.3)).require_writable()  # type: ignore[arg-type]
+    assert Settings().store_probe_timeout_seconds == PROBE_TIMEOUT_SECONDS  # one default, two homes
+    for bad in (0, -1, 5.1, float("inf"), float("nan")):
+        with pytest.raises(ValidationError):
+            Settings(store_probe_timeout_seconds=bad)

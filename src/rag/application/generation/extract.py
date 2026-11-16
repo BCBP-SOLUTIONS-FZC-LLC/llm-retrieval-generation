@@ -39,7 +39,11 @@ from rag.application.retrieval.record import RecordRetrievalSet
 from rag.application.shared.gateway import TASK_EXTRACT, GatewayContext, ModelGateway
 from rag.application.shared.observability import GenerationObserver, NullGenerationObserver
 from rag.application.shared.ports import TransactionRunner
-from rag.application.verification.verify import ClaimResult, VerificationResult
+from rag.application.verification.verify import (
+    ClaimResult,
+    VerificationResult,
+    observe_verification,
+)
 from rag.domain.generation.eligibility import EligibilityVerdict
 from rag.domain.generation.extraction import (
     GAP_NO_EVIDENCE,
@@ -340,6 +344,7 @@ class ExtractStructured:
                 raise
             texts = {c.chunk_id: c.text for c in d.chunks}
             result = verify_fields(parsed, texts)
+            observe_verification(self._obs, result)  # the §16 claim, gap and tier counters
             fields = fields_to_json(parsed)
             body = json.dumps(
                 {"schema_version": schema.versioned_ref, "fields": fields}, sort_keys=True
@@ -354,7 +359,7 @@ class ExtractStructured:
                     serving_tier="primary",
                     verification=result,
                     delivery=DeliveryState.NOT_APPLICABLE,
-                    markers=(),
+                    markers=d.markers,  # the retrieval's, so the stored version keeps them
                     output_schema_version=schema.versioned_ref,
                     trigger_document_version_id=cmd.trigger_document_version_id or "",
                     parser_version=self._cfg.parser_version,

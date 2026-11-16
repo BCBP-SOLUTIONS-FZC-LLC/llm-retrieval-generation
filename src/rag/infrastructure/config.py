@@ -102,6 +102,8 @@ class Settings(PlatformSettings):
     verify_tier0_sample_rate: Unit = 0.10  # the share of non-compliance sections diffed
     generation_answer_deadline_seconds: PosFloat = 12.0  # Gateway call: 2x the 6 s target (§14.3)
     generation_draft_deadline_seconds: PosFloat = 40.0  # 2x the 20 s target
+    # GEN-3 writability probe (§14.3): no retry. Bounded so it stays a fast refusal (no inf).
+    store_probe_timeout_seconds: Annotated[float, Field(gt=0, le=5, allow_inf_nan=False)] = 0.1
     # Not carried by the resolved scope yet (index_generations holds the chunker version).
     pipeline_parser_version: str = "unrecorded"
     pipeline_chunker_version: str = "unrecorded"
