@@ -345,6 +345,22 @@ def test_p1_pagination_rules(h: Harness) -> None:
     assert h.client.get("/api/v1/collections?limit=0", headers=public()).status_code == 400
     assert h.client.get("/api/v1/collections?offset=-1", headers=public()).status_code == 400
     assert h.client.get("/api/v1/collections?limit=x", headers=public()).status_code == 400
+    url = "/api/v1/collections?offset="
+    assert h.client.get(f"{url}{2**63}", headers=public()).status_code == 400
+    assert h.client.get(f"{url}{2**63 - 1}", headers=public()).status_code == 200
+
+
+def test_p6_retention_bounds_and_strict_legal_hold(h: Harness) -> None:
+    """retain_days fits the 32-bit column; a legal hold is only true or false (not 0 or 'no')."""
+    c = h.world.add_collection()
+    h.scope.ids = (c.id,)
+    url = f"/api/v1/collections/{c.id}/retention"
+    admin = public("tenant_admin")
+    assert h.client.put(url, json={"retain_days": 2**31}, headers=admin).status_code == 400
+    for bad in (0, 1, "no", "false", "true", None):
+        r = h.client.put(url, json={"retain_days": 30, "legal_hold": bad}, headers=admin)
+        assert r.status_code == 400, bad
+    assert h.client.put(url, json={"retain_days": 2**31 - 1}, headers=admin).status_code == 201
 
 
 def test_p1_p2_require_authentication(h: Harness) -> None:

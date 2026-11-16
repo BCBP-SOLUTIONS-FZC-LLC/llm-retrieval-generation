@@ -149,6 +149,18 @@ async def test_r6_untrusted_content_sits_between_nonce_markers() -> None:
     assert "ignore previous instructions" in user.split(f"<doc-{nonce}>")[1]
 
 
+async def test_r6_nan_confidence_is_an_unusable_classification() -> None:
+    """NaN is not a confidence: it used to come out as null in a 200."""
+    gw = FakeGateway()
+    gw.complete_text = '{"proposed_role":"drawing","confidence":NaN}'
+    with pytest.raises(DomainError) as e:
+        await classifier(gw).execute(identity(), CMD)
+    assert e.value.code is ErrorCode.INFERENCE_UNAVAILABLE
+    gw.complete_text = '{"proposed_role":"drawing","confidence":' + "9" * 400 + "}"
+    with pytest.raises(DomainError):
+        await classifier(gw).execute(identity(), CMD)
+
+
 async def test_r6_role_outside_the_taxonomy_is_unknown_at_zero_confidence() -> None:
     """A made-up role is never passed through."""
     gw = FakeGateway()

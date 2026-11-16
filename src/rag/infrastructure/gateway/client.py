@@ -15,6 +15,8 @@ import json
 import math
 import time
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any
 from uuid import uuid4
 
@@ -47,10 +49,22 @@ TOKENIZE_TIMEOUT = 0.3
 TOKENIZER_MODEL = "draft"  # the generation Model Profile's tokenizer (§6.8)
 
 
+def _retry_after(value: str) -> int | None:
+    """``Retry-After`` as whole seconds: a number, or an HTTP-date (RFC 9110 allows both)."""
+    try:
+        if value.isascii() and value.isdigit():
+            return int(value)
+        when = parsedate_to_datetime(value)
+        if when.tzinfo is None:  # '-0000' parses as naive; RFC 9110 dates are GMT
+            when = when.replace(tzinfo=UTC)
+        return max(0, math.ceil((when - datetime.now(UTC)).total_seconds()))
+    except TypeError, ValueError, OverflowError:
+        return None
+
+
 def _refusal(response: httpx.Response) -> GatewayError:
     if response.status_code == 429:
-        retry = response.headers.get("retry-after", "")
-        return GatewayQuotaRefused(int(retry) if retry.isdigit() else None)
+        return GatewayQuotaRefused(_retry_after(response.headers.get("retry-after", "")))
     try:
         code = response.json()["error"]["code"]
     except ValueError, KeyError, TypeError:

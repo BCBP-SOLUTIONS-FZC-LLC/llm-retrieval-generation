@@ -123,6 +123,8 @@ def test_r1_unwritable_set_is_503_artefact_store_unwritable(h: Harness) -> None:
     [
         {},
         {"query": ""},
+        {"query": "   "},
+        {"query": "a\u0000b"},
         {"query": "x" * 4001},
         {"query": "q", "scope": {"collection_ids": [str(uuid4())] * 101}},
         {"query": "q", "scope": {"collection_ids": ["not-a-uuid"]}},

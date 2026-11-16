@@ -5,6 +5,7 @@
         "description": "C-I4: the collection's ``record_version``.",
         "properties": {
           "record_version": {
+            "maximum": 9.223372036854776e+18,
             "minimum": 1.0,
             "title": "Record Version",
             "type": "integer"
@@ -123,6 +124,7 @@
         "description": "W-3 body.",
         "properties": {
           "outline_version": {
+            "maximum": 2147483647.0,
             "minimum": 1.0,
             "title": "Outline Version",
             "type": "integer"
@@ -1826,6 +1828,7 @@
           "record_version": {
             "anyOf": [
               {
+                "maximum": 9.223372036854776e+18,
                 "minimum": 1.0,
                 "type": "integer"
               },
@@ -1837,6 +1840,7 @@
           },
           "retain_days": {
             "exclusiveMinimum": 0.0,
+            "maximum": 2147483647.0,
             "title": "Retain Days",
             "type": "integer"
           }
@@ -2466,6 +2470,7 @@
         "description": "W-4 body.",
         "properties": {
           "outline_version": {
+            "maximum": 2147483647.0,
             "minimum": 1.0,
             "title": "Outline Version",
             "type": "integer"
@@ -3814,6 +3819,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maximum": 9223372036854775807,
                   "minimum": 0,
                   "type": "integer"
                 },
@@ -4104,6 +4110,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maximum": 9223372036854775807,
                   "minimum": 0,
                   "type": "integer"
                 },
@@ -4267,6 +4274,7 @@
             "required": false,
             "schema": {
               "default": 0,
+              "maximum": 9223372036854775807,
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
@@ -4383,6 +4391,7 @@
             "required": false,
             "schema": {
               "default": 0,
+              "maximum": 9223372036854775807,
               "minimum": 0,
               "title": "Offset",
               "type": "integer"

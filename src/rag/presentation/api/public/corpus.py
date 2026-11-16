@@ -16,6 +16,7 @@ from rag.application.corpus.commands import (
 from rag.domain.shared.identity import RequestIdentity
 from rag.infrastructure.config import Settings
 from rag.presentation.api.corpus_schemas import (
+    OFFSET_MAX,
     CollectionListResponse,
     CollectionResponse,
     GrantListResponse,
@@ -38,7 +39,7 @@ def page(limit: int | None, offset: int, settings: Settings) -> tuple[int, int]:
 @router.get("", response_model=CollectionListResponse)
 async def list_collections(
     limit: int | None = Query(default=None, ge=1),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=OFFSET_MAX),
     identity: RequestIdentity = Depends(require_identity),
     services: CorpusServices = Depends(get_corpus_services),
     settings: Settings = Depends(get_settings),
@@ -66,7 +67,7 @@ async def get_collection(
 async def list_grants(
     collection_id: UUID,
     limit: int | None = Query(default=None, ge=1),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=OFFSET_MAX),
     identity: RequestIdentity = Depends(require_identity),
     _role: None = Depends(RequireAnyRole("tenant_admin", "tender_admin")),
     services: CorpusServices = Depends(get_corpus_services),

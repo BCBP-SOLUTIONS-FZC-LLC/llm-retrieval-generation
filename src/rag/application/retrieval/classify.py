@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import secrets
 
 from rag.application.packs.ports import PackResolver
@@ -47,6 +48,8 @@ def _error(exc: GatewayError) -> DomainError:
 def _confidence(value: object) -> float:
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError("confidence is not a number")
+    if math.isnan(value):
+        raise ValueError("confidence is NaN")
     return min(max(float(value), 0.0), 1.0)
 
 
@@ -99,7 +102,7 @@ class ProposeClassification:
                 for a in body.get("alternatives", [])
                 if str(a.get("role")) in roles and str(a.get("role")) != role
             )[:MAX_ALTERNATIVES]
-        except (ValueError, KeyError, TypeError, AttributeError) as exc:
+        except (ValueError, KeyError, TypeError, AttributeError, OverflowError) as exc:
             raise DomainError(
                 ErrorCode.INFERENCE_UNAVAILABLE, "The model returned an unusable classification."
             ) from exc

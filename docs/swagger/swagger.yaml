@@ -4,6 +4,7 @@ components:
       description: 'C-I4: the collection''s ``record_version``.'
       properties:
         record_version:
+          maximum: 9.223372036854776e+18
           minimum: 1.0
           title: Record Version
           type: integer
@@ -86,6 +87,7 @@ components:
       description: W-3 body.
       properties:
         outline_version:
+          maximum: 2147483647.0
           minimum: 1.0
           title: Outline Version
           type: integer
@@ -1256,12 +1258,14 @@ components:
           type: boolean
         record_version:
           anyOf:
-          - minimum: 1.0
+          - maximum: 9.223372036854776e+18
+            minimum: 1.0
             type: integer
           - type: 'null'
           title: Record Version
         retain_days:
           exclusiveMinimum: 0.0
+          maximum: 2147483647.0
           title: Retain Days
           type: integer
       required:
@@ -1693,6 +1697,7 @@ components:
       description: W-4 body.
       properties:
         outline_version:
+          maximum: 2147483647.0
           minimum: 1.0
           title: Outline Version
           type: integer
@@ -2586,7 +2591,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - minimum: 0
+          - maximum: 9223372036854775807
+            minimum: 0
             type: integer
           - type: 'null'
           title: Offset
@@ -2769,7 +2775,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - minimum: 0
+          - maximum: 9223372036854775807
+            minimum: 0
             type: integer
           - type: 'null'
           title: Offset
@@ -2869,6 +2876,7 @@ paths:
         required: false
         schema:
           default: 0
+          maximum: 9223372036854775807
           minimum: 0
           title: Offset
           type: integer
@@ -2942,6 +2950,7 @@ paths:
         required: false
         schema:
           default: 0
+          maximum: 9223372036854775807
           minimum: 0
           title: Offset
           type: integer

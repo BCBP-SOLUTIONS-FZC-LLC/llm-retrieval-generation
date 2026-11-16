@@ -12,6 +12,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path, Query
 
 from rag.domain.shared.identity import RequestIdentity
+from rag.presentation.api.corpus_schemas import OFFSET_MAX
 from rag.presentation.api.public.artefacts_models import (
     ArtefactResponse,
     SectionContentResponse,
@@ -27,7 +28,7 @@ router = APIRouter(prefix="/api/v1/artefacts", tags=["artefacts"])
 Identity = Annotated[RequestIdentity, Depends(require_identity)]
 Services = Annotated[GenerationServices, Depends(get_generation)]
 Limit = Annotated[int | None, Query(ge=1, description="Default 100; above 500 is clamped.")]
-Offset = Annotated[int | None, Query(ge=0)]
+Offset = Annotated[int | None, Query(ge=0, le=OFFSET_MAX)]
 
 
 @router.get("/{artefact_id}", response_model=ArtefactResponse)

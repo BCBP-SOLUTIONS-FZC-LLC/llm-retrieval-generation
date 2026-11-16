@@ -127,3 +127,17 @@ def test_a_bad_path_or_header_name_stops_startup(overrides: dict[str, str]) -> N
 
 def test_header_names_are_normalised_to_lower_case() -> None:
     assert Settings(gateway_tenant_header="X-Org").gateway_tenant_header == "x-org"
+
+
+def test_retry_after_is_seconds_or_an_http_date() -> None:
+    """RFC 9110 allows both; a date used to be dropped."""
+    from datetime import UTC, datetime, timedelta
+    from email.utils import format_datetime
+
+    from rag.infrastructure.gateway.client import _retry_after
+
+    assert _retry_after("17") == 17 and _retry_after("") is None and _retry_after("soon") is None
+    assert _retry_after("²") is None and _retry_after("9" * 5000) is None  # not a number we read
+    in_a_minute = format_datetime(datetime.now(UTC) + timedelta(seconds=60), usegmt=True)
+    assert 58 <= (_retry_after(in_a_minute) or 0) <= 60
+    assert _retry_after(format_datetime(datetime.now(UTC) - timedelta(hours=1), usegmt=True)) == 0
