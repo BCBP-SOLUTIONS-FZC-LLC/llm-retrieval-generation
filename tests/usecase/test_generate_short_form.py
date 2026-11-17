@@ -648,7 +648,9 @@ async def test_a_client_gone_before_dispatch_cancels_the_run_and_spends_nothing(
         return True
 
     with pytest.raises(asyncio.CancelledError):
-        await rig.answer.execute(identity(), Q, is_disconnected=gone)
+        await rig.answer.execute(
+            identity(), Q, early_disconnect=gone
+        )  # no streaming probe (ASGI 2.3)
     assert rig.repo.run.status is RunStatus.CANCELLED
     assert rig.repo.artefact.status is ArtefactStatus.CANCELLED
     assert rig.stream_gw.stream_calls == [] and not rig.repo.completions  # no tokens spent

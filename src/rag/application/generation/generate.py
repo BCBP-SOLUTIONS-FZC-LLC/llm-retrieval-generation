@@ -313,6 +313,7 @@ class ShortFormEngine:
         spec: ShortFormSpec,
         *,
         is_disconnected: Callable[[], Awaitable[bool]] | None = None,
+        early_disconnect: Callable[[], Awaitable[bool]] | None = None,
     ) -> GenerationStream:
         """Admit, retrieve, screen, dispatch. Raises the §24 problem of anything before byte one.
 
@@ -325,7 +326,13 @@ class ShortFormEngine:
             adm = await self._admit.execute(identity, spec.admission)
         if isinstance(adm, Replayed):
             return await self._replay(adm)
-        return await self.run_admitted(adm, spec, began=began, is_disconnected=is_disconnected)
+        return await self.run_admitted(
+            adm,
+            spec,
+            began=began,
+            is_disconnected=is_disconnected,
+            early_disconnect=early_disconnect,
+        )
 
     async def run_admitted(
         self,
@@ -334,6 +341,7 @@ class ShortFormEngine:
         *,
         began: float,
         is_disconnected: Callable[[], Awaitable[bool]] | None = None,
+        early_disconnect: Callable[[], Awaitable[bool]] | None = None,
     ) -> GenerationStream:
         """Everything after admission: retrieve, screen, dispatch, then the producer takes over.
 
@@ -345,7 +353,7 @@ class ShortFormEngine:
             if outcome.verdict is not RetrievalVerdict.SUFFICIENT:
                 return await self._refuse(adm, outcome, set_id)
             plan = await self._plan(adm, spec, outcome)
-            if await self._client_gone(is_disconnected):
+            if await self._client_gone(early_disconnect or is_disconnected):
                 # Nobody is listening: close the run cancelled before a token is spent (§7.5),
                 # through the cancellation branch below. The response has no reader.
                 raise asyncio.CancelledError
@@ -779,6 +787,7 @@ class GenerateAnswer:
         cmd: AnswerCommand,
         *,
         is_disconnected: Callable[[], Awaitable[bool]] | None = None,
+        early_disconnect: Callable[[], Awaitable[bool]] | None = None,
     ) -> GenerationStream:
         """Admit and dispatch; the returned stream carries phase 1 and the verdict frame."""
         digest = request_hash(
@@ -821,6 +830,7 @@ class GenerateAnswer:
                 prior=cmd.prior,
             ),
             is_disconnected=is_disconnected,
+            early_disconnect=early_disconnect,
         )
 
 
@@ -836,6 +846,7 @@ class GenerateSectionDraft:
         cmd: DraftCommand,
         *,
         is_disconnected: Callable[[], Awaitable[bool]] | None = None,
+        early_disconnect: Callable[[], Awaitable[bool]] | None = None,
     ) -> GenerationStream:
         """Admit and dispatch; ``422 REQUIRED_INPUT_MISSING`` comes before the first frame."""
         digest = request_hash(
@@ -884,4 +895,5 @@ class GenerateSectionDraft:
                 prior=cmd.prior,
             ),
             is_disconnected=is_disconnected,
+            early_disconnect=early_disconnect,
         )

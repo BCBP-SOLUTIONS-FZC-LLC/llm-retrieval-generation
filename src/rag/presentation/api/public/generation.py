@@ -92,6 +92,8 @@ async def answers(
             prior=body.prior_refinement.to_prior() if body.prior_refinement else None,
         ),
         is_disconnected=_probe(request),
+        # before dispatch Starlette's listener is not running yet, so this works on any ASGI
+        early_disconnect=request.is_disconnected,
     )
     return _sse(stream, request, identity)
 
@@ -119,6 +121,8 @@ async def section_drafts(
             prior=body.prior_refinement.to_prior() if body.prior_refinement else None,
         ),
         is_disconnected=_probe(request),
+        # before dispatch Starlette's listener is not running yet, so this works on any ASGI
+        early_disconnect=request.is_disconnected,
     )
     return _sse(stream, request, identity)
 
