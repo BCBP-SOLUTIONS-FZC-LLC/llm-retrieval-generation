@@ -354,9 +354,15 @@ class ShortFormEngine:
                 return await self._refuse(adm, outcome, set_id)
             plan = await self._plan(adm, spec, outcome)
             if await self._client_gone(early_disconnect or is_disconnected):
-                # Nobody is listening: close the run cancelled before a token is spent (§7.5),
-                # through the cancellation branch below. The response has no reader.
-                raise asyncio.CancelledError
+                # Nobody is listening: close the run cancelled before a token is spent (§7.5) and
+                # end the request with an empty stream. Raising here would log an unhandled ASGI
+                # exception for every dropped client.
+                await self._lifecycle.cancel_quietly(adm, "client_cancelled")
+                queue: asyncio.Queue[Frame | None] = asyncio.Queue()
+                queue.put_nowait(None)
+                return GenerationStream(
+                    queue, adm.eligibility, heartbeat_seconds=self._cfg.heartbeat_seconds
+                )
         except asyncio.CancelledError:
             await asyncio.shield(self._lifecycle.cancel_quietly(adm, "client_cancelled"))
             raise
