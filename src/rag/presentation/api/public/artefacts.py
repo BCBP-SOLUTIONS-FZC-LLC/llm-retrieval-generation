@@ -12,7 +12,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path, Query
 
 from rag.domain.shared.identity import RequestIdentity
-from rag.presentation.api.corpus_schemas import OFFSET_MAX
+from rag.presentation.api.corpus_schemas import INT32_MAX, OFFSET_MAX
 from rag.presentation.api.public.artefacts_models import (
     ArtefactResponse,
     SectionContentResponse,
@@ -20,6 +20,7 @@ from rag.presentation.api.public.artefacts_models import (
     VersionDetailResponse,
     VersionPage,
 )
+from rag.presentation.api.public.text import NoNul
 from rag.presentation.generation_dependencies import GenerationServices, get_generation
 from rag.presentation.identity import require_identity
 
@@ -57,7 +58,7 @@ async def list_versions(
 @router.get("/{artefact_id}/versions/{version_no}", response_model=VersionDetailResponse)
 async def get_version(
     artefact_id: UUID,
-    version_no: Annotated[int, Path(ge=1)],
+    version_no: Annotated[int, Path(ge=1, le=INT32_MAX)],
     identity: Identity,
     services: Services,
 ) -> VersionDetailResponse:
@@ -84,8 +85,8 @@ async def render_artefact(
     artefact_id: UUID,
     identity: Identity,
     services: Services,
-    version_no: Annotated[int | None, Query(ge=1)] = None,
-    format: Annotated[str | None, Query(max_length=32)] = None,  # noqa: A002 - the wire name
+    version_no: Annotated[int | None, Query(ge=1, le=INT32_MAX)] = None,
+    format: Annotated[NoNul | None, Query(max_length=32)] = None,  # noqa: A002 - the wire name
 ) -> None:
     """A-8: reserved. ``503 RENDERER_UNAVAILABLE`` after scope and artefact checks (S-6)."""
     await services.render_artefact.execute(identity, artefact_id)
@@ -97,8 +98,8 @@ async def render_artefact(
 )
 async def get_section_content(
     artefact_id: UUID,
-    section_ref: Annotated[str, Path(max_length=256)],
-    version_no: Annotated[int, Path(ge=1)],
+    section_ref: Annotated[NoNul, Path(max_length=256)],
+    version_no: Annotated[int, Path(ge=1, le=INT32_MAX)],
     identity: Identity,
     services: Services,
 ) -> SectionContentResponse:

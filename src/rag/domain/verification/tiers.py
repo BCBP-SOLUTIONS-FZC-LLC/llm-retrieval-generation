@@ -9,7 +9,7 @@ design defaults carried in configuration (D-23, D-26).
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -113,6 +113,19 @@ def settle_negative(correction: str | None) -> tuple[ClaimOutcome, tuple[str, ..
     return ClaimOutcome.UNSUPPORTED, ()
 
 
+TIER0_MAX_CLAIMS = 500
+"""Per side. Tier 0 is a sampled agreement estimate; 7000 claims a side cost 12 s of CPU (#99)."""
+
+
+def _evenly[T](items: Iterable[T]) -> list[T]:
+    """All items, or ``TIER0_MAX_CLAIMS`` evenly spaced ones (deterministic)."""
+    found = list(items)
+    if len(found) <= TIER0_MAX_CLAIMS:
+        return found
+    step = len(found) / TIER0_MAX_CLAIMS
+    return [found[int(i * step)] for i in range(TIER0_MAX_CLAIMS)]
+
+
 def tier0_disagreement(
     first: Sequence[Claim], second: Sequence[Claim], th: LadderThresholds
 ) -> float:
@@ -121,13 +134,20 @@ def tier0_disagreement(
     A claim agrees when some claim of the other sample overlaps it at ``claim_agreement``.
     Gap claims are ignored: declining to assert is not a disagreement. Two empty samples agree.
     """
-    a = [c.text for c in first if not c.gap]
-    b = [c.text for c in second if not c.gap]
+    a = _evenly(tokens(c.text) for c in first if not c.gap)  # tokenised once: a 200 KB answer has
+    b = _evenly(tokens(c.text) for c in second if not c.gap)  # thousands of claims (#99)
     if not a and not b:
         return 0.0
-    miss_a = sum(1 for x in a if max((overlap(x, y) for y in b), default=0.0) < th.claim_agreement)
-    miss_b = sum(1 for y in b if max((overlap(y, x) for x in a), default=0.0) < th.claim_agreement)
-    return (miss_a + miss_b) / (len(a) + len(b))
+
+    def misses(xs: list[frozenset[str]], ys: list[frozenset[str]]) -> int:
+        return sum(
+            1
+            for x in xs
+            if max((len(x & y) / len(x) if x else 0.0 for y in ys), default=0.0)
+            < th.claim_agreement
+        )
+
+    return (misses(a, b) + misses(b, a)) / (len(a) + len(b))
 
 
 def top_candidates(

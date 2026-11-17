@@ -22,6 +22,7 @@ from rag.domain.shared.enums import GenerationMode
 from rag.presentation.api.corpus_schemas import INT32_MAX
 from rag.presentation.api.public.generation_models import EligibilityBody
 from rag.presentation.api.public.retrieval_models import ScopeBody
+from rag.presentation.api.public.text import NoNul
 
 Mode = Literal["assistance", "automation"]
 
@@ -257,7 +258,7 @@ class RegenerateDocumentRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     base_version_id: UUID
-    instruction: str | None = Field(default=None, max_length=2000)
+    instruction: NoNul | None = Field(default=None, max_length=2000)
     recipients: list[RecipientBody] = Field(default_factory=list, max_length=50)
 
 
@@ -265,7 +266,7 @@ class RegenerateSectionRequest(BaseModel):
     """A-6 body (§5.7.9). ``review_context`` is prompt input for this request only (REGEN-3)."""
 
     base_version_id: UUID
-    instruction: str | None = Field(default=None, max_length=2000)
+    instruction: NoNul | None = Field(default=None, max_length=2000)
     review_context: dict[str, Any] | None = None
     recipients: list[RecipientBody] = Field(default_factory=list, max_length=50)
 

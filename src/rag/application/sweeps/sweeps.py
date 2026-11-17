@@ -171,7 +171,7 @@ async def _fail_and_announce(
             source_event_id=f"swept:{failed.artefact_id}:{failed.run_id}",
             metadata={
                 "generation_run_id": None if failed.run_id is None else str(failed.run_id),
-                "failure_reason": RunFailureReason.INTERNAL.value,
+                "reason": RunFailureReason.INTERNAL.value,
                 "failed_at_stage": failed.failed_at_stage,
             },
         ),

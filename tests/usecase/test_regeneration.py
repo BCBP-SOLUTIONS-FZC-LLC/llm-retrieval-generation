@@ -697,6 +697,18 @@ async def test_a7_keep_established_changes_no_fact_and_flags_nothing() -> None:
     }
 
 
+async def test_a7_a_read_only_store_is_the_specific_503_and_nothing_is_written() -> None:
+    """#112: the same GEN-3 probe as A-6, not a raw write error."""
+    r = WfRig()
+    doc = seed(r)
+    c = open_conflict(r, doc)
+    r.probe.down = True
+    await raises(
+        resolve(r, doc, c, ConflictResolution.DISMISS), ErrorCode.ARTEFACT_STORE_UNWRITABLE
+    )
+    assert r.world.conflicts[c.id].resolved_at is None
+
+
 async def test_a7_update_fact_supersedes_inserts_and_flags_but_regenerates_nothing() -> None:
     r = WfRig()
     doc = seed(r)

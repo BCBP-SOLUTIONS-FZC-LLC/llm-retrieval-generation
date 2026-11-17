@@ -18,6 +18,7 @@ from rag.application.retrieval.dtos import (
 from rag.application.retrieval.scope import ScopeSpec
 from rag.domain.retrieval.sufficiency import GapReport
 from rag.presentation.api.public.artefacts_models import Chunk, RetrievalVerdict
+from rag.presentation.api.public.text import NoNul
 
 CollectionType = Literal["tender", "tenant", "reference"]
 
@@ -48,7 +49,7 @@ class SearchRequest(BaseModel):
 
     query: str = Field(min_length=1, max_length=4000)
     scope: ScopeBody = Field(default_factory=ScopeBody)
-    section_type: str | None = Field(default=None, max_length=256)
+    section_type: NoNul | None = Field(default=None, max_length=256)
     prior_refinement: PriorRefinementBody | None = None
     limit: int | None = Field(default=None, ge=1)
 
@@ -153,8 +154,8 @@ class ClassifyRequest(BaseModel):
     """R-6 body: 1 MB of caller-supplied content (§5.2)."""
 
     content: str = Field(min_length=1, max_length=1_000_000)
-    filename: str | None = Field(default=None, max_length=256)
-    domain_profile_ref: str | None = Field(default=None, max_length=256)
+    filename: NoNul | None = Field(default=None, max_length=256)
+    domain_profile_ref: NoNul | None = Field(default=None, max_length=256)
 
     @field_validator("content")
     @classmethod
@@ -199,8 +200,8 @@ class RequiredInputRequest(BaseModel):
 
     tender_id: UUID | None = None
     scope: ScopeBody = Field(default_factory=ScopeBody)
-    capability: str | None = Field(default=None, max_length=256)
-    section_types: list[str] = Field(min_length=1, max_length=100)
+    capability: NoNul | None = Field(default=None, max_length=256)
+    section_types: list[NoNul] = Field(min_length=1, max_length=100)
 
 
 class GapReportBody(BaseModel):

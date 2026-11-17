@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from rag.application.generation.extract import ExtractionOutcome
 from rag.domain.shared.enums import GenerationMode
 from rag.presentation.api.public.retrieval_models import PriorRefinementBody, ScopeBody
+from rag.presentation.api.public.text import NoNul, Text
 
 Mode = Literal["assistance", "automation"]
 
@@ -20,7 +21,7 @@ Mode = Literal["assistance", "automation"]
 class AnswerRequest(BaseModel):
     """R-2 body. ``scope.tender_id`` is optional: an answer may stand free of a tender."""
 
-    question: str = Field(min_length=1, max_length=4000)
+    question: Text = Field(min_length=1, max_length=4000)
     scope: ScopeBody = Field(default_factory=ScopeBody)
     prior_refinement: PriorRefinementBody | None = None
     requested_mode: Mode = "assistance"
@@ -34,10 +35,10 @@ class DraftRequest(BaseModel):
     """R-3 body. ``tender_id`` is required; ``tender_section_ref`` is opaque (ART-4)."""
 
     tender_id: UUID
-    tender_section_ref: str = Field(min_length=1, max_length=256)
-    section_type: str = Field(min_length=1, max_length=256)
+    tender_section_ref: Text = Field(min_length=1, max_length=256)
+    section_type: Text = Field(min_length=1, max_length=256)
     scope: ScopeBody = Field(default_factory=ScopeBody)
-    user_prompt: str = Field(default="", max_length=8000)
+    user_prompt: NoNul = Field(default="", max_length=8000)
     prior_refinement: PriorRefinementBody | None = None
     requested_mode: Mode = "assistance"
 
@@ -51,9 +52,9 @@ class ExtractRequest(BaseModel):
 
     tender_id: UUID
     scope: ScopeBody = Field(default_factory=ScopeBody)
-    schema_ref: str = Field(min_length=1, max_length=256)
+    schema_ref: NoNul = Field(min_length=1, max_length=256)
     document_ids: list[UUID] = Field(default_factory=list, max_length=100)
-    trigger_document_version_id: str | None = Field(default=None, max_length=256)
+    trigger_document_version_id: NoNul | None = Field(default=None, max_length=256)
 
 
 class EligibilityBody(BaseModel):

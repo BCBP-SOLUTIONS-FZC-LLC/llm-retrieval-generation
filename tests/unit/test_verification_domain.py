@@ -42,6 +42,34 @@ def test_parse_claims_extracts_refs_gaps_and_ignores_fragments() -> None:
     assert claims[2].gap and "[GAP" not in claims[2].text
 
 
+def test_parse_claims_does_not_split_at_abbreviations() -> None:
+    """#91: 'e.g.', 'Mr.' and 'a.m.' do not end a sentence."""
+    text = (
+        "Access is by crane, e.g. a mobile crane. Mr. Khan approves it. "
+        "Work starts at 8 a.m. daily."
+    )
+    assert [c.text for c in parse_claims(text)] == [
+        "Access is by crane, e.g. a mobile crane.",
+        "Mr. Khan approves it.",
+        "Work starts at 8 a.m. daily.",
+    ]
+
+
+def test_tier0_diff_of_thousands_of_claims_is_fast() -> None:
+    """#99: tokenise once, not per pair: 7000 claims a side cost 12 s of CPU before the cap."""
+    import time
+
+    from rag.domain.verification.claims import Claim
+
+    side = [
+        Claim(i, f"crane lifting plan item number {i} approved by engineer", ())
+        for i in range(7000)
+    ]
+    started = time.monotonic()
+    assert tier0_disagreement(side, side, TH) < 0.5
+    assert time.monotonic() - started < 3
+
+
 def test_tier1_supports_at_the_overlap_threshold_and_routes_below() -> None:
     chunk = {"a": "crane erection requires a lifting plan approved by the engineer"}
     hit = tier1("crane erection requires approved lifting plan", ["a"], chunk, TH)

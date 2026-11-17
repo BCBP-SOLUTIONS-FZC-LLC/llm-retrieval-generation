@@ -150,3 +150,24 @@ def test_r5_requires_identity(settings: Settings) -> None:
     client = _r5_client(settings, scope, FakeRetrievalRepo(view))
     assert client.get(f"/api/v1/retrieval-sets/{view.retrieval_set.id}").status_code == 401
     assert scope.calls == []
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        f"{BASE}/versions/{2**31}",
+        f"{BASE}/render?version_no={2**31}",
+        f"{BASE}/sections/a%00b/versions/1/content",
+        f"{BASE}/sections/intro/versions/{2**31}/content",
+        f"{BASE}/render?format=a%00b",
+    ],
+)
+def test_nul_and_out_of_range_numbers_are_400_before_the_use_case(
+    settings: Settings, path: str
+) -> None:
+    """#103/#104: refused at the edge, not a 500 from Postgres (int4 range, NUL)."""
+    client, execute = _client(settings, "get_version", ErrorCode.ARTEFACT_NOT_FOUND)
+    response = client.get(path, headers=HEADERS)
+    assert response.status_code == 400
+    assert response.json()["errorCode"] == "VALIDATION_FAILED"
+    execute.assert_not_awaited()

@@ -357,7 +357,13 @@ class ShortFormEngine:
         task = asyncio.create_task(producer.run())
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
-        await producer.first_byte()
+        try:
+            await producer.first_byte()
+        except asyncio.CancelledError:
+            # the platform's REQUEST_TIMEOUT answered 503: the client never gets a verdict, so the
+            # version the producer still writes is not "delivered" (#86)
+            producer.handle.disconnected = True
+            raise
         return GenerationStream(
             producer.queue,
             adm.eligibility,

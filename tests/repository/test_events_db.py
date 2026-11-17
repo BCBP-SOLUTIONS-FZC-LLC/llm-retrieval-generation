@@ -227,7 +227,15 @@ async def test_stalled_and_pending_selection_and_fail_artefact(db: Db) -> None:
     recent, _ = await artefact(db, A, status="generating", run_status="generating", age="1 minute")
     pending, _ = await artefact(db, A, status="pending", run_status="pending", age="1 hour")
     repo, tx = PgSweepRepository(), db.app_tx
-    now = await (await db.admin()).fetchval("SELECT now()")
+    admin = await db.admin()
+    stuck_section = await admin.fetchval(  # #87: the in-flight section closes with the artefact
+        "INSERT INTO artefact_sections (artefact_id, tenant_id, section_type, ordinal, state) "
+        "VALUES ($1, $2, 'body', 1, 'generating') RETURNING id",
+        quiet,
+        A,
+    )
+    now = await admin.fetchval("SELECT now()")
+    await admin.close()
     with as_tenant(A):
         stalled = await tx.run_in_tx(
             lambda t: repo.stalled_artefacts(t, now - timedelta(minutes=15))
@@ -242,7 +250,7 @@ async def test_stalled_and_pending_selection_and_fail_artefact(db: Db) -> None:
         assert failed.failed_at_stage == "stage2" and (
             failed.sections_complete,
             failed.sections_total,
-        ) == (0, 0)
+        ) == (0, 1)
         assert await tx.run_in_tx(lambda t: repo.fail_artefact(t, quiet, now)) is None  # moved
         assert await tx.run_in_tx(lambda t: repo.fail_artefact(t, recent, now)) is not None
     conn = await db.admin()
@@ -255,6 +263,12 @@ async def test_stalled_and_pending_selection_and_fail_artefact(db: Db) -> None:
         "stage2",
     )
     assert await conn.fetchval("SELECT status FROM artefacts WHERE id = $1", quiet) == "failed"
+    assert tuple(
+        await conn.fetchrow(
+            "SELECT state::text, failure_reason::text FROM artefact_sections WHERE id = $1",
+            stuck_section,
+        )
+    ) == ("failed", "internal")
     await conn.close()
     with as_tenant(B):  # another tenant sees and fails nothing of A's
         assert await tx.run_in_tx(lambda t: repo.fail_artefact(t, pending, now)) is None

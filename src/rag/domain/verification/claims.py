@@ -12,7 +12,28 @@ from dataclasses import dataclass
 
 _CITATION = re.compile(r"\[(c-\d+(?:\s*,\s*c-\d+)*)\]")
 _GAP = re.compile(r"\[GAP\b[^\]]*\]", re.IGNORECASE)
-_SENTENCE = re.compile(r"(?<=[.!?])\s+|\n+")
+# A full stop after one of these does not end a sentence ("e.g. cranes", "Mr. Khan"): a false split
+# made a fragment that no chunk supports (#91). "etc." is left out: it often does end one.
+_ABBREVIATIONS = (
+    "e.g",
+    "i.e",
+    "a.m",
+    "p.m",
+    "vs",
+    "cf",
+    "Mr",
+    "Mrs",
+    "Ms",
+    "Dr",
+    "approx",
+    "incl",
+    "Fig",
+    "Art",
+)
+_SENTENCE = re.compile(
+    r"(?<=[.!?])" + "".join(rf"(?<!\b{re.escape(a)}\.)" for a in _ABBREVIATIONS) + r"\s+|\n+",
+    re.IGNORECASE,
+)
 _WORD = re.compile(r"\w+", re.UNICODE)
 MIN_CLAIM_WORDS = 3
 """Fragments shorter than this (headings, list stubs) assert nothing and are not claims."""

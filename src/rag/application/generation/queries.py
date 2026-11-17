@@ -181,12 +181,19 @@ class GetSectionVersionContent:
             raise DomainError(
                 ErrorCode.ARTEFACT_CONTENT_UNAVAILABLE, "The section content is unavailable."
             )
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError as exc:  # hashes correctly but is not text: same 503 (#105)
+            log.error("section_version_content_not_utf8", section_version=str(sv.id))
+            raise DomainError(
+                ErrorCode.ARTEFACT_CONTENT_UNAVAILABLE, "The section content is unavailable."
+            ) from exc
         return SectionContentDTO(
             section_version_id=sv.id,
             version_no=sv.version_no,
             origin=sv.origin.value,
             content_type=CONTENT_TYPE,
-            content=data.decode("utf-8"),
+            content=text,
             retrieval_set_id=sv.retrieval_set_id,
             evidence_tier=sv.evidence_tier.value,
         )

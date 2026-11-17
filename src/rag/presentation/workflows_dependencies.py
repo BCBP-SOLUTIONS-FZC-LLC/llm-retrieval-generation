@@ -43,6 +43,7 @@ from rag.infrastructure.config import Settings
 from rag.infrastructure.events.publisher import OutboxEventPublisher
 from rag.infrastructure.iam.principals import HttpPrincipalDirectory, UnavailablePrincipalDirectory
 from rag.infrastructure.observability.workflow_metrics import build_workflow_observer
+from rag.infrastructure.persistence.generation.probes import PgStoreProbe
 from rag.infrastructure.persistence.generation.regeneration import (
     PgFactRepository,
     PgInstructionRefinementRepository,
@@ -163,7 +164,14 @@ def build_workflow_services(
             events,
             generate.settings,
         ),
-        resolve_conflict=ResolveFactConflict(deps, facts, refinements, audit, gate),
+        resolve_conflict=ResolveFactConflict(
+            deps,
+            facts,
+            refinements,
+            audit,
+            gate,
+            PgStoreProbe(generation_tx, settings.store_probe_timeout_seconds),
+        ),
         restarter=OrphanRestarter(client, queues),
         resumer=QuotaRunResumer(generation_tx, runs, resume, directory, client),
     )
