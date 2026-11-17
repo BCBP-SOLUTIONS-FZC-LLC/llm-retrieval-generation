@@ -69,7 +69,7 @@ This service writes (always in one transaction with its event and audit entry):
 The Worker Pool writes (as `rag_activity`): `pending -> outline_building`, `outline_building -> awaiting_outline_approval`
 (sets `outline_state = ready`, `outline_version`, `outline_ready_at`, `gate_expires_at`), `pending -> generating` (no gate),
 `generating -> suspended` (**with `failure_reason = quota_exhausted`**: the quota consumer selects on it),
-`generating -> complete | failed` (a failed run always carries `failure_reason`, ck_run_failure),
+`generating -> complete | failed` (a failed run always carries `failure_reason`, ck_run_failure; the vocabulary gained `schema_violation` in migration 0005, which R-4 uses, so an activity's exhaustive switch on the reason needs the new value),
 `awaiting_outline_approval -> failed/gate_expired` (WP-15), `current_stage` at each phase, `coherence` / `coherence_computed_at`
 (WP-16), the section rows and versions, `document_facts`, `fact_conflicts` (detection), `graph_checkpoints`, the
 verification rows, and the outbox rows for the events below.
