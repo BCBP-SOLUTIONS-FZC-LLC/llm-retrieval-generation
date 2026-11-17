@@ -207,6 +207,19 @@ async def test_embed_failure_falls_to_lexical_only(error, stage, reason) -> None
     assert {c.source_half for c in out.chunks} == {"lexical"}
 
 
+async def test_a_wrong_size_vector_is_the_embed_stage_s_fault_not_the_dense_search() -> None:
+    """With a dimension configured the vector is checked (the fake embeds 3 numbers)."""
+    rig = Rig(config=PipelineConfig(embedding_dimension=4))
+    out = await rig.pipeline.run(identity(), REQ)
+    assert ("embed", "unavailable", "lexical_only") in marks(out)
+    assert not [m for m in marks(out) if m[0] == "dense_search"]
+    assert {c.source_half for c in out.chunks} == {"lexical"}
+    ok = await Rig(config=PipelineConfig(embedding_dimension=3)).pipeline.run(identity(), REQ)
+    assert not [m for m in marks(ok) if m[0] in ("embed", "dense_search")]
+    unset = await Rig().pipeline.run(identity(), REQ)  # not configured: not checked
+    assert not [m for m in marks(unset) if m[0] == "embed"]
+
+
 async def test_dense_failure_falls_to_lexical_and_lexical_failure_to_dense() -> None:
     """Either half alone serves, each with its marker; the other half's chunks come through."""
     rig = Rig()

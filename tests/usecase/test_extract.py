@@ -91,6 +91,7 @@ async def test_schema_violation_is_422_non_retryable_and_the_raw_output_is_kept(
     assert raw and b"ten" in r.store.objects[raw[0]]  # WP-8
     assert not r.repo.completions  # validated BEFORE the artefact is written
     assert r.repo.run.status is RunStatus.FAILED and r.repo.artefact.status is ArtefactStatus.FAILED
+    assert r.repo.run.failure_reason is RunFailureReason.SCHEMA_VIOLATION  # not `internal`
 
 
 async def test_an_unknown_schema_ref_is_refused_before_the_shell_commits() -> None:

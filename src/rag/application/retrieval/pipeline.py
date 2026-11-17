@@ -30,6 +30,7 @@ from rag.application.shared.gateway import (
     GatewayContext,
     GatewayDeadlineExceeded,
     GatewayError,
+    GatewayUnavailable,
     ModelGateway,
     TokenCounter,
 )
@@ -71,6 +72,7 @@ class PipelineConfig:
     candidate_overfetch: float = 1.5
     excerpt_chars: int = 240
     embedding_profile: str = "embed-default"
+    embedding_dimension: int | None = None  # None: not checked (no peer records one)
 
 
 def _digest(*parts: str) -> str:
@@ -241,16 +243,21 @@ class RetrievalPipeline:
         self, text: str, tenant: str, pack_version: str, ctx: GatewayContext
     ) -> list[float]:
         key = f"{tenant}:qemb:{pack_version}:{self._cfg.embedding_profile}:{normalise_query(text)}"
+        want = self._cfg.embedding_dimension
         if self._cache:
             hit = await self._cache.get(key)
             if hit:
                 try:
-                    return [float(x) for x in hit.split(",")]
+                    cached = [float(x) for x in hit.split(",")]
+                    if want is None or len(cached) == want:
+                        return cached
                 except ValueError:
                     pass
         vectors = await self._gw.embed([text], ctx=ctx)
         if len(vectors) != 1 or not vectors[0]:
             raise GatewayError("embed returned no vector")
+        if want is not None and len(vectors[0]) != want:  # the embed stage's fault, not Qdrant's
+            raise GatewayUnavailable(f"embed returned {len(vectors[0])} dimensions, not {want}")
         if self._cache:
             await self._cache.set(key, ",".join(repr(x) for x in vectors[0]), EMBED_TTL_SECONDS)
         return vectors[0]

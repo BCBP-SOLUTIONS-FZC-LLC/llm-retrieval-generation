@@ -91,6 +91,8 @@ class Settings(PlatformSettings):
     refiner_query_enabled: bool = True  # flag ``llm.refiner.query`` (§10.5); on by default
     refiner_instruction_enabled: bool = True  # flag ``llm.refiner.instruction`` (§10.5)
     embedding_profile: str = "embed-default"
+    # Assumption: no peer records the vector size, so it is a setting. Unset = not checked.
+    embedding_dimension: PosInt | None = None
     generation_context_window_tokens: PosInt = 128_000  # assumption: the Gateway catalogue has none
     mean_chunk_tokens: PosInt = 350
     candidate_overfetch: Overfetch = 1.5

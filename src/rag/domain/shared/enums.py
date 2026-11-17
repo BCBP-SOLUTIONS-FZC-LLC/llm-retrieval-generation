@@ -214,6 +214,7 @@ class RunFailureReason(StrEnum):
     RESIDENCY_CAPACITY = "residency_capacity"
     ARTEFACT_STORE_UNWRITABLE = "artefact_store_unwritable"
     GATE_EXPIRED = "gate_expired"
+    SCHEMA_VIOLATION = "schema_violation"
     INTERNAL = "internal"
 
 
