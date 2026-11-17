@@ -59,7 +59,6 @@ This service has no direct dependency on Temporal server, Qdrant, or the Model G
 - No Worker Pool exists, so long-form generation (W-1, W-6, A-5) can be started but nothing executes it.
 - Nothing has run against a real Temporal server, Model Gateway, Tender, IAM or S3; the contracts for those peers are assumptions.
 - The Glue event encoder (LD-82) is not built, so published events are not framed for the schema registry.
-- `/ready` does not yet reflect the outbox relay.
 
 Resolve or consciously accept each before a tag is cut — not by working around them here.
 
@@ -187,7 +186,7 @@ Anything in this document marked **Planned** is the intended design, kept here s
 | Helm chart (`deploy/helm/`) | Deploy the API, the migrate job and the sweep CronJobs; chart `version` / `appVersion` bumped in step with the tag | Run and migrate | **Done** (chart, `values-{dev,staging,prod}.yaml`, `deploy/irsa/` policy, `make helm-check` in CI; never applied to a cluster; sweep schedules are proposed) |
 | `BUILD_VERSION` set from the tag at image build | Report the released version at runtime | Run and migrate | Planned (today set from `git describe` by `make run`) |
 | Support-window policy | How long a superseded major line gets security-only fixes | Supported releases | Planned (after the first `v1.0.0` ships) |
-| Readiness reflects the outbox relay | `/ready` fails when the relay is down | Supported releases | **Done** (`install_probes` in `presentation/main.py`; tested in `tests/api/test_lifespan.py`) |
+| Readiness reflects the writable primaries and the outbox relay | `/ready` fails when either database does not take a write transaction, or the relay is down | Supported releases | **Done** (`install_probes` in `presentation/main.py`; tested in `tests/api/test_lifespan.py`) |
 | Glue event encoder (LD-82) | Frame published events for the schema registry | Supported releases | Planned |
 | Production gateway route configuration (`deploy/model-gateway/`, Kubernetes) and the quota, Bedrock and self-hosted-rerank experiments | The local standalone gateway and its contract tests exist; the Kubernetes route config, per-tenant quota, fail-closed behaviour, real Bedrock streaming and a self-hosted reranker behind the gateway do not | Gateway, Consume a release | Planned |
 | Worker Pool | Execute long-form generation, outline, stage and coherence steps | Supported releases | Planned, separate service |

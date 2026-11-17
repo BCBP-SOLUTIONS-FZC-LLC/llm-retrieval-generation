@@ -15,7 +15,7 @@ import asyncio
 import re
 from typing import Any
 
-from rag.application.retrieval.ports import SearchHalfError
+from rag.application.retrieval.ports import SearchHalfError, half_failure
 from rag.application.shared.ports import TransactionRunner, TxHandle
 from rag.corpusscope import ScopeToken
 from rag.domain.retrieval.candidate import Candidate
@@ -127,4 +127,4 @@ class PgLexicalSearch:
                 lambda: asyncio.wait_for(self._tx.run_in_tx(work, read_only=True), LEXICAL_TIMEOUT)
             )
         except Exception as exc:
-            raise SearchHalfError("lexical search failed") from exc
+            raise half_failure("lexical search failed", exc) from exc

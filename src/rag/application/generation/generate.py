@@ -154,6 +154,7 @@ def failure_for(exc: BaseException) -> tuple[RunFailureReason, DomainError | Non
         reason = {
             ErrorCode.INFERENCE_UNAVAILABLE: RunFailureReason.INFERENCE_UNAVAILABLE,
             ErrorCode.ARTEFACT_STORE_UNWRITABLE: RunFailureReason.ARTEFACT_STORE_UNWRITABLE,
+            ErrorCode.EXTRACTION_SCHEMA_VIOLATION: RunFailureReason.SCHEMA_VIOLATION,
         }.get(exc.code, RunFailureReason.INTERNAL)
         return reason, exc
     return RunFailureReason.INTERNAL, None

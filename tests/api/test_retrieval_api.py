@@ -123,6 +123,8 @@ def test_r1_unwritable_set_is_503_artefact_store_unwritable(h: Harness) -> None:
     [
         {},
         {"query": ""},
+        {"query": "   "},
+        {"query": "a\u0000b"},
         {"query": "x" * 4001},
         {"query": "q", "scope": {"collection_ids": [str(uuid4())] * 101}},
         {"query": "q", "scope": {"collection_ids": ["not-a-uuid"]}},
@@ -179,6 +181,14 @@ def classify(h: Harness, body: dict | None = None):  # type: ignore[no-untyped-d
         json=body or {"content": "scc text", "filename": "SCC.pdf"},
         headers=HEADERS,
     )
+
+
+def test_r6_content_bound_is_bytes_not_characters(h: Harness) -> None:
+    """§5.2 says 1 MB: 400 000 three-byte characters are over it, though under a million chars."""
+    h.rig.gw.complete_text = '{"proposed_role":"drawing","confidence":0.5}'
+    r = classify(h, {"content": "\u4e2d" * 400_000})
+    assert r.status_code == 400
+    assert classify(h, {"content": "\u4e2d" * 300_000}).status_code == 200
 
 
 def test_r6_returns_the_proposal_and_writes_nothing(h: Harness) -> None:

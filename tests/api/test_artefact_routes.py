@@ -67,7 +67,12 @@ def test_render_is_the_reserved_503(settings: Settings) -> None:
 
 @pytest.mark.parametrize(
     "path",
-    [f"{BASE}/versions/0", f"{BASE}/versions?limit=0", f"{BASE}/versions?offset=-1"],
+    [
+        f"{BASE}/versions/0",
+        f"{BASE}/versions?limit=0",
+        f"{BASE}/versions?offset=-1",
+        f"{BASE}/versions?offset={2**63}",
+    ],
 )
 def test_bad_path_and_query_values_are_rejected_before_the_use_case(
     settings: Settings, path: str

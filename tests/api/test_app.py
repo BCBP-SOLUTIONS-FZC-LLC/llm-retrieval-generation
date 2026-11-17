@@ -159,6 +159,29 @@ def test_internal_route_needs_one_uuid_tenant(
     assert client.get("/probe/internal", headers=headers).status_code == 401
 
 
+@pytest.mark.parametrize(
+    ("header", "value"),
+    [
+        ("x-user-id", "abc"),
+        ("x-user-id", f"urn:uuid:{USER}"),
+        ("x-user-id", "{" + USER + "}"),
+        ("x-user-id", USER.replace("-", "")),
+        ("x-tenant-id", "abc"),
+        ("x-tenant-id", f"urn:uuid:{TENANT}"),
+        ("x-tenant-id", "{" + TENANT + "}"),
+        ("x-tenant-id", TENANT.replace("-", "")),
+    ],
+)
+def test_bad_identity_uuid_is_401_naming_its_own_header(
+    client: TestClient, header: str, value: str
+) -> None:
+    """Only the hyphenated form passes, and the 401 names the header that was wrong."""
+    headers = {"x-tenant-id": TENANT, "x-user-id": USER, header: value}
+    r = client.get("/probe/public", headers=headers)
+    assert r.status_code == 401
+    assert r.json()["detail"] == f"{header} must be a uuid."
+
+
 def test_internal_route_accepts_tenant_without_user(client: TestClient) -> None:
     """An internal caller sends only x-tenant-id."""
     r = client.get("/probe/internal", headers={"x-tenant-id": TENANT})

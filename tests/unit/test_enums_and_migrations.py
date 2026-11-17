@@ -36,10 +36,17 @@ PY_ENUMS = {
 
 def _sql_enums(instance: str) -> dict[str, list[str]]:
     sql = (MIGRATIONS / instance / "0001_types_and_functions.up.sql").read_text()
-    return {
+    found = {
         name: re.findall(r"'([^']*)'", labels)
         for name, labels in re.findall(r"CREATE TYPE (\w+) AS ENUM \(([^)]*)\)", sql)
     }
+    for later in sorted((MIGRATIONS / instance).glob("*.up.sql")):  # values added since
+        for name, value, before in re.findall(
+            r"ALTER TYPE (\w+) ADD VALUE IF NOT EXISTS '([^']*)' BEFORE '([^']*)'",
+            later.read_text(),
+        ):
+            found[name].insert(found[name].index(before), value)
+    return found
 
 
 def test_evidence_tier_rollup_is_min() -> None:

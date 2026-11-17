@@ -12,6 +12,7 @@ from fastapi import Request
 from pgcommon import Pool
 
 from rag.application.shared.ports import TransactionRunner
+from rag.domain.shared.errors import ErrorCode
 from rag.infrastructure.config import Settings
 from rag.infrastructure.persistence.corpus.transactions import CorpusTransactionRunner
 from rag.infrastructure.persistence.generation.probes import CorpusTenderGate
@@ -55,7 +56,9 @@ class Container:
 
 def build_container(settings: Settings, corpus_pool: Pool, generation_pool: Pool) -> Container:
     """Wire the container from the two open pools."""
-    generation_tx = PgTransactionRunner(generation_pool)
+    generation_tx = PgTransactionRunner(
+        generation_pool, unavailable=ErrorCode.ARTEFACT_STORE_UNWRITABLE
+    )
     corpus_runner = CorpusTransactionRunner(corpus_pool)
     scope = build_scope_services(settings, corpus_runner)
     store = S3ArtefactContentStore(

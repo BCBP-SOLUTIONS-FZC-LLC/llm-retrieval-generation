@@ -19,6 +19,7 @@ from rag.application.workflows.operator import Rematerialised
 from rag.application.workflows.start import RunHandle
 from rag.application.workflows.state import GenerationStateDTO
 from rag.domain.shared.enums import GenerationMode
+from rag.presentation.api.corpus_schemas import INT32_MAX
 from rag.presentation.api.public.generation_models import EligibilityBody
 from rag.presentation.api.public.retrieval_models import ScopeBody
 
@@ -174,7 +175,7 @@ class GenerationStateResponse(Out):
 class ApproveRequest(BaseModel):
     """W-3 body."""
 
-    outline_version: int = Field(ge=1)
+    outline_version: int = Field(ge=1, le=INT32_MAX)
 
 
 class OutlineEntryBody(BaseModel):
@@ -187,7 +188,7 @@ class OutlineEntryBody(BaseModel):
 class ReviseRequest(BaseModel):
     """W-4 body."""
 
-    outline_version: int = Field(ge=1)
+    outline_version: int = Field(ge=1, le=INT32_MAX)
     sections: list[OutlineEntryBody] = Field(default_factory=list, max_length=200)
 
 

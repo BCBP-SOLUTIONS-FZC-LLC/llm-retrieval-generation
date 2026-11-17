@@ -37,13 +37,19 @@ class HttpTenderAccess:
                 raise httpx.HTTPStatusError(
                     "TAC-4 refused", request=response.request, response=response
                 )
-            body = response.json()
+            try:
+                body = response.json()
+            except ValueError:
+                log.warning("tac4_invalid_body", status=response.status_code, why="not_json")
+                raise
         if not isinstance(body, dict) or not isinstance(body.get("has_access"), bool):
+            log.warning("tac4_invalid_body", status=response.status_code, why="has_access")
             raise ValueError("TAC-4 has_access is not a boolean")
         if not body["has_access"]:
             return None
         level = body.get("access_level")
         if not isinstance(level, str):
+            log.warning("tac4_invalid_body", status=response.status_code, why="access_level")
             raise ValueError("TAC-4 access_level is not a string")
         return level
 

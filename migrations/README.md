@@ -31,7 +31,8 @@ instance** (`0002`, `0003`, ... in merge order, no gaps, never renumbered). Name
 | `0003_corpus_events_sweeps` | outbox grants for `rag_app`; role `rag_sweeper` + column grants and `FOR SELECT` policies on `tenant_lifecycle`, `collections` | |
 | `0003_generation_events_sweeps` | | outbox grants (`rag_app`: S/I/U/D, `rag_activity`: INSERT + sequence); `rag_sweeper` on `artefacts`, `generation_runs`, `retrieval_sets`, `graph_checkpoints`, `artefact_audit_chain` |
 | `0004_generation_workflows` | | `uq_run_workflow` (RUN-2: one run row per `workflow_id`), `idx_fc_section` |
-| `0005_generation_*` ... | | later generation slices |
+| `0005_generation_schema_violation_reason` | | `run_failure_reason` gains `schema_violation` (R-4); the down rebuilds the type, a row holding the value reads `internal` |
+| `0006_generation_*` ... | | later generation slices |
 
 The LLD's phase split (§4.11: tables, then FKs, then triggers/RLS, then seed) is applied **per file**: a slice's
 file creates its tables, then the foreign keys to tables that already exist, then triggers, indexes, RLS

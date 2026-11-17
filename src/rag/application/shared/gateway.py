@@ -48,6 +48,14 @@ class GatewayUnavailable(GatewayError):  # noqa: N818
     reason = "unavailable"
 
 
+class GatewayInputTooLarge(GatewayUnavailable):  # noqa: N818
+    """``413``, or a ``400`` naming a context-length error: retrying the same input cannot work.
+
+    A subclass of ``GatewayUnavailable`` so every caller that does not tell them apart degrades
+    exactly as before; R-6 alone maps it to ``413``.
+    """
+
+
 class GatewayDeadlineExceeded(GatewayError):  # noqa: N818
     """The call exceeded its deadline and was cancelled."""
 

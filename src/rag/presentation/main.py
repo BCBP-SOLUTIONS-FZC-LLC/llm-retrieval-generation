@@ -2,17 +2,23 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextvars
+import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
+from typing import Any
 
 from eventcommon.inbox import apply_schema as apply_inbox_schema
 from eventcommon.outbox import apply_schema
 from fastapi import FastAPI
 from fastapicommon import create_platform_app
 from fastapicommon.health import ReadinessCheck, create_health_router
+from fastapicommon.logging import get_logger
 from pgcommon import MetricsIdentity, pgmetrics_init_with_identity
 
 from rag.infrastructure.config import Settings, assert_isolation_config
+from rag.infrastructure.persistence.generation.probes import PgStoreProbe
 from rag.infrastructure.persistence.pools import create_corpus_pool, create_generation_pool
 from rag.presentation.api.internal import corpus as corpus_internal
 from rag.presentation.api.internal import models as models_internal
@@ -75,8 +81,78 @@ def _relay_ready(app: FastAPI) -> bool:
     return bool(check()) if callable(check) else False
 
 
+READINESS_DB_TIMEOUT_SECONDS = 0.6
+"""Both checks run at once, so a hung database answers not ready in under a probe's usual second."""
+READINESS_CACHE_SECONDS = 1.0
+"""A poll inside this window gets the last answer: /ready is unauthenticated by design."""
+log = get_logger("rag.readiness")
+
+
+def _databases_ready(app: FastAPI) -> Callable[[], Awaitable[bool]]:
+    """Both databases take a write transaction on their primary (§18, GEN-3, SCOPE-10).
+
+    A replica that cannot record an artefact or resolve a grant must not take traffic. The check
+    is the GEN-3 probe on each pool: it opens a transaction and requires ``transaction_read_only``
+    to be off, so a read-only standby fails it too. A failure is logged when the state changes,
+    not on every poll.
+    """
+    last: list[bool | None] = [None]
+    cached: list[float | bool] = [float("-inf"), False]  # when, answer
+
+    lock = asyncio.Lock()
+
+    def fresh() -> bool:
+        return time.monotonic() - float(cached[0]) < READINESS_CACHE_SECONDS
+
+    async def check() -> bool:
+        if fresh():
+            return bool(cached[1])  # /ready is unauthenticated: bound the transactions it can open
+        async with lock:  # one probe at a time; callers that waited take its answer
+            if fresh():
+                return bool(cached[1])
+            # An empty context: the probe must not run under the caller's identity headers (an
+            # unauthenticated request with only x-user-id made the GUC provider refuse, so it
+            # read as "not ready" for every caller for a second).
+            answer = await asyncio.create_task(probe(), context=contextvars.Context())
+            cached[0], cached[1] = time.monotonic(), answer
+            return answer
+
+    async def probe() -> bool:
+        container = getattr(app.state, "container", None)
+        failed: list[str] = []
+        causes: dict[str, str] = {}
+        if container is None:
+            failed.append("container")
+        else:
+            pools = {"llm_corpus": container.corpus_tx, "llm_generation": container.generation_tx}
+
+            async def one(tx: Any) -> str | None:
+                """``None`` when writable, else the exception type that stopped the probe."""
+                try:
+                    await asyncio.wait_for(
+                        PgStoreProbe(tx, READINESS_DB_TIMEOUT_SECONDS).require_writable(),
+                        READINESS_DB_TIMEOUT_SECONDS + 0.1,
+                    )
+                except Exception as exc:  # noqa: BLE001 - not proving a writable primary: not ready
+                    return type(exc.__cause__ or exc).__name__
+                return None
+
+            results = await asyncio.gather(*(one(tx) for tx in pools.values()))
+            causes.update({n: r for n, r in zip(pools, results, strict=True) if r})
+            failed.extend(causes)
+        ok = not failed
+        if ok != last[0] and not ok:
+            log.warning("not_ready", failed=failed, causes=causes)
+        elif ok != last[0] and last[0] is not None:
+            log.info("ready_again")
+        last[0] = ok
+        return ok
+
+    return check
+
+
 def install_probes(app: FastAPI, settings: Settings) -> None:
-    """Shadow the platform's check-less ``/ready`` with one that also gates on the relays.
+    """Shadow the platform's check-less ``/ready`` with one that gates on the databases and relays.
 
     ``create_platform_app`` mounts a health router with no readiness checks and offers no hook for
     them. The same router, built with the check, is included and moved to the front of the route
@@ -84,7 +160,9 @@ def install_probes(app: FastAPI, settings: Settings) -> None:
     ``/live`` and ``/health`` behave as before: a stalled relay takes the pod out of rotation, not
     out of service (the relay recovers by itself once the database does).
     """
-    checks: list[ReadinessCheck] = [lambda: _relay_ready(app)] if settings.events_enabled else []
+    checks: list[ReadinessCheck] = [_databases_ready(app)]
+    if settings.events_enabled:
+        checks.insert(0, lambda: _relay_ready(app))
     app.include_router(create_health_router(checks))
     app.router.routes.insert(0, app.router.routes.pop())
 

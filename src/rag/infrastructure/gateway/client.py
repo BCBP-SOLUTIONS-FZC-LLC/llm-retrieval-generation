@@ -15,6 +15,8 @@ import json
 import math
 import time
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any
 from uuid import uuid4
 
@@ -29,6 +31,7 @@ from rag.application.shared.gateway import (
     GatewayContext,
     GatewayDeadlineExceeded,
     GatewayError,
+    GatewayInputTooLarge,
     GatewayQuotaRefused,
     GatewayResidencyRefused,
     GatewayUnavailable,
@@ -47,16 +50,35 @@ TOKENIZE_TIMEOUT = 0.3
 TOKENIZER_MODEL = "draft"  # the generation Model Profile's tokenizer (§6.8)
 
 
+RETRY_AFTER_MAX = 3600
+"""Assumption: no caller is told to wait over an hour; a larger peer value is capped."""
+
+
+def _retry_after(value: str) -> int | None:
+    """``Retry-After`` as whole seconds (at most an hour): a number, or an HTTP-date (RFC 9110)."""
+    try:
+        if value.isascii() and value.isdigit():
+            return min(int(value), RETRY_AFTER_MAX)
+        when = parsedate_to_datetime(value)
+        if when.tzinfo is None:  # '-0000' parses as naive; RFC 9110 dates are GMT
+            when = when.replace(tzinfo=UTC)
+        return min(max(0, math.ceil((when - datetime.now(UTC)).total_seconds())), RETRY_AFTER_MAX)
+    except TypeError, ValueError, OverflowError:
+        return None
+
+
 def _refusal(response: httpx.Response) -> GatewayError:
     if response.status_code == 429:
-        retry = response.headers.get("retry-after", "")
-        return GatewayQuotaRefused(int(retry) if retry.isdigit() else None)
+        return GatewayQuotaRefused(_retry_after(response.headers.get("retry-after", "")))
     try:
         code = response.json()["error"]["code"]
     except ValueError, KeyError, TypeError:
         code = None
     if code == "residency_capacity":
         return GatewayResidencyRefused("no in-region capacity")
+    # Assumed contract (OpenAI-compatible error code): the input does not fit the model.
+    if response.status_code == 413 or code == "context_length_exceeded":
+        return GatewayInputTooLarge(f"gateway answered {response.status_code}")
     return GatewayUnavailable(f"gateway answered {response.status_code}")
 
 
@@ -189,11 +211,18 @@ class HttpModelGateway:
         )
         try:
             scores = [0.0] * len(passages)
+            seen: set[int] = set()
             for item in data["results"]:
-                scores[int(item["index"])] = float(item["relevance_score"])
-            return scores
+                index = int(item["index"])
+                if not 0 <= index < len(passages):  # a negative index would wrap to a real slot
+                    raise IndexError(index)
+                scores[index] = float(item["relevance_score"])
+                seen.add(index)
         except (KeyError, TypeError, ValueError, IndexError) as exc:
             raise GatewayUnavailable("rerank body is malformed") from exc
+        if len(seen) != len(passages):  # no top_n is sent, so a short answer is a broken one
+            raise GatewayUnavailable(f"rerank scored {len(seen)} of {len(passages)} passages")
+        return scores
 
     async def complete(
         self,

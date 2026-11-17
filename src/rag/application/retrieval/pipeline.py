@@ -30,6 +30,7 @@ from rag.application.shared.gateway import (
     GatewayContext,
     GatewayDeadlineExceeded,
     GatewayError,
+    GatewayUnavailable,
     ModelGateway,
     TokenCounter,
 )
@@ -71,6 +72,7 @@ class PipelineConfig:
     candidate_overfetch: float = 1.5
     excerpt_chars: int = 240
     embedding_profile: str = "embed-default"
+    embedding_dimension: int | None = None  # None: not checked (no peer records one)
 
 
 def _digest(*parts: str) -> str:
@@ -241,16 +243,21 @@ class RetrievalPipeline:
         self, text: str, tenant: str, pack_version: str, ctx: GatewayContext
     ) -> list[float]:
         key = f"{tenant}:qemb:{pack_version}:{self._cfg.embedding_profile}:{normalise_query(text)}"
+        want = self._cfg.embedding_dimension
         if self._cache:
             hit = await self._cache.get(key)
             if hit:
                 try:
-                    return [float(x) for x in hit.split(",")]
+                    cached = [float(x) for x in hit.split(",")]
+                    if want is None or len(cached) == want:
+                        return cached
                 except ValueError:
                     pass
         vectors = await self._gw.embed([text], ctx=ctx)
         if len(vectors) != 1 or not vectors[0]:
             raise GatewayError("embed returned no vector")
+        if want is not None and len(vectors[0]) != want:  # the embed stage's fault, not Qdrant's
+            raise GatewayUnavailable(f"embed returned {len(vectors[0])} dimensions, not {want}")
         if self._cache:
             await self._cache.set(key, ",".join(repr(x) for x in vectors[0]), EMBED_TTL_SECONDS)
         return vectors[0]
@@ -332,15 +339,17 @@ class RetrievalPipeline:
             markers.append(DegradationMarker("embed", dense_res.reason, "lexical_only"))
             obs.marker("embed", dense_res.reason)
         elif isinstance(dense_res, SearchHalfError):
-            markers.append(DegradationMarker("dense_search", "unavailable", "lexical_only"))
-            obs.marker("dense_search", "unavailable")
+            markers.append(DegradationMarker("dense_search", dense_res.reason, "lexical_only"))
+            obs.marker("dense_search", dense_res.reason)
         elif isinstance(dense_res, BaseException):
             raise dense_res
         else:
             lists.append(RankedList("dense", dense_res))
         lexical_ok = False
+        lexical_reason = "unavailable"
         for (name, _), res in zip(lexical_queries, lexical_res, strict=True):
             if isinstance(res, SearchHalfError):
+                lexical_reason = res.reason
                 continue
             if isinstance(res, BaseException):
                 raise res
@@ -349,8 +358,8 @@ class RetrievalPipeline:
         if not lexical_ok:
             if not dense_ok:
                 raise DomainError(ErrorCode.RETRIEVAL_FAILED, "Both search halves are unavailable.")
-            markers.append(DegradationMarker("lexical_search", "unavailable", "dense_only"))
-            obs.marker("lexical_search", "unavailable")
+            markers.append(DegradationMarker("lexical_search", lexical_reason, "dense_only"))
+            obs.marker("lexical_search", lexical_reason)
 
         async with obs.stage("fusion"):
             fused = rrf_fuse(lists, self._cfg.rrf_k)

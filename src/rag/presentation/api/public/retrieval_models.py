@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from rag.application.retrieval.dtos import (
     ClassificationResult,
@@ -51,6 +51,18 @@ class SearchRequest(BaseModel):
     section_type: str | None = Field(default=None, max_length=256)
     prior_refinement: PriorRefinementBody | None = None
     limit: int | None = Field(default=None, ge=1)
+
+    @field_validator("query")
+    @classmethod
+    def _query_has_text(cls, value: str) -> str:
+        """Refuse a blank query or one with a NUL character.
+
+        A blank query ran the whole pipeline plus a widened retry; Postgres refuses a NUL only
+        after the pipeline has run, as a 503.
+        """
+        if not value.strip() or "\x00" in value:
+            raise ValueError("query must contain text and no NUL character")
+        return value
 
 
 class RefinementBlock(BaseModel):
@@ -143,6 +155,14 @@ class ClassifyRequest(BaseModel):
     content: str = Field(min_length=1, max_length=1_000_000)
     filename: str | None = Field(default=None, max_length=256)
     domain_profile_ref: str | None = Field(default=None, max_length=256)
+
+    @field_validator("content")
+    @classmethod
+    def _within_a_megabyte(cls, v: str) -> str:
+        """The bound is bytes (§5.2 says 1 MB), not characters: 4 MB of CJK text is refused."""
+        if len(v.encode("utf-8", "surrogatepass")) > 1_000_000:
+            raise ValueError("content is over 1 MB")
+        return v
 
 
 class RoleAlternativeBody(BaseModel):

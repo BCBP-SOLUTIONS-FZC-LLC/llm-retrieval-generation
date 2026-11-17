@@ -5,7 +5,7 @@ Runbooks for the alerts this service **should** carry. **None of them is deploye
 Common starting points:
 
 - Logs: structured JSON on stdout; follow `trace_id` and `request_id`. Content is never logged, so debug from ids in the database.
-- Health: `GET /health`, `/live`, `/ready`. `/ready` returns 503 when `EVENTS_ENABLED=true` and an outbox relay has not yet polled successfully or has not completed a store round trip within `3 x OUTBOX_POLL_INTERVAL + 30 s` (`Relays.ready`); `/live` and `/health` are unaffected, so a stalled relay leaves rotation without a restart. A relay hung inside a publish is bounded by `OUTBOX_PUBLISH_TIMEOUT`, not detected by the probe.
+- Health: `GET /health`, `/live`, `/ready`. `/ready` returns 503 when `EVENTS_ENABLED=true` and an outbox relay has not yet polled successfully or has not completed a store round trip within `3 x OUTBOX_POLL_INTERVAL + 30 s` (`Relays.ready`); `/ready` is also 503 whenever `llm_corpus` or `llm_generation` does not accept a write transaction on its primary (an outage, a hung database, or a read-only standby) within 0.6 s: look for the `not_ready` log (`failed` names the databases, `causes` the exception types) and `ready_again`; the answer is cached for 1 s. `/live` and `/health` are unaffected, so a stalled relay or an outage leaves rotation without a restart. A relay hung inside a publish is bounded by `OUTBOX_PUBLISH_TIMEOUT`, not detected by the probe.
 - Database: connect **direct to Postgres** as the DDL role for diagnosis (`docker compose exec postgres psql -U rag_admin -d llm_generation` locally); the app role cannot see other tenants' rows by design.
 - Sweeps: `python -m rag.infrastructure.sweeps <name>`; exit `0` clean or skipped, `1` a tenant failed, `2` an alert, `64` usage.
 

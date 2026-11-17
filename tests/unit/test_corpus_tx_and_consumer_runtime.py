@@ -89,3 +89,40 @@ async def test_start_consumers_starts_one_per_configured_queue(
     assert len(running.forwarders) == len(running.tasks) == 1
     await asyncio.wait_for(started.wait(), 1)
     await asyncio.gather(*running.tasks)
+
+
+async def test_generation_runner_maps_an_unreachable_database_to_its_503_code(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """R-5 and the other generation reads answered 500 'unclassified error' when the pool failed."""
+    from rag.domain.shared.errors import DomainError, ErrorCode
+    from rag.infrastructure.persistence import transactions as t
+
+    async def refused(pool: Any, fn: Any, *, read_only: bool = False) -> Any:
+        raise ConnectionRefusedError("connect call failed")
+
+    monkeypatch.setattr(t, "run_in_tx", refused)
+    unwired = t.PgTransactionRunner(MagicMock())
+    with pytest.raises(ConnectionRefusedError):  # no code asked for: the original error stays
+        await unwired.run_in_tx(AsyncMock())
+    runner = t.PgTransactionRunner(MagicMock(), unavailable=ErrorCode.ARTEFACT_STORE_UNWRITABLE)
+    with pytest.raises(ConnectionRefusedError):  # a write keeps the original error
+        await runner.run_in_tx(AsyncMock())
+    with pytest.raises(DomainError) as e:  # a read is a specific 503
+        await runner.run_in_tx(AsyncMock(), read_only=True)
+    assert e.value.code is ErrorCode.ARTEFACT_STORE_UNWRITABLE
+
+    async def bug(pool: Any, fn: Any, *, read_only: bool = False) -> Any:
+        raise KeyError("a bug in a query is not an outage")
+
+    monkeypatch.setattr(t, "run_in_tx", bug)
+    with pytest.raises(KeyError):
+        await runner.run_in_tx(AsyncMock(), read_only=True)
+
+    async def domain(pool: Any, fn: Any, *, read_only: bool = False) -> Any:
+        raise DomainError(ErrorCode.RETRIEVAL_SET_NOT_FOUND, "x")
+
+    monkeypatch.setattr(t, "run_in_tx", domain)
+    with pytest.raises(DomainError) as e2:  # a domain answer passes through untouched
+        await runner.run_in_tx(AsyncMock(), read_only=True)
+    assert e2.value.code is ErrorCode.RETRIEVAL_SET_NOT_FOUND

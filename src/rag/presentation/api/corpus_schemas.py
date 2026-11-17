@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Any, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, StrictBool, model_validator
 
 from rag.application.corpus.dtos import (
     ActivationDto,
@@ -20,6 +20,12 @@ from rag.application.corpus.dtos import (
     PurgeEpochDto,
     RetentionDto,
 )
+
+OFFSET_MAX = 2**63 - 1
+"""The largest ``bigint``: a bigger offset used to overflow the database integer (a 500)."""
+INT32_MAX = 2**31 - 1
+"""``retention_policies.retain_days`` and ``outline_version`` are 32-bit integer columns."""
+RETAIN_DAYS_MAX = INT32_MAX
 
 
 class ResolveRequest(BaseModel):
@@ -52,7 +58,7 @@ class PlacementResponse(BaseModel):
 class ActivateRequest(BaseModel):
     """C-I4: the collection's ``record_version``."""
 
-    record_version: int = Field(ge=1)
+    record_version: int = Field(ge=1, le=OFFSET_MAX)  # a bigint column
 
 
 class ActivateResponse(BaseModel):
@@ -97,9 +103,9 @@ class RetentionResponse(BaseModel):
 class PutRetentionRequest(BaseModel):
     """P-6. No ``record_version`` creates the policy (LD-76)."""
 
-    retain_days: int = Field(gt=0)
-    legal_hold: bool = False
-    record_version: int | None = Field(default=None, ge=1)
+    retain_days: int = Field(gt=0, le=RETAIN_DAYS_MAX)
+    legal_hold: StrictBool = False  # a legal hold must not be released by 0, 'no' or 'false'
+    record_version: int | None = Field(default=None, ge=1, le=OFFSET_MAX)
 
 
 class PutRetentionResponse(RetentionResponse):

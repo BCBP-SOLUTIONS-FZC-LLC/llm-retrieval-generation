@@ -105,10 +105,10 @@ async def open_pools(settings: Settings) -> Pools:
         )
 
     return Pools(
-        await pool(settings.corpus_database_url, "sweep-corpus", True),
-        await pool(settings.generation_database_url, "sweep-generation", True),
-        await pool(settings.corpus_sweep_database_url, "sweep-corpus-enum", False),
-        await pool(settings.generation_sweep_database_url, "sweep-generation-enum", False),
+        await pool(settings.corpus_database_url, "sweep_corpus", True),
+        await pool(settings.generation_database_url, "sweep_generation", True),
+        await pool(settings.corpus_sweep_database_url, "sweep_corpus_enum", False),
+        await pool(settings.generation_sweep_database_url, "sweep_generation_enum", False),
     )
 
 

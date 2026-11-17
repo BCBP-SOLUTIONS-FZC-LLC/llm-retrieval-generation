@@ -29,6 +29,7 @@
         "residency_capacity",
         "artefact_store_unwritable",
         "gate_expired",
+        "schema_violation",
         "internal"
       ],
       "title": "RunFailureReason",

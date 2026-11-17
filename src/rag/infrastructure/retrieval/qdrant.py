@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from rag.application.retrieval.ports import SearchHalfError
+from rag.application.retrieval.ports import SearchHalfError, half_failure
 from rag.corpusscope import DenseHit, QdrantScopedReader, ScopeToken
 from rag.domain.retrieval.candidate import Candidate
 from rag.domain.retrieval.plan import StructuralFilters
@@ -96,7 +96,7 @@ class QdrantDenseSearch:
                 lambda: asyncio.wait_for(fan_out(), SEARCH_TIMEOUT)
             )
         except Exception as exc:
-            raise SearchHalfError("dense search failed") from exc
+            raise half_failure("dense search failed", exc) from exc
         scored: list[tuple[float, Candidate]] = []
         for cid, hits in per_collection:
             for hit in hits:

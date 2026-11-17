@@ -89,7 +89,7 @@ async def test_up_down_up(dsns: dict[str, str], instance: str) -> None:
         "SELECT pg_get_userbyid(proowner) FROM pg_proc WHERE proname = 'reject_always'",
     )
     assert owners == {"rag_owner"}
-    await runner.down(4)
+    await runner.down(len(list((MIGRATIONS / instance).glob("*.up.sql"))))
     assert not await _names(dsns[instance], "SELECT typname FROM pg_type WHERE typtype = 'e'")
     await runner.up()
 
@@ -112,3 +112,27 @@ async def test_library_schemas_apply_on_generation(dsns: dict[str, str]) -> None
         "inbox_migrations",
         "pgcommon_migrations",
     } <= tables
+
+
+async def test_the_failure_reason_enum_grows_and_rolls_back(dsns: dict[str, str]) -> None:
+    """0005 adds ``schema_violation``; its down rebuilds the type and keeps data readable."""
+    pool = await Pool.create(Config(dsn=dsns["generation"], max_conns=1, min_conns=1))
+    try:
+        await apply_library_schemas(pool, "generation")
+    finally:
+        await pool.drain_and_close()
+    runner = Runner(dsns["generation"], MIGRATIONS / "generation")
+    await runner.up()
+    labels = "SELECT unnest(enum_range(NULL::run_failure_reason))::text"
+    assert "schema_violation" in await _names(dsns["generation"], labels)
+    await runner.down(1)
+    after = await _names(dsns["generation"], labels)
+    assert "schema_violation" not in after and "internal" in after
+    cols = await _names(
+        dsns["generation"],
+        "SELECT table_name FROM information_schema.columns WHERE column_name = 'failure_reason' "
+        "AND udt_name = 'run_failure_reason'",
+    )
+    assert cols == {"artefact_sections", "generation_runs"}
+    await runner.up()
+    assert "schema_violation" in await _names(dsns["generation"], labels)

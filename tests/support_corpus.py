@@ -249,6 +249,11 @@ class FakeGenerations:
 class FakeGrants:
     """``GrantRepository``."""
 
+    async def latest_projected_at(self, tx: State, collection_id: UUID) -> datetime | None:
+        """The newest over every row."""
+        times = [g.projected_at for g in tx.grants if g.collection_id == collection_id]
+        return max(times, default=None)
+
     async def list_active(
         self, tx: State, collection_id: UUID, *, limit: int, offset: int
     ) -> list[CollectionGrant]:

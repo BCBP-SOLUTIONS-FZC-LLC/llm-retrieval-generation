@@ -107,3 +107,28 @@ async def test_connection_failure_is_inference_unavailable(
     with pytest.raises(DomainError) as err:
         await HttpModelCatalogue(settings).list_models()
     assert err.value.code is ErrorCode.INFERENCE_UNAVAILABLE
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        {"id": "m", "task_classes": "draft"},
+        {"id": "m", "plans": "pro"},
+        {"id": "m", "task_classes": [1, None]},
+        {"id": "m", "plans": [True]},
+        {"id": "m", "plans": {"pro": 1}},
+    ],
+)
+def test_a_list_field_that_is_not_a_list_of_strings_is_refused(model: dict) -> None:  # type: ignore[type-arg]
+    """'pro' used to become ['p', 'r', 'o']; plans is the consumer's filter key (OQ-112)."""
+    with pytest.raises(ValueError):
+        parse_catalogue({"models": [model]}, datetime(2030, 1, 1, tzinfo=UTC))
+
+
+def test_null_lists_and_residency_are_empty_not_the_text_None() -> None:
+    dto = parse_catalogue(
+        {"models": [{"id": "m", "residency": None, "task_classes": None, "plans": None}]},
+        datetime(2030, 1, 1, tzinfo=UTC),
+    )
+    m = dto.models[0]
+    assert (m.residency, m.task_classes, m.plans) == ("", [], [])

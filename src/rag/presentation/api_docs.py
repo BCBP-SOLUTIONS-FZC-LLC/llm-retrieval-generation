@@ -20,6 +20,8 @@ from fastapi import FastAPI
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, PlainTextResponse, Response
 
+from rag.presentation import api_responses
+
 ROOT = Path(__file__).resolve().parents[3]
 ASYNCAPI_SPEC = ROOT / "api" / "asyncapi.yaml"
 ASYNCAPI_HTML = ROOT / "api" / "asyncapi.html"
@@ -136,7 +138,8 @@ async def asyncapi_page(request: Request) -> Response:
 
 
 def register_api_docs(app: FastAPI) -> None:
-    """Mount the AsyncAPI routes on ``app``."""
+    """Mount the AsyncAPI routes on ``app`` and make its OpenAPI carry the declared errors."""
+    api_responses.install(app)
     app.add_route("/", landing, include_in_schema=False)
     app.add_route("/swagger", swagger_page, include_in_schema=False)
     app.add_route("/swagger/index.css", swagger_theme, include_in_schema=False)

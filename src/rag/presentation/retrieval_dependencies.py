@@ -110,6 +110,7 @@ def build_retrieval_services(
             candidate_overfetch=settings.candidate_overfetch,
             excerpt_chars=settings.provenance_excerpt_chars,
             embedding_profile=settings.embedding_profile,
+            embedding_dimension=settings.embedding_dimension,
         ),
         observer,
     )

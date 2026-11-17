@@ -9,6 +9,7 @@ from rag.application.shared.ports import TransactionRunner, TxHandle
 from rag.domain.shared.errors import DomainError, ErrorCode
 
 PROBE_TIMEOUT_SECONDS = 0.1
+"""The default bound; ``STORE_PROBE_TIMEOUT_SECONDS`` overrides it."""
 
 
 class PgStoreProbe:
@@ -19,8 +20,11 @@ class PgStoreProbe:
     token is spent.
     """
 
-    def __init__(self, tx: TransactionRunner) -> None:
+    def __init__(
+        self, tx: TransactionRunner, timeout_seconds: float = PROBE_TIMEOUT_SECONDS
+    ) -> None:
         self._tx = tx
+        self._timeout = timeout_seconds
 
     async def require_writable(self) -> None:
         """Raise ``ARTEFACT_STORE_UNWRITABLE`` unless a read-write transaction opens."""
@@ -29,7 +33,7 @@ class PgStoreProbe:
             return str(await tx.fetchval("SELECT current_setting('transaction_read_only')"))
 
         try:
-            state = await asyncio.wait_for(self._tx.run_in_tx(probe), PROBE_TIMEOUT_SECONDS)
+            state = await asyncio.wait_for(self._tx.run_in_tx(probe), self._timeout)
         except Exception as exc:
             raise DomainError(
                 ErrorCode.ARTEFACT_STORE_UNWRITABLE, "The artefact store is not writable."

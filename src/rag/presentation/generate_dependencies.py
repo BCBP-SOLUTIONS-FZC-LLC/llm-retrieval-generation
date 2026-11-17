@@ -108,7 +108,7 @@ def build_generate_services(
         scope.adapter,
         retrieval.packs,
         retrieval.tokens,
-        PgStoreProbe(generation_tx),
+        PgStoreProbe(generation_tx, settings.store_probe_timeout_seconds),
         CorpusTenderGate(corpus_tx),
         events,
         clock,

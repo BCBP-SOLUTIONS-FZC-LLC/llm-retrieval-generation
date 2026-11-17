@@ -5,6 +5,7 @@
         "description": "C-I4: the collection's ``record_version``.",
         "properties": {
           "record_version": {
+            "maximum": 9.223372036854776e+18,
             "minimum": 1.0,
             "title": "Record Version",
             "type": "integer"
@@ -123,6 +124,7 @@
         "description": "W-3 body.",
         "properties": {
           "outline_version": {
+            "maximum": 2147483647.0,
             "minimum": 1.0,
             "title": "Outline Version",
             "type": "integer"
@@ -1372,19 +1374,6 @@
         "title": "Groundedness",
         "type": "object"
       },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "title": "Detail",
-            "type": "array"
-          }
-        },
-        "title": "HTTPValidationError",
-        "type": "object"
-      },
       "MigrationResultRequest": {
         "description": "C-I8: ``points_copied`` on ``complete``, ``reason`` on ``failed``.",
         "properties": {
@@ -1704,6 +1693,55 @@
         "title": "PriorRefinementBody",
         "type": "object"
       },
+      "Problem": {
+        "additionalProperties": true,
+        "description": "RFC 9457 problem, media type application/problem+json.",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "traceId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "validationErrors": {
+            "items": {
+              "properties": {
+                "field": {},
+                "message": {}
+              },
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "type": "object"
+      },
       "Progress": {
         "description": "A count over the section rows.",
         "properties": {
@@ -1826,6 +1864,7 @@
           "record_version": {
             "anyOf": [
               {
+                "maximum": 9.223372036854776e+18,
                 "minimum": 1.0,
                 "type": "integer"
               },
@@ -1837,6 +1876,7 @@
           },
           "retain_days": {
             "exclusiveMinimum": 0.0,
+            "maximum": 2147483647.0,
             "title": "Retain Days",
             "type": "integer"
           }
@@ -2466,6 +2506,7 @@
         "description": "W-4 body.",
         "properties": {
           "outline_version": {
+            "maximum": 2147483647.0,
             "minimum": 1.0,
             "title": "Outline Version",
             "type": "integer"
@@ -3111,46 +3152,6 @@
         "title": "StartGenerationRequest",
         "type": "object"
       },
-      "ValidationError": {
-        "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "title": "Location",
-            "type": "array"
-          },
-          "msg": {
-            "title": "Message",
-            "type": "string"
-          },
-          "type": {
-            "title": "Error Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError",
-        "type": "object"
-      },
       "VersionDetailResponse": {
         "description": "A-3.",
         "properties": {
@@ -3513,6 +3514,26 @@
               }
             },
             "description": "Successful Response"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "List Models",
@@ -3564,15 +3585,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Answers",
@@ -3608,15 +3659,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Get Artefact",
@@ -3680,15 +3761,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Regenerate Document",
@@ -3756,15 +3867,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Render Artefact",
@@ -3814,6 +3955,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maximum": 9223372036854775807,
                   "minimum": 0,
                   "type": "integer"
                 },
@@ -3836,15 +3978,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "List Sections",
@@ -3901,15 +4073,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Resolve Fact Conflict",
@@ -3982,15 +4184,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Regenerate Section",
@@ -4046,15 +4278,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Get Section Content",
@@ -4104,6 +4366,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maximum": 9223372036854775807,
                   "minimum": 0,
                   "type": "integer"
                 },
@@ -4126,15 +4389,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "List Versions",
@@ -4180,15 +4473,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Get Version",
@@ -4222,15 +4545,65 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "USER_INPUT_OVER_BUDGET: the Gateway says the document is too large for the model."
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "QUOTA_EXHAUSTED, with Retry-After where the Gateway sent one."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Propose Classification",
@@ -4267,6 +4640,7 @@
             "required": false,
             "schema": {
               "default": 0,
+              "maximum": 9223372036854775807,
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
@@ -4284,15 +4658,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "List Collections",
@@ -4328,15 +4732,55 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "COLLECTION_NOT_FOUND (absent or not granted)."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Get Collection",
@@ -4383,6 +4827,7 @@
             "required": false,
             "schema": {
               "default": 0,
+              "maximum": 9223372036854775807,
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
@@ -4400,15 +4845,65 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The caller is not a tenant admin."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "COLLECTION_NOT_FOUND (absent or not granted)."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "List Grants",
@@ -4454,15 +4949,85 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "201": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/PutRetentionResponse"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "The first policy was created."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not a tenant admin, or a platform collection."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "COLLECTION_NOT_FOUND (absent or not granted)."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "OPTIMISTIC_LOCK_CONFLICT (the current version is in recordVersion)."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Put Retention",
@@ -4516,15 +5081,105 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "206": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ExtractionResponse"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "A degraded retrieval: degradation_markers names each stage."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "GRANT_LEVEL_INSUFFICIENT, TENANT_NOT_ACTIVE or GENERATION_NOT_PERMITTED."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "COLLECTION_NOT_FOUND (absent or not granted)."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "IDEMPOTENCY_KEY_CONFLICT or TENDER_CLOSED."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "PACK_INVALID, VERIFICATION_PAIR_INVALID or EXTRACTION_SCHEMA_VIOLATION."
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "QUOTA_EXHAUSTED, with Retry-After where the Gateway sent one."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Extractions",
@@ -4571,15 +5226,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Start Async Extraction",
@@ -4626,15 +5311,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Start Generation",
@@ -4670,15 +5385,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Get Generation",
@@ -4731,15 +5476,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Cancel Generation",
@@ -4785,15 +5560,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Revise Outline",
@@ -4839,15 +5644,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Approve Outline",
@@ -4900,15 +5735,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Resume Generation",
@@ -4942,15 +5807,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Resolve Collection",
@@ -4986,15 +5881,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Get Placement",
@@ -5049,15 +5974,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Activate Generation",
@@ -5103,15 +6058,65 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "COLLECTION_NOT_FOUND."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "OPTIMISTIC_LOCK_CONFLICT or the migration state does not allow the result."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Migration Result",
@@ -5147,15 +6152,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Bump Purge Epoch",
@@ -5191,15 +6226,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Get Retention",
@@ -5245,15 +6310,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Rematerialise",
@@ -5287,15 +6382,55 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "COLLECTION_NOT_FOUND (absent or not granted)."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Required Input Checks",
@@ -5331,15 +6466,55 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RETRIEVAL_SET_NOT_FOUND (absent, expired or out of scope)."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Get Retrieval Set",
@@ -5373,15 +6548,75 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "206": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/SearchResponse"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "A degraded retrieval: degradation_markers names each stage."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "GRANT_LEVEL_INSUFFICIENT."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "COLLECTION_NOT_FOUND (absent or not granted)."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Search",
@@ -5433,15 +6668,45 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "400": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "VALIDATION_FAILED: a request value is out of bounds or malformed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: an unclassified failure (the message is never returned)."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A dependency this route needs cannot answer (the problem's errorCode names it)."
           }
         },
         "summary": "Section Drafts",

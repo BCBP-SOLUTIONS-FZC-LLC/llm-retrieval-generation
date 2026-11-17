@@ -91,6 +91,8 @@ class Settings(PlatformSettings):
     refiner_query_enabled: bool = True  # flag ``llm.refiner.query`` (§10.5); on by default
     refiner_instruction_enabled: bool = True  # flag ``llm.refiner.instruction`` (§10.5)
     embedding_profile: str = "embed-default"
+    # Assumption: no peer records the vector size, so it is a setting. Unset = not checked.
+    embedding_dimension: PosInt | None = None
     generation_context_window_tokens: PosInt = 128_000  # assumption: the Gateway catalogue has none
     mean_chunk_tokens: PosInt = 350
     candidate_overfetch: Overfetch = 1.5
@@ -102,6 +104,8 @@ class Settings(PlatformSettings):
     verify_tier0_sample_rate: Unit = 0.10  # the share of non-compliance sections diffed
     generation_answer_deadline_seconds: PosFloat = 12.0  # Gateway call: 2x the 6 s target (§14.3)
     generation_draft_deadline_seconds: PosFloat = 40.0  # 2x the 20 s target
+    # GEN-3 writability probe (§14.3): no retry. Bounded so it stays a fast refusal (no inf).
+    store_probe_timeout_seconds: Annotated[float, Field(gt=0, le=5, allow_inf_nan=False)] = 0.1
     # Not carried by the resolved scope yet (index_generations holds the chunker version).
     pipeline_parser_version: str = "unrecorded"
     pipeline_chunker_version: str = "unrecorded"

@@ -116,6 +116,20 @@ class VerificationResult:
         return self.supported + self.unsupported + self.miscited + self.gaps
 
 
+def observe_verification(obs: GenerationObserver, result: VerificationResult) -> None:
+    """Count every claim, a gap included (VER-2), and the report's score and tier (MD-16, AOB-2).
+
+    Shared by the prose verifier and R-4's field check, so the same families fill on both.
+    """
+    for c in result.claims:
+        obs.claim_outcome(c.outcome.value)
+        obs.tier_decided(c.tier_decided)
+        if c.outcome is ClaimOutcome.GAP:
+            obs.gap_marker()
+    obs.groundedness(None if result.score is None else float(result.score))
+    obs.evidence_tier(result.tier.value)
+
+
 def _counts(claims: Sequence[ClaimResult]) -> tuple[int, int, int, int]:
     n = {o: sum(1 for c in claims if c.outcome is o) for o in ClaimOutcome}
     return (
@@ -185,14 +199,7 @@ class VerifySection:
             thresholds=self._cfg.tiers,
             verification_ran=ran,
         )
-        for c in claims:
-            self._obs.claim_outcome(c.outcome.value)
-            self._obs.tier_decided(c.tier_decided)
-            if c.outcome is ClaimOutcome.GAP:
-                self._obs.gap_marker()
-        self._obs.groundedness(None if scored.score is None else float(scored.score))
-        self._obs.evidence_tier(scored.tier.value)
-        return VerificationResult(
+        result = VerificationResult(
             claims=tuple(claims),
             supported=s,
             unsupported=u,
@@ -207,6 +214,8 @@ class VerifySection:
             markers=markers,
             tier0_disagreement=ratio,
         )
+        observe_verification(self._obs, result)
+        return result
 
     async def _ladder(
         self, req: VerificationRequest

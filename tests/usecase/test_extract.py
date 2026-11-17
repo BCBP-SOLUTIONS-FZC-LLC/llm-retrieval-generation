@@ -13,6 +13,7 @@ from tests.support_retrieval import chunk, identity
 from rag.application.generation.requests import ExtractCommand
 from rag.application.retrieval.scope import ScopeSpec
 from rag.application.shared.gateway import GatewayQuotaRefused, GatewayUnavailable
+from rag.application.shared.observability import NullGenerationObserver
 from rag.domain.shared.enums import (
     ArtefactStatus,
     DeliveryState,
@@ -90,6 +91,7 @@ async def test_schema_violation_is_422_non_retryable_and_the_raw_output_is_kept(
     assert raw and b"ten" in r.store.objects[raw[0]]  # WP-8
     assert not r.repo.completions  # validated BEFORE the artefact is written
     assert r.repo.run.status is RunStatus.FAILED and r.repo.artefact.status is ArtefactStatus.FAILED
+    assert r.repo.run.failure_reason is RunFailureReason.SCHEMA_VIOLATION  # not `internal`
 
 
 async def test_an_unknown_schema_ref_is_refused_before_the_shell_commits() -> None:
@@ -165,3 +167,42 @@ async def test_the_extraction_completes_even_if_the_caller_is_cancelled() -> Non
     assert task.cancelled()
     assert len(r.repo.completions) == 1 and r.repo.artefact.status is ArtefactStatus.COMPLETE
     _ = TENANT
+
+
+async def test_a_degraded_retrieval_keeps_its_markers_on_the_version_and_the_replay() -> None:
+    """The 206 marker used to vanish: the version stored none, so a replay answered a clean 200."""
+    r = rig()
+    r.gw.rerank_error = GatewayUnavailable("down")
+    out = await r.extract.execute(identity(), replace(CMD, idempotency_key="k-markers"))
+    assert out.degraded and any(m["stage"] == "rerank" for m in out.degradation_markers)
+    stored = r.repo.completions[0].artefact_version.degradation_markers
+    assert any(m["stage"] == "rerank" for m in stored)
+    again = await r.extract.execute(identity(), replace(CMD, idempotency_key="k-markers"))
+    assert again.replay and any(m["stage"] == "rerank" for m in again.degradation_markers)
+
+
+class _Counting(NullGenerationObserver):
+    def __init__(self) -> None:
+        self.claims: list[str] = []
+        self.tiers: list[str] = []
+        self.gaps = 0
+
+    def claim_outcome(self, outcome: str) -> None:
+        self.claims.append(outcome)
+
+    def gap_marker(self) -> None:
+        self.gaps += 1
+
+    def evidence_tier(self, tier: str) -> None:
+        self.tiers.append(tier)
+
+
+async def test_extraction_counts_its_claims_gaps_and_tier_like_prose_does() -> None:
+    """The §16 verification counters stayed empty on R-4 (verify_fields is a pure function)."""
+    r = rig()
+    seen = _Counting()
+    r.extract._obs = seen
+    await r.extract.execute(identity(), CMD)
+    assert "supported" in seen.claims and "gap" in seen.claims
+    assert seen.gaps == seen.claims.count("gap") >= 1
+    assert seen.tiers == ["SUPPORTED"]

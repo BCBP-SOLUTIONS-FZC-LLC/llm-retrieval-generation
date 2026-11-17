@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import timedelta
 from uuid import uuid4
 
 import pytest
@@ -493,6 +494,16 @@ async def test_list_grants_reports_freshness_and_is_never_authoritative() -> Non
     )
     assert page.authoritative is False and page.as_of == NOW and page.bound_seconds == 60
     assert [(e.subject_id, e.level) for e in page.entries] == [(USER, "answer")]
+    newer = NOW + timedelta(minutes=5)
+    w.state.grants.append(
+        CollectionGrant(
+            uuid4(), c.id, TENANT, GrantSubjectType.USER, uuid4(), GrantLevel.ANSWER, newer
+        )
+    )
+    first = await ListGrants(w.tx, w.repos, FakeScope(c.id), bound_seconds=60).execute(
+        ListGrantsQuery(identity("tenant_admin"), c.id, 1, 0)
+    )
+    assert len(first.entries) == 1 and first.as_of == newer  # the whole projection, not the page
     with pytest.raises(CollectionNotFound):
         await ListGrants(w.tx, w.repos, FakeScope(), bound_seconds=60).execute(
             ListGrantsQuery(identity("tenant_admin"), c.id, 100, 0)
