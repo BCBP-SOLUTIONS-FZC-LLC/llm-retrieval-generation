@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 
 import redis.asyncio as redis
 from fastapicommon.logging import get_logger
 
 from rag.infrastructure.config import Settings
+from rag.infrastructure.observability.metrics import cache_failure_hook
 
 log = get_logger("rag.cache")
 LOG_EVERY_SECONDS = 60.0
@@ -20,14 +22,17 @@ class ValkeyCache:
     (§4.10); a Valkey outage bypasses to the source (§11.4).
     """
 
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str, on_failure: Callable[[str], None] | None = None) -> None:
         self._client: redis.Redis = redis.from_url(url, decode_responses=True)
+        self._on_failure = on_failure
         self._down = False
         self._last_logged = float("-inf")
         self._logged = False
 
     def _failed(self, op: str, exc: Exception) -> None:
-        """Log the first failure after a healthy spell; a Valkey outage must not be silent."""
+        """Count every failure; log the first after a healthy spell (an outage is never silent)."""
+        if self._on_failure:
+            self._on_failure(op)
         if self._down:
             return
         self._down = True
@@ -74,4 +79,6 @@ class ValkeyCache:
 
 def build_cache(settings: Settings) -> ValkeyCache | None:
     """``None`` where no Valkey URL is configured (every cache then bypasses to source)."""
-    return ValkeyCache(settings.valkey_url) if settings.valkey_url else None
+    if not settings.valkey_url:
+        return None
+    return ValkeyCache(settings.valkey_url, cache_failure_hook(settings))

@@ -12,9 +12,11 @@ Deviations from the §16.2 table, forced by OBS-3: ``candidate_depth`` is a coun
 
 from __future__ import annotations
 
+import functools
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapicommon.metrics import (
     MetricsNotInitializedError,
@@ -43,6 +45,7 @@ METRIC_NAMES = {
         "candidate_depth_band_total",
         "retrieval_verdict_total",
         "widened_retry_total",
+        "cache_failure_total",
     ],
     "histogram": ["retrieval_stage_duration_seconds", "refiner_latency_seconds"],
     "gauge": ["retrieval_cache_hit_ratio"],
@@ -138,6 +141,22 @@ class PrometheusObserver:
     def instruction_refiner(self, latency_seconds: float) -> None:
         """An Instruction Refiner call's latency (§16.2, the 3 s budget)."""
         self._refiner.labels(refiner="instruction").observe(latency_seconds)
+
+
+@functools.cache
+def _cache_failures() -> Any:
+    return new_counter(P + "cache_failure_total", "Valkey failures (the cache is bypassed)", ["op"])
+
+
+def cache_failure_hook(settings: Settings) -> Callable[[str], None] | None:
+    """Counts each Valkey failure by operation; ``None`` when metrics are off (#50)."""
+    if not settings.enable_metrics:
+        return None
+    try:
+        counter = _cache_failures()
+    except MetricsNotInitializedError:
+        return None
+    return lambda op: counter.labels(op=op).inc()
 
 
 def build_observer(settings: Settings) -> PipelineObserver:

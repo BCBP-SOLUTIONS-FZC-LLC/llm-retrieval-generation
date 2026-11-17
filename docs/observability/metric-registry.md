@@ -25,6 +25,7 @@ Not constructed here. `platform-fastapicommon` records `platform_http_*` and bui
 | `widened_retry_total` | counter | — | D-16's single widened retry |
 | `refiner_latency_seconds` | histogram | `refiner` (`query`, `instruction`) | Refiner call latency; the query refiner's budget is 150 ms, the instruction refiner's 3 s |
 | `retrieval_cache_hit_ratio` | gauge | — | Running hit ratio of the retrieval-set cache |
+| `cache_failure_total` | counter | `op` (`get`, `set`) | A Valkey failure, counted every time (the log line is once per outage, at most once a minute); the cache is bypassed, so a rise means every search is paying the source. Not in LLD §16.2: recorded as a deviation in `docs/implementation-plan.md` |
 
 ### Generation and verification (`observability/generation_metrics.py`)
 

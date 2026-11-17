@@ -352,3 +352,22 @@ async def test_rerank_uses_the_cohere_v2_path_the_gateway_serves() -> None:
     scores = await gw(handler).rerank("q", ["a", "b"], ctx=CTX, deadline_seconds=1)
     assert paths == ["/cohere/v2/rerank"]
     assert scores == [0.4, 0.9]
+
+
+async def test_every_cache_failure_is_counted_by_operation_even_when_the_log_is_quiet() -> None:
+    """#50: the log says it once a minute; the counter sees each failure (no key or value in it)."""
+    seen: list[str] = []
+    cache = ValkeyCache("redis://localhost:1/0", seen.append)
+
+    class Broken:
+        async def get(self, key: str) -> Any:
+            raise ConnectionError("down")
+
+        async def set(self, *a: Any, **k: Any) -> Any:
+            raise ConnectionError("down")
+
+    cache._client = Broken()  # type: ignore[assignment]
+    await cache.get("k")
+    await cache.get("k")
+    await cache.set("k", "v", 5)
+    assert seen == ["get", "get", "set"]

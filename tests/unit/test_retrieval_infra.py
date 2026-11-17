@@ -393,6 +393,7 @@ def test_every_metric_passes_the_platform_naming_and_label_rules() -> None:
         "candidate_depth_band_total": ["profile_source", "band"],
         "retrieval_verdict_total": ["verdict"],
         "refiner_latency_seconds": ["refiner"],
+        "cache_failure_total": ["op"],
     }
     registry = default_registry()
     for kind, names in METRIC_NAMES.items():
