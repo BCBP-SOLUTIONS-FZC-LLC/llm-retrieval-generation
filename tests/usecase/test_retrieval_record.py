@@ -120,3 +120,29 @@ async def test_clamped_scope_is_recorded() -> None:
     await rig.recorder.record(identity(), await rig.pipeline.run(identity(), REQ))
     stored = rig.sets.inserted[0].retrieval_set
     assert (stored.grant_level_applied, stored.grant_level_clamped) == (GrantLevel.ANSWER, True)
+
+
+async def test_prior_refinement_sets_user_action_once_on_the_callers_own_row() -> None:
+    """#83: R-1 with the id of the caller's refinement records the action; the first report wins."""
+    from uuid import uuid4
+
+    from rag.application.retrieval.dtos import PriorRefinement
+    from rag.domain.shared.enums import UserAction
+    from rag.domain.shared.identity import RequestIdentity
+
+    rig = Rig(refiner=True)
+    uc = SearchDocuments(rig.pipeline, rig.recorder)
+    await uc.execute(identity(), SearchCommand(REQ))
+    (row,) = rig.refinements.rows
+    assert rig.refinements.actions == {}  # nothing reported: stays unknown
+    await uc.execute(
+        identity(), SearchCommand(REQ, prior=PriorRefinement(row.id, UserAction.EDITED))
+    )
+    assert rig.refinements.actions == {row.id: UserAction.EDITED}
+    await rig.recorder.report(identity(), PriorRefinement(row.id, UserAction.DISCARDED))
+    assert rig.refinements.actions[row.id] is UserAction.EDITED  # first report wins
+    other = rig.refinements.rows[1].id  # the second search wrote its own row
+    stranger = RequestIdentity(TENANT, uuid4())
+    await rig.recorder.report(stranger, PriorRefinement(other, UserAction.ACCEPTED))
+    await rig.recorder.report(identity(), PriorRefinement(uuid4(), UserAction.ACCEPTED))
+    assert other not in rig.refinements.actions and len(rig.refinements.actions) == 1

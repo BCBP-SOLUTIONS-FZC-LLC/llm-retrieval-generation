@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from typing import Protocol
@@ -56,6 +57,10 @@ class TenderGate(Protocol):
 
     async def require_open(self, tender_id: UUID) -> None:
         """Raises ``DomainError(TENDER_CLOSED)``; reads ``collections`` ``FOR SHARE``."""
+        ...
+
+    async def require_collections_open(self, collection_ids: Sequence[UUID]) -> None:
+        """Raises ``DomainError(TENDER_CLOSED)`` where any of these collections is closed."""
         ...
 
 

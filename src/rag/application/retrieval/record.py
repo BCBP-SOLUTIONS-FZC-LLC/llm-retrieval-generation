@@ -6,12 +6,17 @@ from dataclasses import dataclass
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from rag.application.retrieval.dtos import RetrievalOutcome
+from fastapicommon.logging import get_logger
+
+from rag.application.retrieval.dtos import PriorRefinement, RetrievalOutcome
+from rag.application.retrieval.refiner import principal_hash
 from rag.application.shared.ports import TransactionRunner, TxHandle
 from rag.domain.generation.repositories import QueryRefinementRepository, RetrievalSetRepository
 from rag.domain.generation.retrieval import RetrievalChunk, RetrievalSet, RetrievalSetView
 from rag.domain.shared.errors import DomainError, ErrorCode
 from rag.domain.shared.identity import RequestIdentity
+
+log = get_logger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,6 +109,25 @@ class RecordRetrievalSet:
         refinements: QueryRefinementRepository,
     ) -> None:
         self._tx, self._sets, self._refinements = tx, sets, refinements
+
+    async def report(self, identity: RequestIdentity, prior: PriorRefinement | None) -> None:
+        """Record what the user did with an earlier refinement (§5.5, REF-5), if they said.
+
+        The first report on the caller's own row wins. An unknown id, another user's row and a
+        replay change nothing and say nothing (no 404: it would confirm a row exists), and a
+        failure here never fails the request: the report is a quality signal, not the work.
+        """
+        if prior is None:
+            return
+        who = principal_hash(identity.tenant_id, identity.principal_id)
+        try:
+            await self._tx.run_in_tx(
+                lambda tx: self._refinements.report_action(
+                    tx, prior.refinement_id, who, prior.action
+                )
+            )
+        except Exception as exc:  # noqa: BLE001 - never fails the request
+            log.warning("refinement_action_not_recorded", error=type(exc).__name__)
 
     async def record(
         self,

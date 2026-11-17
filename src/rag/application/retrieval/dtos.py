@@ -11,7 +11,7 @@ from rag.domain.retrieval.candidate import Candidate
 from rag.domain.retrieval.plan import DegradationMarker, RetrievalPlan
 from rag.domain.retrieval.scope import ResolvedScope
 from rag.domain.retrieval.sufficiency import GapReport
-from rag.domain.shared.enums import GrantLevel, RetrievalVerdict
+from rag.domain.shared.enums import GrantLevel, RetrievalVerdict, UserAction
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,10 +65,19 @@ class RetrievalOutcome:
 
 
 @dataclass(frozen=True, slots=True)
+class PriorRefinement:
+    """What the user did with the refinement an earlier request returned (§5.5, REF-5)."""
+
+    refinement_id: UUID
+    action: UserAction
+
+
+@dataclass(frozen=True, slots=True)
 class SearchCommand:
     """R-1 after validation."""
 
     request: PipelineRequest
+    prior: PriorRefinement | None = None
 
 
 @dataclass(frozen=True, slots=True)

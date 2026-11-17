@@ -1669,7 +1669,7 @@
         "type": "object"
       },
       "PriorRefinementBody": {
-        "description": "``PriorRefinement`` (\u00a75.5). Accepted; ``user_action`` capture is not built (\u00a720 OQ-22).",
+        "description": "``PriorRefinement`` (\u00a75.5): recorded on the caller's own refinement row (REF-5).\n\nNothing reports it yet (\u00a720 OQ-22), so the column stays ``unknown`` until a client does.",
         "properties": {
           "action": {
             "enum": [

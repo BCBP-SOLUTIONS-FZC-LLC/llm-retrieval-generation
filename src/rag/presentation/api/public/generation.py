@@ -89,6 +89,7 @@ async def answers(
             requested_mode=body.mode(),
             idempotency_key=idempotency_key,
             correlation_id=_correlation(),
+            prior=body.prior_refinement.to_prior() if body.prior_refinement else None,
         ),
         is_disconnected=_probe(request),
     )
@@ -115,6 +116,7 @@ async def section_drafts(
             requested_mode=body.mode(),
             idempotency_key=idempotency_key,
             correlation_id=_correlation(),
+            prior=body.prior_refinement.to_prior() if body.prior_refinement else None,
         ),
         is_disconnected=_probe(request),
     )

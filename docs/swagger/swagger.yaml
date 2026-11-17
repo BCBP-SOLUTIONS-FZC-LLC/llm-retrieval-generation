@@ -1145,7 +1145,10 @@ components:
       title: PlacementResponse
       type: object
     PriorRefinementBody:
-      description: '``PriorRefinement`` (§5.5). Accepted; ``user_action`` capture is not built (§20 OQ-22).'
+      description: '``PriorRefinement`` (§5.5): recorded on the caller''s own refinement row (REF-5).
+
+
+        Nothing reports it yet (§20 OQ-22), so the column stays ``unknown`` until a client does.'
       properties:
         action:
           enum:

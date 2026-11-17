@@ -21,6 +21,7 @@ class SearchDocuments:
 
     async def execute(self, identity: RequestIdentity, cmd: SearchCommand) -> SearchResult:
         """The recorded set's id and the outcome."""
+        await self._recorder.report(identity, cmd.prior)
         outcome = await self._pipeline.run(identity, cmd.request)
         recorded = await self._recorder.record(
             identity, outcome, tender_id=cmd.request.scope.tender_id

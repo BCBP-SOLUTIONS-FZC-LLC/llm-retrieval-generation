@@ -43,6 +43,7 @@ from rag.domain.shared.enums import (
     GrantLevel,
     RefinerOutcome,
     RetrievalVerdict,
+    UserAction,
 )
 from rag.infrastructure.persistence.generation.repositories import (
     PgQueryRefinementRepository,
@@ -158,6 +159,27 @@ async def test_refinement_row_insert_defaults_user_action_to_unknown(db: Db) -> 
         )
     assert row["user_action"] == "unknown" and row["outcome"] == "degraded"
     assert row["refined_query"] is None and list(row["exact_terms"]) == []
+    # #83: the owner's report sets it once; another hash, a replay and another tenant change nothing
+    repo = PgQueryRefinementRepository()
+    with as_tenant(TENANT):
+        assert not await db.app_tx.run_in_tx(
+            lambda tx: repo.report_action(tx, r.id, "someone-else", UserAction.ACCEPTED)
+        )
+        assert await db.app_tx.run_in_tx(
+            lambda tx: repo.report_action(tx, r.id, r.principal_hash, UserAction.EDITED)
+        )
+        assert not await db.app_tx.run_in_tx(
+            lambda tx: repo.report_action(tx, r.id, r.principal_hash, UserAction.DISCARDED)
+        )
+        got = await db.app_tx.run_in_tx(
+            lambda tx: tx.fetchval("SELECT user_action FROM query_refinements WHERE id = $1", r.id),
+            read_only=True,
+        )
+    assert got == "edited"
+    with as_tenant(OTHER):
+        assert not await db.app_tx.run_in_tx(
+            lambda tx: repo.report_action(tx, r.id, r.principal_hash, UserAction.ACCEPTED)
+        )
 
 
 # --- corpus database: scope store and lexical ----------------------------------------------------

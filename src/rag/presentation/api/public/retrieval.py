@@ -45,7 +45,8 @@ async def search(
                 section_type=body.section_type,
                 limit=body.limit,
                 required_level=GrantLevel.SEARCH,
-            )
+            ),
+            prior=body.prior_refinement.to_prior() if body.prior_refinement else None,
         ),
     )
     if result.outcome.degraded:

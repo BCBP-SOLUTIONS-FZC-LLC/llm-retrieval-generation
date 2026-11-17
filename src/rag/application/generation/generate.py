@@ -51,7 +51,7 @@ from rag.application.generation.ports import (
     UserContextUnavailable,
 )
 from rag.application.generation.requests import AnswerCommand, DraftCommand
-from rag.application.retrieval.dtos import PipelineRequest, RetrievalOutcome
+from rag.application.retrieval.dtos import PipelineRequest, PriorRefinement, RetrievalOutcome
 from rag.application.retrieval.pipeline import RetrievalPipeline
 from rag.application.retrieval.record import RecordRetrievalSet
 from rag.application.retrieval.scope import ScopeSpec
@@ -120,6 +120,8 @@ class ShortFormSpec:
     metric_kind: str
     regeneration: SectionRegeneration | None = None
     """A-6: complete a section version (no document version) and mark the prior one."""
+    prior: PriorRefinement | None = None
+    """R-2/R-3: what the user did with the refinement an earlier request returned (§5.5)."""
 
 
 def _refs(text: str) -> set[str]:
@@ -343,6 +345,10 @@ class ShortFormEngine:
             if outcome.verdict is not RetrievalVerdict.SUFFICIENT:
                 return await self._refuse(adm, outcome, set_id)
             plan = await self._plan(adm, spec, outcome)
+            if await self._client_gone(is_disconnected):
+                # Nobody is listening: close the run cancelled before a token is spent (§7.5),
+                # through the cancellation branch below. The response has no reader.
+                raise asyncio.CancelledError
         except asyncio.CancelledError:
             await asyncio.shield(self._lifecycle.cancel_quietly(adm, "client_cancelled"))
             raise
@@ -372,10 +378,22 @@ class ShortFormEngine:
             on_close=producer.handle,
         )
 
+    @staticmethod
+    async def _client_gone(probe: Callable[[], Awaitable[bool]] | None) -> bool:
+        """Whether the client has already disconnected; an unreadable connection says no."""
+        if probe is None:
+            return False
+        try:
+            return bool(await probe())
+        except Exception as exc:  # noqa: BLE001 - an unreadable connection is not a verdict
+            log.warning("disconnect_probe_failed", error=type(exc).__name__)
+            return False
+
     # --- before the first byte -----------------------------------------------------------
 
     async def _retrieve(self, a: Admitted, spec: ShortFormSpec) -> tuple[RetrievalOutcome, UUID]:
         dp = a.bundle.domain_profile
+        await self._recorder.report(a.identity, spec.prior)
         async with self._obs.span("generation.retrieve"):
             outcome = await self._pipeline.run(
                 a.identity,
@@ -800,6 +818,7 @@ class GenerateAnswer:
                 enforce_required=False,  # R-2 has no section type: no rule to apply (§5.7.2)
                 deadline=self._cfg.answer_deadline_seconds,
                 metric_kind="answer",
+                prior=cmd.prior,
             ),
             is_disconnected=is_disconnected,
         )
@@ -862,6 +881,7 @@ class GenerateSectionDraft:
                 enforce_required=True,
                 deadline=self._cfg.draft_deadline_seconds,
                 metric_kind="draft",
+                prior=cmd.prior,
             ),
             is_disconnected=is_disconnected,
         )

@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import UUID
 
+from rag.application.retrieval.dtos import PriorRefinement
 from rag.application.retrieval.scope import ScopeSpec
 from rag.domain.shared.enums import GenerationMode
 
@@ -18,6 +19,7 @@ class AnswerCommand:
     requested_mode: GenerationMode = GenerationMode.ASSISTANCE
     idempotency_key: str | None = None
     correlation_id: str = ""
+    prior: PriorRefinement | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +34,7 @@ class DraftCommand:
     requested_mode: GenerationMode = GenerationMode.ASSISTANCE
     idempotency_key: str | None = None
     correlation_id: str = ""
+    prior: PriorRefinement | None = None
 
 
 @dataclass(frozen=True, slots=True)
