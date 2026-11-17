@@ -31,6 +31,7 @@ from rag.application.shared.gateway import (
     GatewayContext,
     GatewayDeadlineExceeded,
     GatewayError,
+    GatewayInputTooLarge,
     GatewayQuotaRefused,
     GatewayResidencyRefused,
     GatewayUnavailable,
@@ -49,15 +50,19 @@ TOKENIZE_TIMEOUT = 0.3
 TOKENIZER_MODEL = "draft"  # the generation Model Profile's tokenizer (§6.8)
 
 
+RETRY_AFTER_MAX = 3600
+"""Assumption: no caller is told to wait over an hour; a larger peer value is capped."""
+
+
 def _retry_after(value: str) -> int | None:
-    """``Retry-After`` as whole seconds: a number, or an HTTP-date (RFC 9110 allows both)."""
+    """``Retry-After`` as whole seconds (at most an hour): a number, or an HTTP-date (RFC 9110)."""
     try:
         if value.isascii() and value.isdigit():
-            return int(value)
+            return min(int(value), RETRY_AFTER_MAX)
         when = parsedate_to_datetime(value)
         if when.tzinfo is None:  # '-0000' parses as naive; RFC 9110 dates are GMT
             when = when.replace(tzinfo=UTC)
-        return max(0, math.ceil((when - datetime.now(UTC)).total_seconds()))
+        return min(max(0, math.ceil((when - datetime.now(UTC)).total_seconds())), RETRY_AFTER_MAX)
     except TypeError, ValueError, OverflowError:
         return None
 
@@ -71,6 +76,9 @@ def _refusal(response: httpx.Response) -> GatewayError:
         code = None
     if code == "residency_capacity":
         return GatewayResidencyRefused("no in-region capacity")
+    # Assumed contract (OpenAI-compatible error code): the input does not fit the model.
+    if response.status_code == 413 or code == "context_length_exceeded":
+        return GatewayInputTooLarge(f"gateway answered {response.status_code}")
     return GatewayUnavailable(f"gateway answered {response.status_code}")
 
 

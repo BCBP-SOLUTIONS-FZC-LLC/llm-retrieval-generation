@@ -52,7 +52,8 @@ EXTRA: dict[tuple[str, str], dict[str, str]] = {
         "404": "COLLECTION_NOT_FOUND (absent or not granted)."
     },
     ("post", "/api/v1/classification/propose"): {
-        "429": "QUOTA_EXHAUSTED, with Retry-After where the Gateway sent one."
+        "413": "USER_INPUT_OVER_BUDGET: the Gateway says the document is too large for the model.",
+        "429": "QUOTA_EXHAUSTED, with Retry-After where the Gateway sent one.",
     },
     ("post", "/api/v1/extractions"): {
         "206": "A degraded retrieval: degradation_markers names each stage.",

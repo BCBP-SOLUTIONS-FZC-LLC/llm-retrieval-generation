@@ -156,6 +156,14 @@ class ClassifyRequest(BaseModel):
     filename: str | None = Field(default=None, max_length=256)
     domain_profile_ref: str | None = Field(default=None, max_length=256)
 
+    @field_validator("content")
+    @classmethod
+    def _within_a_megabyte(cls, v: str) -> str:
+        """The bound is bytes (§5.2 says 1 MB), not characters: 4 MB of CJK text is refused."""
+        if len(v.encode("utf-8", "surrogatepass")) > 1_000_000:
+            raise ValueError("content is over 1 MB")
+        return v
+
 
 class RoleAlternativeBody(BaseModel):
     """One alternative."""

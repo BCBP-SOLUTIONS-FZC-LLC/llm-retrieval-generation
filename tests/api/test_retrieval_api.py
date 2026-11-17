@@ -183,6 +183,14 @@ def classify(h: Harness, body: dict | None = None):  # type: ignore[no-untyped-d
     )
 
 
+def test_r6_content_bound_is_bytes_not_characters(h: Harness) -> None:
+    """§5.2 says 1 MB: 400 000 three-byte characters are over it, though under a million chars."""
+    h.rig.gw.complete_text = '{"proposed_role":"drawing","confidence":0.5}'
+    r = classify(h, {"content": "\u4e2d" * 400_000})
+    assert r.status_code == 400
+    assert classify(h, {"content": "\u4e2d" * 300_000}).status_code == 200
+
+
 def test_r6_returns_the_proposal_and_writes_nothing(h: Harness) -> None:
     """GEN-9: stateless. No scope resolved, no set, no refinement row."""
     h.rig.gw.complete_text = (

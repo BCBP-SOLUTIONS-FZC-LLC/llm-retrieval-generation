@@ -14,6 +14,7 @@ from tests.support_retrieval import DictKV, bundle
 from rag.application.shared.gateway import (
     GatewayContext,
     GatewayDeadlineExceeded,
+    GatewayInputTooLarge,
     GatewayQuotaRefused,
     GatewayResidencyRefused,
     GatewayUnavailable,
@@ -84,6 +85,36 @@ async def test_embed_retries_once_immediately_and_opens_the_breaker_after_five_f
     with pytest.raises(GatewayUnavailable, match="breaker"):
         await gw.embed(["q"], ctx=CTX)
     assert calls["n"] == 10  # the open breaker made no call
+
+
+async def test_a_huge_retry_after_is_capped_at_an_hour() -> None:
+    """A peer's `Retry-After: 999999999` never tells a caller to wait for days."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, headers={"retry-after": "999999999"})
+
+    with pytest.raises(GatewayQuotaRefused) as e:
+        await gateway(handler).embed(["q"], ctx=CTX)
+    assert e.value.retry_after_seconds == 3600
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        httpx.Response(413),
+        httpx.Response(400, json={"error": {"code": "context_length_exceeded"}}),
+    ],
+)
+async def test_an_input_the_model_cannot_take_is_told_apart_from_an_outage(
+    response: httpx.Response,
+) -> None:
+    """413 and a context-length 400 a retry cannot cure; 401, 404 and other 400s are outages."""
+    with pytest.raises(GatewayInputTooLarge):
+        await gateway(lambda r: response).embed(["q"], ctx=CTX)
+    for status in (400, 401, 404):
+        with pytest.raises(GatewayUnavailable) as e:
+            await gateway(lambda r, s=status: httpx.Response(s)).embed(["q"], ctx=CTX)
+        assert not isinstance(e.value, GatewayInputTooLarge)
 
 
 async def test_embed_does_not_retry_a_refusal() -> None:

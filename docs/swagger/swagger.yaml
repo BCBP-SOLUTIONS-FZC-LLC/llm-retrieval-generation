@@ -3051,6 +3051,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: 'UNAUTHORIZED: the identity headers are missing, repeated or not a canonical uuid.'
+        '413':
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: 'USER_INPUT_OVER_BUDGET: the Gateway says the document is too large for the model.'
         '429':
           content:
             application/problem+json:

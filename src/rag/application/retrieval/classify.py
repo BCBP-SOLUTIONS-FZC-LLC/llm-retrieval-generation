@@ -6,6 +6,7 @@ import asyncio
 import json
 import math
 import secrets
+from typing import Any
 
 from rag.application.packs.ports import PackResolver
 from rag.application.packs.resolve import resolve_or_default
@@ -19,6 +20,7 @@ from rag.application.shared.gateway import (
     GatewayContext,
     GatewayDeadlineExceeded,
     GatewayError,
+    GatewayInputTooLarge,
     GatewayQuotaRefused,
     GatewayResidencyRefused,
     ModelGateway,
@@ -42,6 +44,10 @@ def _error(exc: GatewayError) -> DomainError:
         )
     if isinstance(exc, GatewayResidencyRefused):
         return DomainError(ErrorCode.RESIDENCY_CAPACITY, "No in-region capacity is available.")
+    if isinstance(exc, GatewayInputTooLarge):  # a retry cannot help, so not a 503
+        return DomainError(
+            ErrorCode.USER_INPUT_OVER_BUDGET, "The document is too large to classify."
+        )
     return DomainError(ErrorCode.INFERENCE_UNAVAILABLE, "The model gateway is unavailable.")
 
 
@@ -51,6 +57,34 @@ def _confidence(value: object) -> float:
     if math.isnan(value):
         raise ValueError("confidence is NaN")
     return min(max(float(value), 0.0), 1.0)
+
+
+def _json_object(text: str) -> dict[str, Any]:
+    """The model's JSON, with the markdown fence some models wrap it in removed."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1].removesuffix("```").strip()
+    body = json.loads(text)
+    if not isinstance(body, dict):
+        raise ValueError("the answer is not a JSON object")
+    return body
+
+
+def _alternatives(
+    raw: object, roles: list[str], role: str, top: float
+) -> tuple[RoleAlternative, ...]:
+    """Known roles other than the proposal, once each (best score), best first, never above it."""
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise ValueError("alternatives is not a list")
+    best: dict[str, float] = {}
+    for a in raw:
+        name = a["role"]
+        if isinstance(name, str) and name in roles and name != role:
+            best[name] = max(best.get(name, 0.0), min(_confidence(a["confidence"]), top))
+    ranked = sorted(best.items(), key=lambda kv: -kv[1])
+    return tuple(RoleAlternative(n, c) for n, c in ranked[:MAX_ALTERNATIVES])
 
 
 class ProposeClassification:
@@ -96,13 +130,17 @@ class ProposeClassification:
         except TimeoutError as exc:
             raise _error(GatewayDeadlineExceeded()) from exc
         try:
-            body = json.loads(completion.text)
-            role, confidence = str(body["proposed_role"]), _confidence(body["confidence"])
-            alternatives = tuple(
-                RoleAlternative(str(a["role"]), _confidence(a["confidence"]))
-                for a in body.get("alternatives", [])
-                if str(a.get("role")) in roles and str(a.get("role")) != role
-            )[:MAX_ALTERNATIVES]
+            body = _json_object(completion.text)
+            role = body["proposed_role"]
+            if not isinstance(role, str):  # a null, number or list is a malformed answer
+                raise ValueError("proposed_role is not a string")
+            confidence = _confidence(body["confidence"])
+            alternatives = _alternatives(
+                body.get("alternatives"),
+                roles,
+                role,
+                confidence,
+            )
         except (ValueError, KeyError, TypeError, AttributeError, OverflowError) as exc:
             raise DomainError(
                 ErrorCode.INFERENCE_UNAVAILABLE, "The model returned an unusable classification."
