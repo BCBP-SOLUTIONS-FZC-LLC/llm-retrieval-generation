@@ -21,8 +21,8 @@ from rag.domain.shared.errors import DomainError, ErrorCode
 log = get_logger(__name__)
 
 _DELETE_BATCH = 1000
-# A hung S3 held the request until REQUEST_TIMEOUT. Worst case 2 attempts x (2 s + 5 s) = 14 s, well
-# under it; the sweeps' bulk deletes are bounded per call, not per prefix.
+# A hung S3 held the request until REQUEST_TIMEOUT. botocore's max_attempts counts retries, so
+# 3 attempts x (2 s + 5 s) = 21 s worst case (18 s measured with a paused floci), under it.
 _BOUNDS = Config(connect_timeout=2, read_timeout=5, retries={"max_attempts": 2, "mode": "standard"})
 
 
