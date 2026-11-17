@@ -229,7 +229,8 @@ class VerifySection:
             if req.resampler is None:
                 raise VerificationUnavailable("tier 0 has no second generation to diff")
             second = parse_claims(await req.resampler.sample())
-            ratio = tier0_disagreement(claims, second, th)
+            # off the event loop: the diff is quadratic in claims and blocked the whole API (#99)
+            ratio = await asyncio.to_thread(tier0_disagreement, claims, second, th)
             tiers.add(0)
             self._obs.tier0_ratio(ratio)
             if ratio > th.tier0_disagreement:  # routes up: tier 3 on compliance, tier 2 otherwise

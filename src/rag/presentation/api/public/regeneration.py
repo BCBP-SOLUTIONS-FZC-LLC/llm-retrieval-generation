@@ -21,6 +21,7 @@ from rag.domain.shared.enums import ConflictResolution
 from rag.domain.shared.identity import RequestIdentity
 from rag.presentation.api.public.generation import SSE_HEADERS, _probe, _sse
 from rag.presentation.api.public.sse import SseResponse
+from rag.presentation.api.public.text import NoNul
 from rag.presentation.api.public.workflows_models import (
     FactConflictResolutionRequest,
     FactConflictResolutionResponse,
@@ -39,7 +40,7 @@ Services = Annotated[WorkflowServices, Depends(get_workflows)]
 IgnoredIdempotencyKey = Annotated[
     str | None, Header(alias="Idempotency-Key", min_length=1, max_length=255)
 ]
-SectionRef = Annotated[str, Path(min_length=1, max_length=256)]
+SectionRef = Annotated[NoNul, Path(min_length=1, max_length=256)]
 __all__ = ["SSE_HEADERS", "router"]
 
 

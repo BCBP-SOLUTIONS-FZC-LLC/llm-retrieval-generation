@@ -41,7 +41,7 @@ from rag.application.generation.flow import (
 )
 from rag.application.generation.frames import FactConflictOut, VerdictFrame
 from rag.application.generation.generate import GenerationStream, ShortFormEngine, ShortFormSpec
-from rag.application.generation.ports import ArtefactContentStore, TenderGate
+from rag.application.generation.ports import ArtefactContentStore, StoreProbe, TenderGate
 from rag.application.generation.refiner import InstructionRefiner, RefineRun, principal_hash
 from rag.application.retrieval.scope import ScopeSpec
 from rag.application.shared.events import EventPublisher
@@ -713,9 +713,10 @@ class ResolveFactConflict:
         refinements: InstructionRefinementRepository,
         audit_log: AppendAuditEntry,
         gate: TenderGate,
+        probe: StoreProbe,
     ) -> None:
         self._d, self._facts, self._refinements, self._audit = deps, facts, refinements, audit_log
-        self._gate = gate
+        self._gate, self._probe = gate, probe
 
     async def execute(
         self,
@@ -739,6 +740,7 @@ class ResolveFactConflict:
             raise DomainError(ErrorCode.FACT_CONFLICT_NOT_FOUND, "The conflict was not found.")
         assert identity.principal_id is not None
         principal = identity.principal_id
+        await self._probe.require_writable()  # a read-only store is a 503, not a raw write error
 
         async def work(tx: TxHandle) -> ConflictResolved:
             found = await d.regen.get_section(tx, artefact.id, section_ref)

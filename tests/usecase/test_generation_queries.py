@@ -226,6 +226,25 @@ async def test_a9_altered_bytes_fail_the_asv4_digest_check(w: World) -> None:
     assert err.value.code is ErrorCode.ARTEFACT_CONTENT_UNAVAILABLE
 
 
+async def test_a9_bytes_that_hash_correctly_but_are_not_utf8_are_503() -> None:
+    """#105: not text is the same ARTEFACT_CONTENT_UNAVAILABLE, never a 500."""
+    import hashlib
+    from dataclasses import replace
+
+    w = World()
+    bad = b"\xff\xfe not text"
+    w.store.objects[w.sv.content_ref] = bad
+    w.repo.section_versions[:] = [
+        replace(v, content_sha256=hashlib.sha256(bad).digest()) if v.id == w.sv.id else v
+        for v in w.repo.section_versions
+    ]
+    with pytest.raises(DomainError) as err:
+        await GetSectionVersionContent(w.tx, w.repo, w.scope, w.store).execute(
+            identity(), w.art.id, "sec-1", 1
+        )
+    assert err.value.code is ErrorCode.ARTEFACT_CONTENT_UNAVAILABLE
+
+
 async def test_a9_free_standing_answer_resolves_with_a_tenant_wide_scope() -> None:
     """ART-1/AS-4: no tender, section addressed by id; scope target carries no tender."""
     w = World()

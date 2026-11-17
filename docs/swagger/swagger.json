@@ -3830,6 +3830,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maximum": 2147483647,
                   "minimum": 1,
                   "type": "integer"
                 },
@@ -4261,6 +4262,7 @@
             "name": "version_no",
             "required": true,
             "schema": {
+              "maximum": 2147483647,
               "minimum": 1,
               "title": "Version No",
               "type": "integer"
@@ -4456,6 +4458,7 @@
             "name": "version_no",
             "required": true,
             "schema": {
+              "maximum": 2147483647,
               "minimum": 1,
               "title": "Version No",
               "type": "integer"

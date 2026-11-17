@@ -734,7 +734,7 @@ class WfRig:
             self.refinements, self.refiner, self.store, self.events, self.cfg,
         )  # fmt: skip
         self.resolve_conflict = ResolveFactConflict(
-            deps, self.facts, self.refinements, self.audit, self.gate
+            deps, self.facts, self.refinements, self.audit, self.gate, self.probe
         )
 
     async def settle(self) -> None:

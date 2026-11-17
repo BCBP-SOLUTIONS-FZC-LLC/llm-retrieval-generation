@@ -9,6 +9,7 @@ from typing import Any
 from uuid import UUID
 
 import boto3  # type: ignore[import-untyped]
+from botocore.config import Config  # type: ignore[import-untyped]
 from botocore.exceptions import (  # type: ignore[import-untyped]
     BotoCoreError,
     ClientError,
@@ -20,6 +21,9 @@ from rag.domain.shared.errors import DomainError, ErrorCode
 log = get_logger(__name__)
 
 _DELETE_BATCH = 1000
+# A hung S3 held the request until REQUEST_TIMEOUT. botocore's max_attempts counts retries, so
+# 3 attempts x (2 s + 5 s) = 21 s worst case (18 s measured with a paused floci), under it.
+_BOUNDS = Config(connect_timeout=2, read_timeout=5, retries={"max_attempts": 2, "mode": "standard"})
 
 
 def tenant_prefix(tenant_id: UUID) -> str:
@@ -60,7 +64,10 @@ class S3ArtefactContentStore:
         self._bucket = bucket
         self._kms_key_id = kms_key_id or None
         self._s3 = client or boto3.client(
-            "s3", region_name=region or None, endpoint_url=endpoint_url or None
+            "s3",
+            region_name=region or None,
+            endpoint_url=endpoint_url or None,
+            config=_BOUNDS,
         )
 
     def section_key(

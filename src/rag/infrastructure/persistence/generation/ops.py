@@ -130,6 +130,16 @@ class PgSweepRepository:
                 run["id"],
             )
         await tx.execute("UPDATE artefacts SET status = 'failed' WHERE id = $1", artefact_id)
+        # AS-7/AS-8: the in-flight section closes in the same transaction, as a synchronous failure
+        # does: back to complete where it has a version, otherwise failed / internal (#87).
+        await tx.execute(
+            "UPDATE artefact_sections SET state = CASE WHEN current_version_id IS NULL "
+            "THEN 'failed'::section_state ELSE 'complete'::section_state END, "
+            "failure_reason = CASE WHEN current_version_id IS NULL "
+            "THEN 'internal'::run_failure_reason END, record_version = record_version + 1 "
+            "WHERE artefact_id = $1 AND state = 'generating'",
+            artefact_id,
+        )
         counts = await tx.fetchrow(
             "SELECT count(*) FILTER (WHERE state = 'complete') AS done, count(*) AS total "
             "FROM artefact_sections WHERE artefact_id = $1",

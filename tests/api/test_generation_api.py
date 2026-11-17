@@ -274,6 +274,11 @@ def test_r4_errors_are_problems(h: Harness) -> None:
     [
         ("/api/v1/answers", {"question": ""}),
         ("/api/v1/answers", {"question": "x" * 4001}),
+        ("/api/v1/answers", {"question": "   "}),
+        ("/api/v1/answers", {"question": "a\x00b"}),
+        ("/api/v1/sections/drafts", {**DRAFT, "tender_section_ref": " "}),
+        ("/api/v1/sections/drafts", {**DRAFT, "section_type": "a\x00"}),
+        ("/api/v1/sections/drafts", {**DRAFT, "user_prompt": "a\x00"}),
         ("/api/v1/answers", {"question": "q", "requested_mode": "turbo"}),
         ("/api/v1/sections/drafts", {**DRAFT, "user_prompt": "x" * 8001}),
         ("/api/v1/sections/drafts", {k: v for k, v in DRAFT.items() if k != "tender_id"}),

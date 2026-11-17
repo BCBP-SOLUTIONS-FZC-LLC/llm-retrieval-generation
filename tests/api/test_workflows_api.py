@@ -326,6 +326,9 @@ def test_a6_validation(h: Harness) -> None:
     assert h.post(a6_path(doc), {"base_version_id": "nope"}).status_code == 400
     long = {"base_version_id": str(doc.sv1.id), "instruction": "x" * 2001}
     assert h.post(a6_path(doc), long).status_code == 400
+    nul = {"base_version_id": str(doc.sv1.id), "instruction": "a\x00b"}
+    assert h.post(a6_path(doc), nul).status_code == 400  # #110
+    assert h.post(a6_path(doc, "a%00b"), {"base_version_id": str(doc.sv1.id)}).status_code == 400
     huge = {"base_version_id": str(doc.sv1.id), "review_context": {"c": "y" * 9000}}
     assert h.post(a6_path(doc), huge).status_code == 400  # REGEN-3 input is bounded
     problem(
