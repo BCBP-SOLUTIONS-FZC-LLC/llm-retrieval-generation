@@ -262,7 +262,7 @@ Troubleshooting: count stays 0 → `EVENTS_ENABLED` is still false or the app wa
 
 ## Testing
 
-~1,500 tests (1,474 unit + integration, 32 e2e, 14 against a live gateway); coverage about 97.85% for unit + integration.
+~1,550 tests (1,509 unit + integration, 32 e2e, 14 against a live gateway); coverage about 98.3% for unit + integration.
 
 | Group | Where | Needs |
 |---|---|---|
