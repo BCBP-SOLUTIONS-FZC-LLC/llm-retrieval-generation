@@ -136,6 +136,26 @@ class PgFactRepository:
         )
         return None if r is None else _conflict(r)
 
+    async def find_open(
+        self,
+        tx: Conn,
+        section_id: UUID,
+        fact_key: str,
+        instruction_value: str,
+        established_value: str,
+    ) -> FactConflict | None:
+        """The oldest still-open conflict of this section, key and both values."""
+        r = await tx.fetchrow(
+            "SELECT * FROM fact_conflicts WHERE section_id = $1 AND fact_key = $2 "
+            "AND instruction_value = $3 AND established_value = $4 AND resolution IS NULL "
+            "ORDER BY created_at, id LIMIT 1",
+            section_id,
+            fact_key,
+            instruction_value,
+            established_value,
+        )
+        return None if r is None else _conflict(r)
+
     async def save_resolution(self, tx: Conn, conflict: FactConflict) -> bool:
         """Guarded on the conflict's own state: ``resolution IS NULL`` (§5.7.10)."""
         assert conflict.resolution is not None

@@ -468,6 +468,34 @@ async def test_fact_resolution_sql_supersede_insert_flag_and_the_guard(db: Db) -
     assert ir["conflict_resolution"] == "update_fact"
 
 
+async def test_find_open_returns_only_the_open_conflict_of_the_same_key_and_values(db: Db) -> None:
+    """#114: an A-6 repeat finds the open conflict; a resolved one, another value or another
+    tenant finds nothing."""
+    from datetime import UTC, datetime
+
+    g = await graph(db)
+    conflict_id = await sql(db, A, lambda c: seed.facts_and_refinements(c, g))
+
+    async def find(tenant: UUID, instruction: str = "ladder", established: str = "crane") -> Any:
+        return await sql(
+            db,
+            tenant,
+            lambda c: facts.find_open(c, g.section, "access_method", instruction, established),
+            read_only=True,
+        )
+
+    found = await find(A)
+    assert found is not None and found.id == conflict_id
+    assert await find(A, instruction="hoist") is None  # a different value is another conflict
+    assert await find(A, established="hoist") is None  # the established value moved on
+    assert await find(B) is None  # RLS
+    conflict = await sql(db, A, lambda c: facts.get_conflict(c, conflict_id, lock=True))
+    assert conflict is not None
+    conflict.resolution, conflict.resolved_at = ConflictResolution.DISMISS, datetime.now(UTC)
+    assert await sql(db, A, lambda c: facts.save_resolution(c, conflict)) is True
+    assert await find(A) is None  # once resolved it is no longer open
+
+
 async def test_another_tenant_sees_neither_facts_nor_conflicts(db: Db) -> None:
     g = await graph(db)
     conflict_id = await sql(db, A, lambda c: seed.facts_and_refinements(c, g))

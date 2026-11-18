@@ -535,6 +535,31 @@ async def test_a_conflict_is_surfaced_as_a_choice_and_nothing_is_generated() -> 
     assert r.world.sections[doc.s1.id].state is SectionState.COMPLETE
 
 
+async def test_the_same_conflict_repeated_while_open_is_one_conflict_not_two() -> None:
+    """#114: a repeat returns the open conflict's id; a different value is a different conflict."""
+    r = WfRig()
+    doc = seed(r)
+    r.gw.instruction_text = CONFLICT
+    (first,) = (await run_a6(r, doc, instruction="Say we access by hoist.")).items
+    (second,) = (await run_a6(r, doc, instruction="Again: we access by hoist.")).items
+    assert first.fact_conflict is not None and second.fact_conflict is not None  # type: ignore[union-attr]
+    assert second.fact_conflict.conflict_id == first.fact_conflict.conflict_id  # type: ignore[union-attr]
+    assert len(r.world.conflicts) == 1
+    # both calls still wrote their own refinement row, both linked to that one conflict
+    assert {x.fact_conflict_id for x in r.world.refinements} == {first.fact_conflict.conflict_id}  # type: ignore[union-attr]
+    other = json.dumps(
+        {
+            "instruction_type": "correct",
+            "refined_instruction": "Use a lift.",
+            "needs_retrieval": True,
+            "fact_conflict": {"fact_key": "access_method", "instruction_value": "lift"},
+        }
+    )
+    r.gw.instruction_text = other
+    await run_a6(r, doc, instruction="Say we access by lift.")
+    assert len(r.world.conflicts) == 2  # a different instruction value is its own conflict
+
+
 async def test_a_short_form_draft_has_no_facts_so_no_conflict_can_surface() -> None:
     r = WfRig()
     doc = seed(r, kind=ArtefactKind.SECTION_DRAFT, facts=False)

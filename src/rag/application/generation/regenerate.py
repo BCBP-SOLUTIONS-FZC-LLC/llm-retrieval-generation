@@ -624,17 +624,27 @@ class RegenerateSection:
                     tx, section.id, finding.fact_key, finding.instruction_value
                 )
                 if prior is None:
-                    conflict = FactConflict(
-                        id=uuid4(),
-                        tenant_id=adm.identity.tenant_id,
-                        artefact_id=adm.artefact.id,
-                        section_id=section.id,
-                        fact_key=finding.fact_key,
-                        established_value=finding.established_value,
-                        instruction_value=finding.instruction_value,
-                        established_by_section_id=finding.established_by_section_id,
+                    # the same conflict repeated while it is still open is that conflict, not
+                    # a second row for the reviewer to resolve (#114)
+                    conflict = await self._facts.find_open(
+                        tx,
+                        section.id,
+                        finding.fact_key,
+                        finding.instruction_value,
+                        finding.established_value,
                     )
-                    await self._facts.insert_conflict(tx, conflict)
+                    if conflict is None:
+                        conflict = FactConflict(
+                            id=uuid4(),
+                            tenant_id=adm.identity.tenant_id,
+                            artefact_id=adm.artefact.id,
+                            section_id=section.id,
+                            fact_key=finding.fact_key,
+                            established_value=finding.established_value,
+                            instruction_value=finding.instruction_value,
+                            established_by_section_id=finding.established_by_section_id,
+                        )
+                        await self._facts.insert_conflict(tx, conflict)
                     conflict_id = conflict.id
                 elif prior.resolution is ConflictResolution.KEEP_ESTABLISHED:
                     keep = (prior.fact_key, prior.established_value)

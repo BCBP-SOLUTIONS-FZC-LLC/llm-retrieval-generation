@@ -296,6 +296,17 @@ class FactRepository(Protocol):
         """A conflict on this section, key and value that a reviewer already resolved."""
         ...
 
+    async def find_open(
+        self,
+        tx: Tx,
+        section_id: UUID,
+        fact_key: str,
+        instruction_value: str,
+        established_value: str,
+    ) -> FactConflict | None:
+        """The still-open conflict of this section, key and both values, if one exists."""
+        ...
+
     async def save_resolution(self, tx: Tx, conflict: FactConflict) -> bool:
         """``WHERE resolution IS NULL``: ``False`` where another reviewer resolved it first."""
         ...
