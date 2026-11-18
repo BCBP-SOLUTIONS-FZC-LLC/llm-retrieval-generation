@@ -51,7 +51,7 @@ C-I1 `POST /resolve`, C-I2 `GET /{id}`, C-I4 `POST /{id}/index-generations/{n}/a
 |---|---|---|---|
 | Scope | tenant, principal, roles → `ScopeToken` | 60 s (`SCOPE_CACHE_TTL_SECONDS`); token 600 s | Expiry only; the purge epoch rides the token, so a purge can show up to 60 s late. Scope-cache `DEL` on collection writes is **not built** |
 | Pack | `{tenant}:pack:{domain}:{language}:{concern}:{version}` | per pack | `DomainProfilePublished` → `SCAN` + `DEL` (`ValkeyProfileCache`) |
-| Retrieval set | tenant-prefixed | 15 min | None; a document revision does not invalidate it (LD-38) |
+| Retrieval set | tenant-prefixed | 15 min; an insufficient or degraded outcome is not stored | None; a document revision does not invalidate it (LD-38) |
 | Placement | `{tenant}:coll:{collection_id}` | — | `DEL` on a purge-epoch bump (`ValkeyPlacementCache`) |
 | IAM user context | per user | 300 s | Expiry; 300 ms budget, breaker |
 | Idempotency | per key | 1 h | `idempotency-keys` sweep clears them in Postgres |

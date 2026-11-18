@@ -131,7 +131,7 @@ Do not weaken or delete these without a design discussion:
 
 ### Coverage gate
 
-`make test-ci` runs unit and integration together and writes `coverage.xml`. CI fails below **95%** (`.github/scripts/coverage-gate.sh`, `COVERAGE_THRESHOLD`); current coverage is about 97.8%. A new module needs tests that keep it above the gate on its own — do not rely on the rest of the suite to carry it.
+`make test-ci` runs unit and integration together and writes `coverage.xml`. CI fails below **95%** (`.github/scripts/coverage-gate.sh`, `COVERAGE_THRESHOLD`); current coverage is about 97.85%. A new module needs tests that keep it above the gate on its own — do not rely on the rest of the suite to carry it.
 
 ### Testcontainers note
 
