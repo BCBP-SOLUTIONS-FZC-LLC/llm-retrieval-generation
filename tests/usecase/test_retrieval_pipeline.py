@@ -417,6 +417,18 @@ async def test_degraded_results_are_not_cached() -> None:
     assert not again.cache_hit and not again.degraded
 
 
+async def test_an_insufficient_outcome_is_not_cached() -> None:
+    """#89: a refusal caused by a passing fault must not stay for 15 minutes."""
+    rig = Rig(cache=True)
+    rig.dense.hits, rig.lexical.hits = [], []  # nothing found: insufficient (after the retry)
+    first = await rig.pipeline.run(identity(), REQ)
+    assert first.verdict is RetrievalVerdict.INSUFFICIENT
+    assert not [k for k in rig.kv.data if ":rset:" in k]  # type: ignore[union-attr]
+    rig.dense.hits, rig.lexical.hits = [chunk(1), chunk(2), chunk(3)], [chunk(2), chunk(4)]
+    again = await rig.pipeline.run(identity(), REQ)  # the cause has cleared
+    assert not again.cache_hit and again.verdict is RetrievalVerdict.SUFFICIENT
+
+
 async def test_embedding_cache_is_used_for_a_repeated_query() -> None:
     """§11.1 ``qemb``: the second embed of the same text never reaches the Gateway."""
     rig = Rig(cache=True)
