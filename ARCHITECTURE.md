@@ -606,7 +606,7 @@ Every dependency failure has one defined behaviour; none is answered with a defa
 | Repository, integration | `tests/repository/`, `tests/integration/` | Docker (`postgres:18`) | RLS under `FORCE`, triggers, grants, concurrency, migrations |
 | End to end | `tests/e2e/` | Docker | The real app over a real RLS Postgres: flows, security, error shape, infra |
 
-Coverage is about 97.9% for unit + integration, gated at 95% in CI. Coverage is a floor, not the argument: the isolation tests (`tests/repository`, `tests/e2e/test_security.py`) are the ones that must never be weakened. Fakes cannot catch what Postgres catches — the integration run found a real bug (`asyncpg` refusing a `UUID` for a `$1::text` lock key) and a real race (`uq_coll_tender`) that the fakes missed.
+Coverage is about 97.8% for unit + integration, gated at 95% in CI. Coverage is a floor, not the argument: the isolation tests (`tests/repository`, `tests/e2e/test_security.py`) are the ones that must never be weakened. Fakes cannot catch what Postgres catches — the integration run found a real bug (`asyncpg` refusing a `UUID` for a `$1::text` lock key) and a real race (`uq_coll_tender`) that the fakes missed.
 
 ---
 

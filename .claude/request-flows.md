@@ -11,8 +11,8 @@ Diagrams are in [`ARCHITECTURE.md`](../ARCHITECTURE.md). This file is the writte
 
 ## 8.2 R-2 / R-3 Answer and draft (SSE)
 
-1. `ShortFormEngine.start()`: admission (§5.6 order: tenant status, store probe, scope, tender gate, packs, VER-3, eligibility, budget), then one transaction for the idempotency lookup, shell, run, section and `GenerationStarted`. Retrieval; insufficient or refused → a `200` verdict frame with `refusal`, run closed `cancelled`.
-2. A producer task (strong reference on the engine) drafts through the Gateway (12 s answers, 40 s drafts), feeds a queue the SSE body drains, verifies, writes S3, and runs the completion transaction. A client disconnect cannot stop it (GEN-2).
+1. `ShortFormEngine.start()`: admission (§5.6 order: tenant status, store probe, scope, tender gate (also a closed collection named in `scope.collection_ids`, COL-14), packs, VER-3, eligibility, budget), then one transaction for the idempotency lookup, shell, run, section and `GenerationStarted`. Retrieval (R-2/R-3 first record `prior_refinement` on the caller's own `query_refinements` row, once); insufficient or refused → a `200` verdict frame with `refusal`, run closed `cancelled`.
+2. A producer task (strong reference on the engine) drafts through the Gateway (12 s answers, 40 s drafts), feeds a queue the SSE body drains, verifies, writes S3, and runs the completion transaction. After dispatch a client disconnect cannot stop it (GEN-2). A client gone before dispatch closes the run `cancelled` (`client_cancelled`) with no tokens spent and an empty stream (§7.5); R-2 and R-3 pass `request.is_disconnected` as an early probe because uvicorn advertises ASGI 2.3.
 3. Frames: provisional `draft` frames, then exactly one `verdict` frame with the evidence tier, or one `error` frame. A blocking compliance scope suppresses the draft phase (LD-22).
 4. Failure before the first byte is HTTP; after it, an `error` frame. The blocking compliance path waits `SSE_HEARTBEAT_SECONDS` for the producer so an early failure is still HTTP.
 
