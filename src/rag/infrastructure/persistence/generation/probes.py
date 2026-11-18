@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
 from uuid import UUID
 
 from rag.application.shared.ports import TransactionRunner, TxHandle
@@ -63,6 +64,20 @@ class CorpusTenderGate:
                 "SELECT 1 FROM collections WHERE tender_id = $1 AND tender_closed_at IS NOT NULL "
                 "LIMIT 1 FOR SHARE",
                 tender_id,
+            )
+            return row is not None
+
+        if await self._tx.run_in_tx(closed):
+            raise DomainError(ErrorCode.TENDER_CLOSED, "The tender has closed.")
+
+    async def require_collections_open(self, collection_ids: Sequence[UUID]) -> None:
+        """Raise ``409 TENDER_CLOSED`` where a named collection belongs to a closed tender."""
+
+        async def closed(tx: TxHandle) -> bool:
+            row = await tx.fetchval(
+                "SELECT 1 FROM collections WHERE id = ANY($1::uuid[]) "
+                "AND tender_closed_at IS NOT NULL LIMIT 1 FOR SHARE",
+                list(collection_ids),
             )
             return row is not None
 

@@ -173,6 +173,28 @@ async def test_admission_refusals_leave_no_trace(setup, code) -> None:  # type: 
     assert not rig.repo.runs and rig.stream_gw.stream_calls == [] and rig.dense.calls == []
 
 
+async def test_a_named_collection_of_a_closed_tender_is_409_but_the_default_scope_is_not() -> None:
+    """#84 (COL-14): naming a closed tender's collection is new work on it; a default scope that
+    merely includes one is not refused, or every tenant-wide answer would 409 once a tender closed;
+    a collection the caller did not resolve is never confirmed by a 409."""
+    from tests.support_retrieval import COLL, COLL_B
+
+    rig = GenRig()
+    rig.gate.closed_collections.add(COLL)
+    named = replace(Q, scope=ScopeSpec(None, (COLL,)))
+    with pytest.raises(DomainError) as exc:
+        await rig.answer.execute(identity(), named)
+    assert exc.value.code is ErrorCode.TENDER_CLOSED
+    assert not rig.repo.runs and rig.stream_gw.stream_calls == []  # nothing written or spent
+    other = replace(Q, scope=ScopeSpec(None, (COLL_B,)))  # an open collection is admitted
+    assert await rig.answer.execute(identity(), other) is not None
+    await rig.settle()
+    default = GenRig()
+    default.gate.closed_collections.add(COLL)  # in the default scope, not named
+    assert await default.answer.execute(identity(), Q) is not None
+    await default.settle()
+
+
 async def test_tenant_not_active_is_the_first_check() -> None:
     rig = GenRig()
     rig.probe.down = True  # would also refuse: the tenant check comes first (§5.6)
@@ -605,13 +627,31 @@ async def test_the_probe_notices_a_disconnect_during_a_silent_stage() -> None:
     """The blocking path writes nothing until its heartbeat, so only a probe can see a drop."""
     rig = await _compliance_rig_with_rule()
 
+    calls = 0
+
     async def gone() -> bool:
-        return True
+        nonlocal calls
+        calls += 1
+        return calls > 1  # present at dispatch (the first probe), gone during the silent stage
 
     stream = await rig.draft.execute(identity(), draft_cmd(), is_disconnected=gone)
     await drain(stream)
     await rig.settle()
     assert rig.repo.completions[0].artefact_version.delivery is DeliveryState.DISCONNECTED
+
+
+async def test_a_client_gone_before_dispatch_cancels_the_run_and_spends_nothing() -> None:
+    """#85 (§7.5): a disconnect during admission and retrieval closes the run cancelled."""
+    rig = GenRig()
+
+    async def gone() -> bool:
+        return True
+
+    stream = await rig.answer.execute(identity(), Q, early_disconnect=gone)  # ASGI 2.3: only probe
+    assert (await drain(stream)).items == []  # an empty stream: the request ends, nothing raised
+    assert rig.repo.run.status is RunStatus.CANCELLED
+    assert rig.repo.artefact.status is ArtefactStatus.CANCELLED
+    assert rig.stream_gw.stream_calls == [] and not rig.repo.completions  # no tokens spent
 
 
 async def test_a_probe_that_fails_is_not_a_verdict() -> None:

@@ -12,11 +12,13 @@ from pydantic import BaseModel, Field, field_validator
 
 from rag.application.retrieval.dtos import (
     ClassificationResult,
+    PriorRefinement,
     RequiredInputResult,
     SearchResult,
 )
 from rag.application.retrieval.scope import ScopeSpec
 from rag.domain.retrieval.sufficiency import GapReport
+from rag.domain.shared.enums import UserAction
 from rag.presentation.api.public.artefacts_models import Chunk, RetrievalVerdict
 from rag.presentation.api.public.text import NoNul
 
@@ -38,10 +40,17 @@ class ScopeBody(BaseModel):
 
 
 class PriorRefinementBody(BaseModel):
-    """``PriorRefinement`` (§5.5). Accepted; ``user_action`` capture is not built (§20 OQ-22)."""
+    """``PriorRefinement`` (§5.5): recorded on the caller's own refinement row (REF-5).
+
+    Nothing reports it yet (§20 OQ-22), so the column stays ``unknown`` until a client does.
+    """
 
     refinement_id: UUID
     action: Literal["accepted", "edited", "discarded"]
+
+    def to_prior(self) -> PriorRefinement:
+        """The application's report: the user's action on that refinement (REF-5)."""
+        return PriorRefinement(self.refinement_id, UserAction(self.action))
 
 
 class SearchRequest(BaseModel):

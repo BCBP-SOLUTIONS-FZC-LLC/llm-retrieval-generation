@@ -22,7 +22,7 @@ from rag.domain.generation.views import (
     VersionDetail,
     VersionSectionDetail,
 )
-from rag.domain.shared.enums import EvidenceTier
+from rag.domain.shared.enums import EvidenceTier, UserAction
 from rag.infrastructure.persistence.generation import rows
 from rag.infrastructure.persistence.generation.rows import dump_json
 
@@ -326,6 +326,19 @@ class PgQueryRefinementRepository:
             r.latency_ms,
             r.outcome.value,
         )
+
+    async def report_action(
+        self, tx: Conn, refinement_id: UUID, principal_hash: str, action: UserAction
+    ) -> bool:
+        """The first report wins; another user's row, a missing id and a replay change nothing."""
+        status = await tx.execute(
+            "UPDATE query_refinements SET user_action = $3::user_action "
+            "WHERE id = $1 AND principal_hash = $2 AND user_action = 'unknown'",
+            refinement_id,
+            principal_hash,
+            action.value,
+        )
+        return str(status).endswith(" 1")
 
 
 class PgAuditChainRepository:

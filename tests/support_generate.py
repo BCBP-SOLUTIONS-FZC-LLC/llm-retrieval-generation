@@ -262,9 +262,14 @@ class Gate:
 
     def __init__(self) -> None:
         self.closed: set[UUID] = set()
+        self.closed_collections: set[UUID] = set()
 
     async def require_open(self, tender_id: UUID) -> None:
         if tender_id in self.closed:
+            raise DomainError(ErrorCode.TENDER_CLOSED)
+
+    async def require_collections_open(self, collection_ids: Any) -> None:
+        if self.closed_collections & set(collection_ids):
             raise DomainError(ErrorCode.TENDER_CLOSED)
 
 

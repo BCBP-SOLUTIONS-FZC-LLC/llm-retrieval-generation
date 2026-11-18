@@ -345,11 +345,21 @@ class FakeRefinements:
 
     def __init__(self, order: list[str] | None = None) -> None:
         self.rows: list[QueryRefinement] = []
+        self.actions: dict[Any, Any] = {}  # refinement id -> the user's reported action
         self.order = order if order is not None else []
 
     async def insert(self, tx: Any, refinement: QueryRefinement) -> None:
         self.order.append("refinement")
         self.rows.append(refinement)
+
+    async def report_action(
+        self, tx: Any, refinement_id: Any, principal_hash: str, action: Any
+    ) -> bool:
+        mine = any(r.id == refinement_id and r.principal_hash == principal_hash for r in self.rows)
+        if not mine or refinement_id in self.actions:
+            return False
+        self.actions[refinement_id] = action
+        return True
 
 
 class Rig:

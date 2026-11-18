@@ -305,6 +305,13 @@ class AdmitGeneration:
             # After scope: a caller with no grant gets the uniform 404, not a 409 that would
             # confirm the tender exists and is closed (§6.2, OQ-19).
             await self._gate.require_open(req.tender_id)
+        # A collection named in the request belongs to its tender too (COL-14): naming a closed
+        # tender's collection is new work on it. Only the NAMED ids: the default and
+        # ``collection_types`` expansion would 409 every tenant-wide answer once any tender closed.
+        # Only those that resolved, so a 409 never confirms an ungranted collection exists.
+        named = set(req.scope.collection_ids) & {c.id for c in scope.collections}
+        if named:
+            await self._gate.require_collections_open(sorted(named))
         bundle, markers = await resolve_or_default(self._packs, identity.tenant_id)
         dp = bundle.domain_profile
         if req.check_pack is not None:

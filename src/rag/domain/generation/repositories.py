@@ -27,6 +27,7 @@ from rag.domain.generation.views import (
     SectionVersionRecord,
     VersionDetail,
 )
+from rag.domain.shared.enums import UserAction
 
 type Tx = Any
 
@@ -104,6 +105,12 @@ class QueryRefinementRepository(Protocol):
 
     async def insert(self, tx: Tx, refinement: QueryRefinement) -> None:
         """Insert one refinement row."""
+        ...
+
+    async def report_action(
+        self, tx: Tx, refinement_id: UUID, principal_hash: str, action: UserAction
+    ) -> bool:
+        """Set ``user_action`` once, on the caller's own row still ``unknown`` (REF-5)."""
         ...
 
 
