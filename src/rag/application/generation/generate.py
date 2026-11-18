@@ -652,6 +652,8 @@ class _Producer:
         self._started = True
         parts: list[str] = []
         last = StreamChunk()
+        finish = ""
+        shown = False  # a frame has gone out: before that, spaces alone are not worth a 200
         usage = (0, 0)
         stream = e._gw.generate_stream(
             TASK_DRAFT,
@@ -665,9 +667,16 @@ class _Producer:
                 if chunk.delta:
                     before = "".join(parts)
                     parts.append(chunk.delta)
-                    if not self._suppress:
-                        new = _refs(before + chunk.delta) - _refs(before)
-                        self._emit(DraftFrame(chunk.delta, tuple(sorted(new))))
+                    if not self._suppress and (shown or chunk.delta.strip() or before.strip()):
+                        # the first frame carries everything held back while it was only spaces
+                        sent = before if shown else ""
+                        new = _refs(before + chunk.delta) - _refs(sent)
+                        self._emit(
+                            DraftFrame(before[len(sent) :] + chunk.delta, tuple(sorted(new)))
+                        )
+                        shown = True
+                if chunk.finish_reason in ("length", "incomplete"):
+                    finish = chunk.finish_reason
                 if chunk.model or chunk.serving_tier:
                     last = chunk
                 if chunk.prompt_tokens or chunk.completion_tokens:
@@ -700,7 +709,10 @@ class _Producer:
         delivery = (
             DeliveryState.DISCONNECTED if self.handle.disconnected else DeliveryState.DELIVERED
         )
-        markers = tuple(merge_markers(plan.markers, result.markers))
+        # a text the model cut short is kept, and says so (#92)
+        cut = (marker("draft", "truncated", "text_as_received"),) if finish else ()
+        base = (*plan.markers, *cut)
+        markers = tuple(merge_markers(base, result.markers))
         completion = CompletionInput(
             admitted=a,
             retrieval_set_id=self._set_id,
@@ -710,7 +722,7 @@ class _Producer:
             serving_tier=last.serving_tier,
             verification=result,
             delivery=delivery,
-            markers=plan.markers,
+            markers=base,
             disclaimer_ref=a.profile.disclaimer_ref if a.profile.compliance else None,
             parser_version=e._cfg.parser_version,
             chunker_version=e._cfg.chunker_version,

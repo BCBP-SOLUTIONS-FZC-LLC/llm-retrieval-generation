@@ -52,7 +52,7 @@ Logs, spans and `llm_retrieval_generation_*` metrics through `fastapicommon`. **
 
 ## 16. Testing
 
-Layers and markers in [`CONTRIBUTING.md`](../CONTRIBUTING.md#testing-requirements). Coverage ≈ 97.8% (unit + integration), gate 95% (`.github/scripts/coverage-gate.sh`). e2e runs separately (`make test-e2e`, Ryuk disabled in CI).
+Layers and markers in [`CONTRIBUTING.md`](../CONTRIBUTING.md#testing-requirements). Coverage ≈ 98.3% (unit + integration), gate 95% (`.github/scripts/coverage-gate.sh`). e2e runs separately (`make test-e2e`, Ryuk disabled in CI).
 
 ## 17. Known gaps
 

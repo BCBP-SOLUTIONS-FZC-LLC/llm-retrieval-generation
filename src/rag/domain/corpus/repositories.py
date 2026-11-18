@@ -34,6 +34,10 @@ class CollectionRepository(Protocol):
         """Every row of the tenant itself (never the PLATFORM sentinel's), locked."""
         ...
 
+    async def active_generations(self, tx: Tx, ids: Sequence[UUID]) -> dict[UUID, int | None]:
+        """The ``active`` generation of each collection, ``None`` where it has none (SCOPE-12)."""
+        ...
+
     async def list_by_ids(
         self, tx: Tx, ids: Sequence[UUID], *, limit: int, offset: int
     ) -> list[Collection]:

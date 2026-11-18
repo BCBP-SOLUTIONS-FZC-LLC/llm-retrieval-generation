@@ -35,8 +35,9 @@ class ListCollections:
                 if ids
                 else []
             )
+            active = await self._r.collections.active_generations(tx, [c.id for c in rows])
             return CollectionPageDto(
-                [to_collection_dto(c) for c in rows], query.limit, query.offset
+                [to_collection_dto(c, active.get(c.id)) for c in rows], query.limit, query.offset
             )
 
         return await self._tx.run_in_tx(work, read_only=True)
@@ -60,7 +61,8 @@ class GetCollection:
             row = await self._r.collections.get(tx, query.collection_id)
             if row is None:
                 raise CollectionNotFound(f"No granted collection {query.collection_id}.")
-            return to_collection_dto(row)
+            active = await self._r.collections.active_generations(tx, [row.id])
+            return to_collection_dto(row, active.get(row.id))
 
         return await self._tx.run_in_tx(work, read_only=True)
 

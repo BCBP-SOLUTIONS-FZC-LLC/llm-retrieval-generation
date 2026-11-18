@@ -22,8 +22,12 @@ def to_placement(c: Collection, record_version: int | None = None) -> PlacementD
     )
 
 
-def to_collection_dto(c: Collection) -> CollectionDto:
-    """P-1 / P-2 shape."""
+def to_collection_dto(c: Collection, active_generation: int | None) -> CollectionDto:
+    """P-1 / P-2 shape.
+
+    ``active_generation`` is ``None`` for a collection with no active generation: the column
+    ``collections.active_index_generation`` says 1 either way.
+    """
     return CollectionDto(
         id=c.id,
         type=c.type.value,
@@ -31,7 +35,7 @@ def to_collection_dto(c: Collection) -> CollectionDto:
         tender_id=c.tender_id,
         status=c.status.value,
         restricted=c.restricted,
-        active_index_generation=c.active_index_generation,
+        active_index_generation=active_generation,
         weight_override=c.weight_override,
         promoted_from=c.promoted_from,
         tender_closed_at=c.tender_closed_at,

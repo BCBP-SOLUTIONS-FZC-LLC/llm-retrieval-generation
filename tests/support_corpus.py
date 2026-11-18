@@ -135,6 +135,27 @@ class FakeCollections:
         """The tenant's own rows."""
         return [c for c in tx.collections.values() if c.tenant_id == tenant_id]
 
+    async def active_generations(self, tx: State, ids: Sequence[UUID]) -> dict[UUID, int | None]:
+        """The ``active`` generation of each collection, ``None`` where none is active."""
+        out: dict[UUID, int | None] = {}
+        for i in ids:
+            c = tx.collections.get(i)
+            if c is None:
+                continue
+            if c.type is CollectionType.REFERENCE:
+                out[i] = c.active_index_generation
+                continue
+            out[i] = next(
+                (
+                    g
+                    for (cid, _), gen in tx.generations.items()
+                    if cid == i and gen.status is IndexGenerationStatus.ACTIVE
+                    for g in [gen.generation]
+                ),
+                None,
+            )
+        return out
+
     async def list_by_ids(
         self, tx: State, ids: Sequence[UUID], *, limit: int, offset: int
     ) -> list[Collection]:

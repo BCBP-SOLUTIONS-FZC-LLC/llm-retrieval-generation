@@ -195,6 +195,53 @@ async def test_a_named_collection_of_a_closed_tender_is_409_but_the_default_scop
     await default.settle()
 
 
+async def test_a_whitespace_only_answer_is_refused_before_the_first_frame() -> None:
+    """#92: spaces alone must not commit a 200 and then break with an error frame."""
+    rig = GenRig()
+    rig.stream_gw.deltas = ["   ", "\n", "  "]
+    with pytest.raises(DomainError) as exc:
+        await rig.answer.execute(identity(), Q)
+    assert exc.value.code is ErrorCode.INFERENCE_UNAVAILABLE
+    assert not rig.repo.completions
+
+
+async def test_leading_spaces_are_held_back_and_sent_with_the_first_real_text() -> None:
+    """#92: nothing goes out for the spaces; the first frame carries them with the text."""
+    rig = GenRig()
+    rig.stream_gw.deltas = [
+        "  ",
+        "Crane erection access routes are specified [c-01]. ",
+        "More [c-02].",
+    ]
+    out = await drain(await rig.answer.execute(identity(), Q))
+    drafts = out.of(DraftFrame)
+    assert [d.delta for d in drafts] == [
+        "  Crane erection access routes are specified [c-01]. ",
+        "More [c-02].",
+    ]
+    assert drafts[0].citation_refs == ("c-01",) and drafts[1].citation_refs == ("c-02",)
+    await rig.settle()
+
+
+@pytest.mark.parametrize("reason", ["length", "incomplete"])
+async def test_a_cut_short_answer_is_kept_and_says_so_with_a_marker(reason: str) -> None:
+    """#92: finish_reason=length, or a stream that ended without [DONE], is marked truncated."""
+    rig = GenRig()
+    rig.stream_gw.finish_reason = reason
+    (v,) = (await drain(await rig.answer.execute(identity(), Q))).of(VerdictFrame)
+    assert {"stage": "draft", "reason": "truncated", "applied_fallback": "text_as_received"} in [
+        dict(m) for m in v.degradation_markers
+    ]
+    await rig.settle()
+
+
+async def test_a_complete_answer_has_no_truncated_marker() -> None:
+    rig = GenRig()
+    (v,) = (await drain(await rig.answer.execute(identity(), Q))).of(VerdictFrame)
+    assert not [m for m in v.degradation_markers if dict(m).get("reason") == "truncated"]
+    await rig.settle()
+
+
 async def test_tenant_not_active_is_the_first_check() -> None:
     rig = GenRig()
     rig.probe.down = True  # would also refuse: the tenant check comes first (§5.6)

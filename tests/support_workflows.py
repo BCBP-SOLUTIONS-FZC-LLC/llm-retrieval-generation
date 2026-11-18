@@ -427,6 +427,25 @@ class WorldFacts:
         c = self.w.conflicts.get(conflict_id)
         return None if c is None else replace(c)
 
+    async def find_open(
+        self,
+        tx: Any,
+        section_id: UUID,
+        fact_key: str,
+        instruction_value: str,
+        established_value: str,
+    ) -> FactConflict | None:
+        return next(
+            (
+                replace(c)
+                for c in self.w.conflicts.values()
+                if (c.section_id, c.fact_key, c.instruction_value, c.established_value)
+                == (section_id, fact_key, instruction_value, established_value)
+                and c.resolution is None
+            ),
+            None,
+        )
+
     async def find_resolved(
         self, tx: Any, section_id: UUID, fact_key: str, instruction_value: str
     ) -> FactConflict | None:

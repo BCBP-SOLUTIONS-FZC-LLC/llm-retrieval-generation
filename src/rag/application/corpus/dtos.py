@@ -41,7 +41,7 @@ class CollectionDto:
     tender_id: UUID
     status: str
     restricted: bool
-    active_index_generation: int
+    active_index_generation: int | None
     weight_override: float | None
     promoted_from: UUID | None
     tender_closed_at: datetime | None

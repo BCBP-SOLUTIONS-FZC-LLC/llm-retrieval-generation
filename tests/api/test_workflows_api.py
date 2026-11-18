@@ -135,6 +135,43 @@ def test_w1_validation_and_auth(h: Harness) -> None:
     assert h.client.post("/api/v1/generations", json=W1, headers=KEY).status_code == 401
 
 
+def test_a_nul_character_is_a_400_in_every_workflow_text_field(h: Harness) -> None:
+    """#80: Postgres refuses a NUL in a text column and in the outbox jsonb (recipients), so it
+    must stop at the request model, never as a late 500."""
+    nul = "a\x00b"
+    post = h.post
+    k = {**HEADERS, **KEY}
+    cases = [
+        ("/api/v1/generations", {**W1, "capability": nul}, k),
+        ("/api/v1/generations", {**W1, "target_ref": nul}, k),
+        ("/api/v1/generations", {**W1, "recipients": [{"kind": "user", "id": nul}]}, k),
+        ("/api/v1/extractions/async", {"tender_id": str(TENDER), "schema_ref": nul}, k),
+        (
+            "/api/v1/extractions/async",
+            {"tender_id": str(TENDER), "schema_ref": "s", "target_ref": nul},
+            k,
+        ),
+        (
+            "/api/v1/extractions/async",
+            {"tender_id": str(TENDER), "schema_ref": "s", "trigger_document_version_id": nul},
+            k,
+        ),
+    ]
+    for path, body, headers in cases:
+        r = post(path, body, headers)
+        assert r.status_code == 400 and r.json()["errorCode"] == "VALIDATION_FAILED", (path, body)
+    _, run, _ = seed_document(h.rig.world, outline_version=2)
+    base = f"/api/v1/generations/{run.id}"
+    bad_outline = {"outline_version": 2, "sections": [{"ref": nul, "type": "intro"}]}
+    assert post(f"{base}/outline", bad_outline).status_code == 400
+    bad_type = {"outline_version": 2, "sections": [{"ref": "a", "type": nul}]}
+    assert post(f"{base}/outline", bad_type).status_code == 400
+    assert post(f"{base}/cancel", {"reason": nul}).status_code == 400
+    op = f"/api/v1/operator/generations/{run.id}/rematerialise"
+    assert post(op, {"ticket_ref": nul}, OPERATOR).status_code == 400
+    assert post(op, {"ticket_ref": "OPS-1", "reason": nul}, OPERATOR).status_code == 400
+
+
 def test_w6_has_the_same_shape_with_schema_ref(h: Harness) -> None:
     body = {"tender_id": str(TENDER), "schema_ref": SCHEMA.ref}
     assert h.post("/api/v1/extractions/async", body, HEADERS).status_code == 400  # key required
@@ -328,6 +365,8 @@ def test_a6_validation(h: Harness) -> None:
     assert h.post(a6_path(doc), long).status_code == 400
     nul = {"base_version_id": str(doc.sv1.id), "instruction": "a\x00b"}
     assert h.post(a6_path(doc), nul).status_code == 400  # #110
+    rcp = {"base_version_id": str(doc.sv1.id), "recipients": [{"kind": "user", "id": "a\x00b"}]}
+    assert h.post(a6_path(doc), rcp).status_code == 400  # #80: a NUL in the outbox jsonb
     assert h.post(a6_path(doc, "a%00b"), {"base_version_id": str(doc.sv1.id)}).status_code == 400
     huge = {"base_version_id": str(doc.sv1.id), "review_context": {"c": "y" * 9000}}
     assert h.post(a6_path(doc), huge).status_code == 400  # REGEN-3 input is bounded

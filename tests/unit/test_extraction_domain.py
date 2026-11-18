@@ -94,3 +94,52 @@ def test_malformed_output_is_a_violation_that_never_echoes_the_value() -> None:
 def test_all_gaps_for_an_insufficient_scope() -> None:
     g = all_gaps(SCHEMA, "no_supporting_evidence")
     assert set(g) == {f.name for f in SCHEMA.fields} and all(v["gap"] for v in g.values())
+
+
+# --- the rest of the constraint checks and the malformed shapes --------------------------------
+
+LOOSE = ExtractionSchema(
+    "dp/loose",
+    "1.0.0",
+    (
+        FieldSpec("share", "number", maximum=100),
+        FieldSpec("optional", "boolean"),
+        FieldSpec("title", "string"),
+    ),
+)
+
+
+def violation(schema: ExtractionSchema, raw: str) -> str:
+    with pytest.raises(DomainError) as exc:
+        parse_extraction(schema, raw, CHUNKS, REFS)
+    assert exc.value.code is ErrorCode.EXTRACTION_SCHEMA_VIOLATION
+    return exc.value.detail if hasattr(exc.value, "detail") else str(exc.value)
+
+
+def test_a_number_above_its_maximum_is_refused_without_echoing_the_value() -> None:
+    message = violation(LOOSE, out(share={"value": 250, "chunk_ids": ["c-01"]}))
+    assert "share: above maximum" in message and "250" not in message
+
+
+def test_a_boolean_field_takes_only_a_boolean() -> None:
+    assert "optional: expected boolean" in violation(
+        LOOSE, out(optional={"value": "yes", "chunk_ids": ["c-01"]})
+    )
+
+
+def test_a_string_field_takes_only_a_string_and_a_plain_string_has_no_constraint() -> None:
+    assert "title: expected string" in violation(
+        LOOSE, out(title={"value": 7, "chunk_ids": ["c-01"]})
+    )
+    ok = parse_extraction(LOOSE, out(title={"value": "Plan", "chunk_ids": ["c-01"]}), CHUNKS, REFS)
+    assert [f.name for f in ok.fields if not f.gap] == ["title"]
+
+
+def test_an_entry_that_is_not_an_object_is_refused() -> None:
+    assert "title: expected an object" in violation(LOOSE, out(title="Plan"))
+
+
+def test_output_whose_fields_is_not_a_map_is_refused() -> None:
+    assert "not an object with a fields map" in violation(
+        LOOSE, json.dumps({"fields": ["share", "title"]})
+    )

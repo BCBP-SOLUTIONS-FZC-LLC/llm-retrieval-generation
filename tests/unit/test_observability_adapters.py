@@ -111,6 +111,13 @@ def test_generation_delivered_ratio_is_a_running_hit_rate(collectors: MagicMock)
     collectors.set.assert_called_with(0.5)
 
 
+def test_failure_policy_counter_is_labelled_with_the_declared_policy(collectors: MagicMock) -> None:
+    """#93: the label says what it is (the pack-declared policy), not an action nobody takes."""
+    gm.PrometheusGenerationObserver().failure_policy("block")
+    assert {"declared_policy": "block"} in [c.kwargs for c in collectors.labels.call_args_list]
+    assert gm.LABELS["failure_policy_total"] == ["declared_policy"]
+
+
 @pytest.mark.parametrize(
     ("build", "null", "wrapper"),
     [

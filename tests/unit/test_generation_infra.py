@@ -109,6 +109,21 @@ async def test_stream_parses_openai_sse_with_usage_and_serving_tier() -> None:
     assert headers["x-residency-mode"] == "strict"
 
 
+async def test_stream_reports_a_length_stop_and_a_stream_that_ended_without_done() -> None:
+    """#92: finish_reason=length, or no [DONE], tells the caller the text is cut short."""
+    stopped = {"model": "m", "choices": [{"delta": {}, "finish_reason": "length"}]}
+    chunks = await collect(
+        gateway(lambda r: httpx.Response(200, content=sse(delta("Hello "), stopped)))
+    )
+    assert [c.finish_reason for c in chunks] == ["", "length"]
+    cut = await collect(
+        gateway(lambda r: httpx.Response(200, content=sse(delta("Hello "), done=False)))
+    )
+    assert [c.finish_reason for c in cut] == ["", "incomplete"]
+    whole = await collect(gateway(lambda r: httpx.Response(200, content=sse(delta("Hello ")))))
+    assert [c.finish_reason for c in whole] == [""]  # [DONE] arrived: nothing is cut
+
+
 async def test_a_quota_refusal_raises_on_the_first_read_before_any_delta() -> None:
     gw = gateway(lambda r: httpx.Response(429, headers={"retry-after": "30"}, json={}))
     stream = gw.generate_stream("draft", "s", "u", ctx=CTX, deadline_seconds=5)

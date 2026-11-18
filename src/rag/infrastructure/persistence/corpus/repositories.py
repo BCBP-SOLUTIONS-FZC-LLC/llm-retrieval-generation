@@ -133,6 +133,23 @@ class PgCollectionRepository:
         )
         return [_collection(r) for r in rows]
 
+    async def active_generations(self, tx: Any, ids: Sequence[UUID]) -> dict[UUID, int | None]:
+        """The ``active`` generation of each collection; ``None`` where none is active.
+
+        ``collections.active_index_generation`` is never NULL and is not evidence of an
+        activation (SCOPE-12). The same rule as the resolver's read: a reference row carries the
+        PLATFORM tenant, whose ``index_generations`` the tenant policy hides, so for it the column
+        is the only readable answer.
+        """
+        rows = await tx.fetch(
+            "SELECT c.id, CASE WHEN c.type = 'reference' THEN c.active_index_generation "
+            "ELSE (SELECT g.generation FROM index_generations g "
+            "WHERE g.collection_id = c.id AND g.status = 'active') END AS active_generation "
+            "FROM collections c WHERE c.id = ANY($1::uuid[])",
+            list(ids),
+        )
+        return {r["id"]: r["active_generation"] for r in rows}
+
     async def list_by_ids(
         self, tx: Any, ids: Sequence[UUID], *, limit: int, offset: int
     ) -> list[Collection]:

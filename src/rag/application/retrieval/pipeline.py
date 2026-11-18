@@ -188,7 +188,10 @@ class RetrievalPipeline:
             second = await self._attempt(scope, req, widened, bundle, profile, refined, pre, ctx)
             final = replace(second, widened_retry=True, first_attempt=first)
         obs.verdict(final.verdict.value, label)
-        if not final.markers:
+        # An insufficient outcome is not remembered: its cause is often a fault that clears (a
+        # rerank outage, a document not yet current), and a cached refusal would keep saying
+        # "not enough evidence" for the whole 15-minute TTL after it has (#89).
+        if not final.markers and final.verdict is not RetrievalVerdict.INSUFFICIENT:
             await self._cache_put(key, final)
         return final
 

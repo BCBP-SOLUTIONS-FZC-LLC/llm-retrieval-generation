@@ -136,7 +136,7 @@ When cutting a tagged release:
    make ci           # fmt-check + lint + typecheck + test-ci (needs Docker)
    make test-e2e     # real app over a real RLS Postgres
    ```
-   `validate-test.yml`'s coverage gate is **95%** (`.github/scripts/coverage-gate.sh`); measured coverage is about 97.8% for unit + integration.
+   `validate-test.yml`'s coverage gate is **95%** (`.github/scripts/coverage-gate.sh`); measured coverage is about 98.3% for unit + integration.
 
 5. **Create and push an annotated tag**:
    ```bash

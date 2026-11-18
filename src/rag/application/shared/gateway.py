@@ -99,6 +99,9 @@ class StreamChunk:
     serving_tier: str = ""
     prompt_tokens: int = 0
     completion_tokens: int = 0
+    finish_reason: str = ""
+    """``length`` where the model stopped at its limit; ``incomplete`` where the stream ended
+    without ``[DONE]`` (the Gateway client adds that chunk). Either means the text is cut short."""
 
 
 class ModelGateway(Protocol):

@@ -448,6 +448,30 @@ async def test_activation_writes_state_and_event_row_in_one_transaction(dsn: str
     assert [(r["generation"], r["status"]) for r in states] == [(1, "retired"), (2, "active")]
 
 
+async def test_active_generations_is_none_until_one_is_activated_and_follows_the_reference(
+    dsn: str,
+) -> None:
+    """#9 / SCOPE-12: the column is never NULL and says 1 before any activation; the active row
+    is the truth. A reference row's generations are hidden from a tenant (PLATFORM tenant), so
+    its column is the answer."""
+    provisioning = await _seed(dsn, status=C.PROVISIONING)  # generation 1 exists, not active
+    active = await _seed(dsn, tender=uuid4(), status=C.ACTIVE)  # generation 1 active
+    admin = await asyncpg.connect(dsn)
+    ref = Collection.create(tenant_id=TENANT, tender_id=REFERENCE, restricted=False)
+    await admin.execute("SELECT set_config('app.tenant_id', $1, false)", str(PLATFORM))
+    await admin.execute("SET ROLE rag_app")
+    await REPOS.collections.insert(admin, ref)
+    await admin.close()
+
+    async def read(tx: Any) -> dict[Any, Any]:
+        return await REPOS.collections.active_generations(
+            tx, [provisioning.id, active.id, ref.id, uuid4()]
+        )
+
+    got = await app(dsn, TENANT).run_in_tx(read)
+    assert got == {provisioning.id: None, active.id: 1, ref.id: ref.active_index_generation}
+
+
 # --- other repository behaviour -------------------------------------------------------------
 
 

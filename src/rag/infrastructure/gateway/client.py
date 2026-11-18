@@ -90,8 +90,9 @@ def _chunk(payload: str, tier: str) -> StreamChunk | None:
             raise GatewayUnavailable("the stream carried an error")
         choices = obj.get("choices") or []
         delta = (choices[0].get("delta") or {}).get("content") or "" if choices else ""
+        finish = str(choices[0].get("finish_reason") or "") if choices else ""
         usage = obj.get("usage") or {}
-        if not delta and not usage:
+        if not delta and not usage and not finish:
             return None
         return StreamChunk(
             str(delta),
@@ -99,6 +100,7 @@ def _chunk(payload: str, tier: str) -> StreamChunk | None:
             tier,
             int(usage.get("prompt_tokens", 0)),
             int(usage.get("completion_tokens", 0)),
+            finish,
         )
     except (ValueError, TypeError, AttributeError, IndexError) as exc:
         raise GatewayUnavailable("the stream carried a malformed frame") from exc
@@ -306,6 +308,8 @@ class HttpModelGateway:
                     chunk = _chunk(payload, tier)
                     if chunk is not None:
                         yield chunk
+                # the connection ended without [DONE]: the text may be cut short
+                yield StreamChunk(finish_reason="incomplete")
         except httpx.TimeoutException as exc:
             log.warning("gateway_timeout", path="stream", timeout=deadline_seconds)
             raise GatewayDeadlineExceeded("stream timed out") from exc

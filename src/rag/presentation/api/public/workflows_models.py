@@ -31,7 +31,7 @@ class RecipientBody(BaseModel):
     """``{kind, id}`` echoed on the run's events (LD-83)."""
 
     kind: Literal["user", "department"]
-    id: str = Field(min_length=1, max_length=128)
+    id: NoNul = Field(min_length=1, max_length=128)
 
 
 def recipients_of(items: list[RecipientBody]) -> tuple[Recipient, ...]:
@@ -43,8 +43,8 @@ class StartGenerationRequest(BaseModel):
     """W-1 body."""
 
     tender_id: UUID
-    capability: str = Field(min_length=1, max_length=256)
-    target_ref: str | None = Field(default=None, max_length=256)
+    capability: NoNul = Field(min_length=1, max_length=256)
+    target_ref: NoNul | None = Field(default=None, max_length=256)
     scope: ScopeBody = Field(default_factory=ScopeBody)
     requested_mode: Mode = "assistance"
     outline_gate: bool = True
@@ -59,10 +59,10 @@ class StartExtractionRequest(BaseModel):
     """W-6 body: W-1's shape with ``schema_ref`` in place of ``capability``."""
 
     tender_id: UUID
-    schema_ref: str = Field(min_length=1, max_length=256)
-    target_ref: str | None = Field(default=None, max_length=256)
+    schema_ref: NoNul = Field(min_length=1, max_length=256)
+    target_ref: NoNul | None = Field(default=None, max_length=256)
     scope: ScopeBody = Field(default_factory=ScopeBody)
-    trigger_document_version_id: str | None = Field(default=None, max_length=256)
+    trigger_document_version_id: NoNul | None = Field(default=None, max_length=256)
     recipients: list[RecipientBody] = Field(default_factory=list, max_length=50)
 
 
@@ -182,8 +182,8 @@ class ApproveRequest(BaseModel):
 class OutlineEntryBody(BaseModel):
     """One section of an edited outline: a reference and a type, never content."""
 
-    ref: str = Field(min_length=1, max_length=256)
-    type: str = Field(min_length=1, max_length=256)
+    ref: NoNul = Field(min_length=1, max_length=256)
+    type: NoNul = Field(min_length=1, max_length=256)
 
 
 class ReviseRequest(BaseModel):
@@ -196,7 +196,7 @@ class ReviseRequest(BaseModel):
 class CancelRequest(BaseModel):
     """W-5 body: free text, at most 256 characters."""
 
-    reason: str | None = Field(default=None, max_length=256)
+    reason: NoNul | None = Field(default=None, max_length=256)
 
 
 class ResumeRequest(BaseModel):
@@ -229,8 +229,8 @@ class SignalResponse(BaseModel):
 class RematerialiseRequest(BaseModel):
     """W-8 body: ``ticket_ref`` is required and at most 128 characters."""
 
-    ticket_ref: str = Field(min_length=1, max_length=128)
-    reason: str | None = Field(default=None, max_length=512)
+    ticket_ref: NoNul = Field(min_length=1, max_length=128)
+    reason: NoNul | None = Field(default=None, max_length=512)
 
 
 class RematerialiseResponse(BaseModel):

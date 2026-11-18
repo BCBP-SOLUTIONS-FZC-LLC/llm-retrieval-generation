@@ -1140,6 +1140,7 @@ CREATE TABLE fact_conflicts (
 | FC-1 | A conflict is returned to the caller as a choice, never resolved automatically (`REGEN-6`) |
 | FC-2 | `update_fact` flags affected sections through `artefact_sections.flagged_for_review`. It does not regenerate them |
 | FC-3 | A second conflict on the same key surfaces rather than retries (HLD §8.4) |
+| FC-4 | A conflict repeated while it is still open (same section, key and both values) is that conflict: its id is returned and no second open row is written (rev 2.140) |
 
 #### 4.5.6 `graph_checkpoints`
 
@@ -1913,7 +1914,7 @@ CREATE TRIGGER trg_generation_transition BEFORE INSERT OR UPDATE ON index_genera
 
 #### 4.8.3 Read support
 
-The A-4 section-state read is served by `idx_a4_read` (§4.3.4). The document-level roll-up is computed as `MIN(evidence_tier)` over the section-version set recorded in `artefact_version_sections`. So MD-30 is arithmetic over recorded verdicts. No stored number exists that could drift.
+The A-4 section-state read is served by `idx_a4_read` (§4.3.4). The document-level roll-up is `MIN(evidence_tier)` over the section-version set recorded in `artefact_version_sections`. It is **materialised on the version when the version is written** (`AV-3`) and A-3 returns that stored value; it is never recomputed on read. The set it is computed over is immutable, so the stored value is reproducible (MD-30). A stored value that disagrees with its sections is a data fault, not a state the service repairs (rev 2.140).
 
 ### 4.9 Read routing
 
@@ -2106,6 +2107,8 @@ All are `400 VALIDATION_FAILED` unless noted.
 | `collection_ids`, `document_ids`, `section_types` | 100 entries |
 | R-6 `content` | 1 MB. R-6 takes caller-supplied text rather than reading the corpus, so it is the one route with no other bound on its input size |
 | `tender_section_ref`, `target_ref`, `capability`, `schema_ref` | 256 characters, stored opaque (`ART-4`) |
+| Any free-text body field, query value or path segment (`question`, `query`, `instruction`, `section_ref`, `ref`, `reason`, a recipient `id`, and the rest) | A NUL character is refused: Postgres cannot store it, and it failed late as a 500 or 503 (rev 2.140). `question`, `tender_section_ref` and `section_type` also refuse text of only spaces |
+| `version_no` (path or query) | 1 to 2,147,483,647 (the column is an `int`) |
 | Any uuid path or body parameter | Parsed as a uuid, not matched as a string |
 
 **A malformed or schema-invalid body returns `400 VALIDATION_FAILED`** with one `validationErrors` entry `{field, message}` per failing field (rev 2.118, LD-91). The bounds above are checked in handlers and return the same code.
@@ -2264,6 +2267,8 @@ Absent, the recorded `user_action` stays `unknown`. No Tender UI reports this to
 ```
 
 **Marker reasons (rev 2.126, LD-99).** `reason` is a lower snake case string. Two reasons record a Model Gateway refusal: `quota_refused` and `residency_refused`. A search appends one when the Gateway refuses its embed, rerank or refine call (§6.1, §14.4). A search marker has the `stage` `embed`, `rerank` or `refine`. Its `applied_fallback` is `lexical_only`, `fused_order` or `raw_query`. The Instruction Refiner on A-6 (§10.2) appends the same two reasons. Its `stage` is `refine_instruction` and its `applied_fallback` is `raw_instruction`, named after the field that always keeps the caller's text (MD-33). When the Gateway refuses the `refine-instruction` call on A-6, the route falls back to the raw instruction and adds a marker. The draft call that follows can still return `429 QUOTA_EXHAUSTED` or `503 RESIDENCY_CAPACITY`. The refine call and the draft call are two separate Gateway calls, and the Gateway can refuse each one. This changes the public contract. A client that branches on `reason` sees two new values. `LLM/retrieval_generation_openapi.yaml` documents both. `DegradationMarker.reason` stays a free string, so no enum changes.
+
+**A cut-short draft (rev 2.140).** A model answer that stops at its length limit (`finish_reason` `length`), or whose stream ends without `[DONE]`, is kept, and its verdict carries the marker `{ "stage": "draft", "reason": "truncated", "applied_fallback": "text_as_received" }`. A model answer of only spaces is treated as empty before the first frame is sent, so it is a `503`, not a `200` followed by an error frame.
 
 **`RetrievalVerdict`**, the reduced three-valued result (MD-14):
 
@@ -2433,6 +2438,8 @@ The grounded answer. Streams per §5.6.
 
 R-2 with a `tender_id` returns `409 TENDER_CLOSED` for a tender that has closed (`COL-14`). R-2, R-3 and R-4 also return it for a collection named in `scope.collection_ids` that the caller resolved and whose tender has closed (rev 2.139); a default or `collection_types` scope is not refused.
 
+**Insufficient evidence on R-2 (rev 2.140).** *LLD decision.* Where retrieval is insufficient after its one widened retry, R-2 returns `200` with a verdict frame that carries `refusal` (`reason` `insufficient_evidence`), the run closes `cancelled`, no model call is made, and the retrieval set is kept for explainability (`API-9`). An insufficient outcome is not cached (§11.1): its cause is often a fault that clears, and a cached refusal would repeat for the whole 15-minute TTL.
+
 **Errors (rev 2.123, LD-95).** *LLD decision.* R-2 returns `403 TENANT_NOT_ACTIVE` at admission of new generation work, for a tenant whose status does not admit generation (§7.6, LD-95). A Gateway refusal at dispatch is an HTTP status, because no frame has gone: `429 QUOTA_EXHAUSTED` with `Retry-After`, `503 RESIDENCY_CAPACITY` or `503 INFERENCE_UNAVAILABLE`. Only `INFERENCE_UNAVAILABLE` and `INTERNAL_ERROR` ride the terminal `error` frame, after the first frame (§5.6, `API-6`). R-2 returns no `REQUIRED_INPUT_MISSING`. Required-input rules work per section type. R-7 takes `capability` and `section_types` and returns `per_section` (§5.7.7). R-2's request carries a question and no section type. Plan construction therefore has no rule to apply to R-2, and an unmet scope gives an `Insufficient` verdict. §7.1 step 3 lists the check in the shared generation contract. This decision reads that step as applying only where a section type exists.
 
 ```jsonc
@@ -2548,8 +2555,9 @@ GET /api/v1/retrieval-sets/{id}
                   "collection_ids": ["7c31..."], "document_role": ["specification"] },
   "index_generations": { "7c31...": 12 },        // its own column (§4.4.1), not part of the filter
   "applied_profile": { /* as R-1 */ }, "profile_source": "section_type",
-  "budget_allocation": { "window": 128000, "system_skeleton": 9800,
-                         "user_input": 1200, "reserved_output": 32000, "evidence": 84000 },
+  "budget_allocation": { "window_tokens": 128000, "skeleton_tokens": 9800,
+                         "user_input_tokens": 1200, "output_reserve_tokens": 32000,
+                         "evidence_tokens": 84000 },
   "reranker_ran": true,
   "domain_profile_version": "dp-civil-en-4.2.0", "language_pack_version": "lp-en-2.0.1",
   "query_refinement_id": "a19c...",
@@ -2603,6 +2611,8 @@ POST /api/v1/required-input-checks
 R-7 returns `200` on every outcome, including a blocking one. A gap report is the answer to the question asked. An error status for a check that worked but found gaps would put a quality signal into a failure counter (§24).
 
 #### 5.7.8 A-1 to A-4, artefact reads
+
+**Small behaviours of the artefact reads (rev 2.140), recorded as accepted.** (1) The artefact id in the path may be written `urn:uuid:<uuid>`: the path parses it as a uuid. (2) While the scope store is down, a missing id answers `404` and an existing id `503`: that shows existence during an outage, the same class as the identity-system outage on the collection routes, and is accepted for the same reason (fail closed is the rule). (3) A caller whose grant is at search level only gets `403 GRANT_LEVEL_INSUFFICIENT` on an existing artefact and `404` on an unknown one, as §24 specifies. (4) Two sections of one artefact may share a `tender_section_ref`; A-9 answers the lowest ordinal.
 
 A-1 returns the artefact with its current version summary. A-2 and A-4 are paginated summary shapes (`API-8`): neither returns groundedness reports, claim verifications, or chunks. A fifty-version history that carried fifty reports would be too large for any client to render.
 
@@ -2704,6 +2714,8 @@ After `keep_established` or `update_fact` the regeneration proceeds as a **new r
 **A-7 is guarded on the conflict's own state, not on a version.** The resolution is written only where `resolution IS NULL`. A second reviewer who resolves the same conflict differently gets `409 WORKFLOW_STATE_CONFLICT`, so nothing is overwritten. `REGEN-2` makes the same refusal for a section. An already-resolved conflict returns `409` with the recorded resolution.
 
 Only a long-form artefact has conflict ids. Fact-conflict detection needs document-wide fact keys. A short-form draft has no stage 1 to set those keys (`REGEN-4`). This route therefore returns `404` for a short-form artefact, not an empty conflict list.
+
+**An open conflict is reused (rev 2.140, `FC-4`).** The same instruction repeated while its conflict is still open (same section, key and both values) returns that conflict's id and writes no second row. A different instruction value is a different conflict. **The instruction record is not linked to the section version it produced (rev 2.140).** `instruction_refinements.artefact_version_id` links document versions only (A-5); A-6 mints a section version, which carries no such link, so no read route shows which instruction produced which section version. A column and link is the change if a screen needs it.
 
 #### 5.7.11 A-8 and A-9, render and section content
 
@@ -2841,6 +2853,8 @@ x-tenant-id: <the tenant whose run is restarted>
 #### 5.7.15 P-1, P-2, P-3 and P-6, corpus administration
 
 P-1 and P-2 return collections with placement and status. Neither returns the physical Qdrant collection name to a tenant caller; that is internal placement (C-I2) and a tenant client has no use for it.
+
+**`active_index_generation` on P-1 and P-2 is `null` for a collection with no active generation (rev 2.140).** The column `collections.active_index_generation` is never `NULL` and reads `1` before any activation, so it is not evidence of one (`SCOPE-12`). The routes read the `active` row of `index_generations`, as the scope resolver does; for a reference collection, whose generations the tenant policy hides, they read the column. C-I1 and C-I2 still return the column, because Ingestion's own placement view is the column.
 
 **An empty scope on P-1 is an empty list (rev 2.123, LD-95).** *LLD decision.* P-1 returns `200` with an empty list where the caller's scope holds no collection. `404` belongs to a single resource.
 
@@ -3859,7 +3873,7 @@ RefinedInstruction {
 
 `REGEN-8`: a regeneration mints a new **section** version. Document versions mint at completion, the coherence pass, export, or explicit request, and materialise the roll-up over their exact section version set (§4.3.2, §4.3.3). A-5 mints one and is therefore an explicit request; A-6 does not. A section regeneration publishes `SectionCompleted` with `origin: "regeneration"`, and `ArtefactRegenerated` fires only where a document version is minted (§12.3). The versions a section edit supersedes ride on that event as `superseded_version_ids` (§12.3, LD-31).
 
-`REGEN-5`: reusing a prior retrieval set requires the caller's **current** scope to still cover every collection that set was built from. Scope is re-resolved on every regeneration and compared with the set's recorded `filter_set` (§4.4.1). Where the scope no longer covers it, the service refuses the reuse path. The request then takes the full pipeline on the narrowed scope, or fails if the narrowed scope is empty (`SCOPE-6`). Without this rule the style-only path is a hole. It would serve content from collections the caller's grant no longer reaches, because no search runs to re-apply the filter.
+`REGEN-5`: reusing a prior retrieval set requires the caller's **current** scope to still cover every collection that set was built from. Scope is re-resolved on every regeneration and compared with the set's recorded `filter_set` (§4.4.1). Where the scope no longer covers it, the service refuses the reuse path. The request then takes the full pipeline on the narrowed scope, or fails if the narrowed scope is empty (`SCOPE-6`). **Not built (rev 2.140, documented deviation, implementation plan).** `rules.scope_covers` exists with no caller: every A-6 takes the full pipeline on the caller's current scope, so a collection the caller cannot reach changes nothing, and the hole this rule closes does not open. Without this rule the style-only path would be a hole. It would serve content from collections the caller's grant no longer reaches, because no search runs to re-apply the filter.
 
 `REGEN-9`: `needs_retrieval = true` enters the full retrieval pipeline. There is no abbreviated retrieval path for regeneration.
 
@@ -3930,11 +3944,11 @@ This table is the whole reason D-34 and D-35 are decidable positions rather than
 | Query embedding | `{tenant}:qemb:{pack-ver}:{embed-profile}:{normalised-query}` | 24 h | embedding profile or pack change |
 | **User context** *(LLD addition, rev 1.8)* | `{tenant}:uctx:{principal}` | 300 s | `RET-3` forbids an uncached cross-service call on the synchronous path, and prompt layer 3 was one (§14.3) |
 | **Refined query** *(LLD addition)* | `{tenant}:qref:{normalised-query}:{section-type}:{pack-ver}` | 1 h | pack change, refiner version change |
-| Retrieval set | `{tenant}:rset:{scope-hash}:{index-gen}:{normalised-query}:{pack-vers}` | 15 min | purge epoch bump, cutover, pack change |
+| Retrieval set | `{tenant}:rset:{scope-hash}:{index-gen}:{normalised-query}:{pack-vers}` | 15 min. An `insufficient` outcome is not stored, and neither is a degraded one (one with markers) (rev 2.140) | purge epoch bump, cutover, pack change |
 
 Every key tenant-prefixed. **No cache entry is served across tenants under any circumstance, including byte-identical queries** (HLD §4.2, HLD §7.8).
 
-*LLD decision, LD-38.* **A document revision is not a cache invalidation, so a cached retrieval set can serve a superseded version for up to the 15-minute retrieval-set TTL.** Nothing in the invalidation column fires when a document is superseded. The purge epoch (a per-collection counter bumped when a document is purged) moves on purge only, and this service consumes no supersede event. Bumping the epoch on each revision would empty every cached set in the collection. At §4.12's document rate that costs far more than the staleness it removes. It would also overload a field whose meaning §18.8 depends on. Fifteen minutes is therefore the stated freshness bound on a revision, on the same footing as the 60 s grant bound in §11.2. `RET-8` holds for every search that misses the cache.
+*LLD decision, LD-38.* The same bound covers R-3's required-input rule (rev 2.140, accepted): R-3 enforces the rule on a cached retrieval outcome, so a chunk that stops satisfying it can leave the rule looking satisfied for up to 15 minutes. **A document revision is not a cache invalidation, so a cached retrieval set can serve a superseded version for up to the 15-minute retrieval-set TTL.** Nothing in the invalidation column fires when a document is superseded. The purge epoch (a per-collection counter bumped when a document is purged) moves on purge only, and this service consumes no supersede event. Bumping the epoch on each revision would empty every cached set in the collection. At §4.12's document rate that costs far more than the staleness it removes. It would also overload a field whose meaning §18.8 depends on. Fifteen minutes is therefore the stated freshness bound on a revision, on the same footing as the 60 s grant bound in §11.2. `RET-8` holds for every search that misses the cache.
 
 The refined-query cache is an addition to HLD §7.8's three, and it is the difference between the §6.6 budget holding and not.
 
@@ -5401,7 +5415,7 @@ Every HLD §3.5 target has a metric. Every metric carries the **not-yet-validate
 | `llm_retrieval_generation_claim_outcome_total{outcome}` | Supported, unsupported, miscited, gap, never collapsed to a binary (MD-16) |
 | `llm_retrieval_generation_verification_tier_total{tier_decided}` | The tier mix across the ladder. Tier 3 is roughly 2× generation cost, so this is a cost signal as much as a quality one |
 | `llm_retrieval_generation_tier0_disagreement_ratio` | Tier 0's routing input (§8.1) |
-| `llm_retrieval_generation_failure_policy_total{action}` | Block against flag, per §8.1's pack-declared policy |
+| `llm_retrieval_generation_failure_policy_total{declared_policy}` | Block against flag, per §8.1's pack-declared policy. Counts a section whose combined verdict was not a plain surface. Nothing is blocked: the answer is stored and returned either way (label renamed from `action`, rev 2.140) |
 | `llm_retrieval_generation_evidence_tier_total{tier}` | Including `NOT_COMPUTED`, which `AOB-2` keeps distinct from passing |
 
 **Generation**:
@@ -6306,7 +6320,7 @@ A gap report is not an error (below), so it returns on a `200`.
 | 422 | `REQUIRED_INPUT_MISSING` | **A customer action.** The problem detail carries the code; the caller re-reads the gap report from R-7 (§5.7.7). An HTTP `422` on R-3 and A-6, returned before the first frame, because their plan construction applies the pack's required-input rules for the section type (§6.1 stage 3, §6.9, §5.7.7). W-1 records a blocking gap on the section (§4.3.4). R-2, R-4 and W-6 carry no section type, so no rule applies and an unmet scope is an `Insufficient` verdict | R-3, A-6 |
 | 429 | `QUOTA_EXHAUSTED` | This service's mapping of the Gateway's 429. On R-2, R-3, R-4 and A-6 it is an HTTP `429` with `Retry-After` as a response header, before any frame (`API-6`). W-1, W-6 and A-5 return none, because quota is checked at dispatch (LD-13) and a refusal inside a run is its `failure_reason`. R-6 also returns HTTP `429` with `Retry-After`, from its single Gateway call (§7.8). R-1 returns none: a quota refusal of its embed, rerank or refine call is a marker | R-2, R-3, R-4, A-6, R-6 |
 | 500 | `INTERNAL_ERROR` | An unhandled failure. **A platform type the library emits (rev 2.118, LD-91).** | all routes, R-2 (frame), R-3 (frame), A-6 (frame) |
-| 503 | `ARTEFACT_STORE_UNWRITABLE` | Admission check failed before dispatch (GEN-3). Also the write of R-1's retrieval set failed. R-1 has no admission step and returns chunks with a set id that must resolve (`API-9`), so it fails the request | R-1, R-2, R-3, R-4, A-5, A-6, A-7, W-1, W-6 |
+| 503 | `ARTEFACT_STORE_UNWRITABLE` | Admission check failed before dispatch (GEN-3). Also the write of R-1's retrieval set failed. R-1 has no admission step and returns chunks with a set id that must resolve (`API-9`), so it fails the request. **Also a read of `llm_generation` that cannot reach the database (rev 2.140):** a read has no code of its own, so every read route answers this one (R-5, A-1 to A-4, A-8, A-9, W-2) | R-1, R-2, R-3, R-4, A-5, A-6, A-7, W-1, W-6, and every read of `llm_generation` |
 | 503 | `ARTEFACT_CONTENT_UNAVAILABLE` | The object behind `content_ref` cannot be read, does not hash to `content_sha256`, or is not UTF-8 text (A-9, §18.9) | A-9 |
 | 503 | `RETRIEVAL_FAILED` | Both search halves down. Also where the required-input entity count cannot run, on R-7 and on plan construction for R-3 and A-6 (§6.9). **Incident-level** (MD-14). Returned only when both search halves are down. One half down is a degradation with a marker on every route, generation included (§6.1, §14.4) | R-1, R-2, R-3, R-4, R-7, A-6 |
 | 503 | `SCOPE_STORE_UNAVAILABLE` | Collection tables unreachable; not degradable (§14.3) | R-1, R-2, R-3, R-4, R-5, R-7, A-1, A-2, A-3, A-4, A-5, A-6, A-7, A-8, A-9, W-1, W-2, W-3, W-4, W-5, W-6, W-7, P-1, P-2, P-3, P-6, C-I1, C-I2, C-I4, C-I5, C-I6, C-I8 |
@@ -6669,6 +6683,7 @@ This is the record of every change, oldest first. It is for maintainers and is n
 | 2.137 | 2026-11-13 | **Commercial HLD v0.48 is read against this LLD and the code. One defect is fixed in code and several statements are corrected.** **Why.** The Commercial team's HLD v0.48 (13 Nov 2026) replaces the v0.28 this team held. **Found by reading the code against §10.2.** The platform HTTP client that `client.py` builds stamps the inbound request's `x-request-id`, `x-correlation-id` and `traceparent` on every outbound call. A probe with three calls from one request context sent the same `x-request-id` on all three, and the value was a caller-supplied string that was not a UUID, so a feed that deduplicates on `call_id` would have counted the three calls once. **Changed in code.** Each Gateway call now sends a new UUID v4 `x-request-id` (`infrastructure/gateway/client.py`, `tests/unit/test_gateway_call_id.py`, which fails without the change); `x-correlation-id` still goes on every call. The quota-restored consumer accepts `tokens` and `llm_tokens` as the token resource, because v0.48 does not give the value for the quota events and uses `llm_tokens` on its add-on event (an assumption, recorded in `docs/implementation-plan.md`). **Corrected.** LD-104 (spans, not the access log; what is sent today); OQ-95 and OQ-117, which said no correlation id or request id was sent; the consumer paragraph in §12 (`resource`, and `cause` as `window_reset` or `limit_raised`); the peer register row for Commercial; OQ-116's RTO wording. OQ-113 is resolved on assumption; OQ-112 carries v0.48's wording. The register counts 118 items, ninety-eight resolved. **Not changed.** The `capability` and `payer` headers (LD-104, owed to Commercial), the Worker Pool passing `x-correlation-id`, and every cluster test (OQ-114). |
 | 2.138 | 2026-11-17 | **The LLD follows fixes from manual testing (implementation-plan, branch `fix/text-validation-and-tier0-cap`).** `run_failure_reason` gains `schema_violation` (§4.2, the `GenerationFailed.reason` list). The stalled-generations sweep closes the in-flight section with the artefact (§22). `ARTEFACT_STORE_UNWRITABLE` lists A-7 and `ARTEFACT_CONTENT_UNAVAILABLE` covers a non-UTF-8 object (§24). P-1 resolves from departments only and never lists an overlay-granted collection (§5.2 table). R-4's example response matches the code (`generation_id`, `evidence_tier`, `refusal`, no `currency` inside a field) and LD-84 names the two gap reasons the code uses. No design decision changes; each is a statement brought in line with code that was already built and tested. |
 | 2.139 | 2026-11-18 | **The LLD follows three behaviours fixed from manual testing (implementation-plan, branch `fix/prior-refinement-closed-collections-disconnect-cancel`).** `PriorRefinement` sets `user_action` once on the caller's own row (§4.6.1, §5.5); OQ-22 stays open because no client sends it. A closed tender's collection named in `scope.collection_ids` is `409 TENDER_CLOSED` on R-2, R-3 and R-4 (§5.7.2; the LLD was silent). A client gone before dispatch closes the run `cancelled` with no tokens spent (§7.5, already the stated rule; the code now meets it). No design decision changes. |
+| 2.140 | 2026-11-18 | **The LLD follows the Low-severity fixes from manual testing (implementation-plan, branch `fix/low-severity-items`).** A NUL character and a `version_no` over `int` are refused (§5.2). P-1 and P-2 show `null` for a collection with no active generation (§5.7.15). A cut-short draft keeps its text with a `truncated` marker, and spaces alone are a `503` before the first frame (§5.5); an insufficient outcome is not cached and R-2's refusal is stated (§5.7.2, §11). An open fact conflict is reused (`FC-4`); the A-6 instruction link is documented as absent (§5.7.10). The document roll-up is stored (§4.8.3, `AV-3` wins). A read outage uses `ARTEFACT_STORE_UNWRITABLE` (§24). REGEN-5 is marked not built. The `failure_policy_total` label is `declared_policy` (§16.2). The `budget_allocation` example uses the stored keys (§5.7.5). Small artefact-read behaviours and the R-3 required-input staleness are recorded as accepted. No design decision changes. |
 
 ---
 

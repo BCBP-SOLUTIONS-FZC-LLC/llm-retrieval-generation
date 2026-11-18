@@ -410,8 +410,10 @@ components:
       description: 'P-2 body and a P-1 entry: placement without the physical collection name.'
       properties:
         active_index_generation:
+          anyOf:
+          - type: integer
+          - type: 'null'
           title: Active Index Generation
-          type: integer
         created_at:
           anyOf:
           - format: date-time
