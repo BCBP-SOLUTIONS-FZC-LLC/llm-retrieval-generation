@@ -292,6 +292,7 @@ class StreamGateway(FakeGateway):
     def __init__(self) -> None:
         super().__init__()
         self.deltas: list[str] = list(GOOD_TEXT)
+        self.finish_reason = ""  # the last chunk's finish_reason ("length", "incomplete")
         self.second: list[str] | None = None
         self.before_first: Exception | None = None
         self.fail_after: tuple[int, Exception] | None = None
@@ -328,7 +329,7 @@ class StreamGateway(FakeGateway):
             if self.fail_after is not None and i == self.fail_after[0]:
                 raise self.fail_after[1]
             yield StreamChunk(delta, "gen-large", "primary")
-        yield StreamChunk("", "gen-large", "primary", 100, 20)
+        yield StreamChunk("", "gen-large", "primary", 100, 20, self.finish_reason)
 
     async def complete(
         self,
