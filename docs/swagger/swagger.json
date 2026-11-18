@@ -620,8 +620,15 @@
         "description": "P-2 body and a P-1 entry: placement without the physical collection name.",
         "properties": {
           "active_index_generation": {
-            "title": "Active Index Generation",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Index Generation"
           },
           "created_at": {
             "anyOf": [

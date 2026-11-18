@@ -482,6 +482,23 @@ async def test_get_collection_out_of_scope_is_404_never_403() -> None:
     assert dto.id == a.id and dto.record_version == 1
 
 
+async def test_a_collection_with_no_active_generation_shows_null_not_one() -> None:
+    """#9: the column says 1 either way (SCOPE-12); P-1 and P-2 show what is really active."""
+    w = World()
+    empty = w.add_collection()  # provisioning: generation 1 exists but is not active
+    live = w.add_collection(tender_id=uuid4(), status=C.ACTIVE)  # generation 1 is active
+    scope = FakeScope(empty.id, live.id)
+    page = await ListCollections(w.tx, w.repos, scope).execute(
+        ListCollectionsQuery(identity(), 100, 0)
+    )
+    shown = {c.id: c.active_index_generation for c in page.collections}
+    assert shown == {empty.id: None, live.id: 1}
+    one = await GetCollection(w.tx, w.repos, FakeScope(empty.id)).execute(
+        CollectionQuery(identity(), empty.id)
+    )
+    assert one.active_index_generation is None
+
+
 async def test_list_grants_reports_freshness_and_is_never_authoritative() -> None:
     """P-3."""
     w = World()
