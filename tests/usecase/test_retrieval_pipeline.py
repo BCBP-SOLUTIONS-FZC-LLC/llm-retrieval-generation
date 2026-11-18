@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 from tests.support_retrieval import (
     COLL,
@@ -427,6 +429,48 @@ async def test_an_insufficient_outcome_is_not_cached() -> None:
     rig.dense.hits, rig.lexical.hits = [chunk(1), chunk(2), chunk(3)], [chunk(2), chunk(4)]
     again = await rig.pipeline.run(identity(), REQ)  # the cause has cleared
     assert not again.cache_hit and again.verdict is RetrievalVerdict.SUFFICIENT
+
+
+async def test_a_damaged_embedding_cache_entry_is_recomputed_not_trusted() -> None:
+    """A cached vector that does not parse (or has the wrong size) falls back to a fresh embed."""
+    rig = Rig(cache=True)
+    await rig.pipeline.run(identity(), REQ)
+    keys = [k for k in rig.kv.data if ":qemb:" in k]  # type: ignore[union-attr]
+    assert len(keys) == 1
+    rig.kv.data[keys[0]] = "not,a,number"  # type: ignore[union-attr]
+    again = await rig.pipeline.run(identity(), replace(REQ, limit=3))  # a new retrieval key
+    assert again.verdict is RetrievalVerdict.SUFFICIENT and not again.degraded
+    assert rig.kv.data[keys[0]] != "not,a,number"  # type: ignore[union-attr]  # refilled
+
+
+async def test_a_damaged_retrieval_cache_entry_is_a_miss() -> None:
+    """A cached outcome that cannot be decoded is recomputed, never served or raised."""
+    rig = Rig(cache=True)
+    await rig.pipeline.run(identity(), REQ)
+    (key,) = [k for k in rig.kv.data if ":rset:" in k]  # type: ignore[union-attr]
+    rig.kv.data[key] = "{broken"  # type: ignore[union-attr]
+    again = await rig.pipeline.run(identity(), REQ)
+    assert not again.cache_hit and again.verdict is RetrievalVerdict.SUFFICIENT
+
+
+async def test_an_unexpected_search_error_is_raised_not_turned_into_a_marker() -> None:
+    """Only the planned search failures degrade; a bug in a half is not hidden."""
+    rig = Rig()
+    rig.dense.error = RuntimeError("bug")
+    with pytest.raises(RuntimeError):
+        await rig.pipeline.run(identity(), REQ)
+    ok = Rig()
+    ok.lexical.error = RuntimeError("bug")
+    with pytest.raises(RuntimeError):
+        await ok.pipeline.run(identity(), REQ)
+
+
+def test_a_score_is_stored_as_its_exact_decimal() -> None:
+    from decimal import Decimal
+
+    from rag.application.retrieval.pipeline import to_decimal
+
+    assert to_decimal(0.1) == Decimal("0.1") and to_decimal(1.0) == Decimal("1.0")
 
 
 async def test_embedding_cache_is_used_for_a_repeated_query() -> None:

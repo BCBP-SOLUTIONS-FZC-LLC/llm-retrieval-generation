@@ -271,6 +271,36 @@ async def run_a6(r: WfRig, doc: Doc, **kw: object):  # noqa: ANN202
     return frames
 
 
+async def test_a6_a_store_failure_after_the_stream_is_an_error_frame_and_fails_the_run() -> None:
+    """The text cannot be written to S3: no section version, an `error` frame, a failed run."""
+    from rag.application.generation.frames import ErrorFrame
+
+    r = WfRig()
+    doc = seed(r)
+    r.store.fail_put = True
+    frames = await run_a6(r, doc)
+    assert frames.of(ErrorFrame) and not frames.of(VerdictFrame)
+    assert r.world.sections[doc.s1.id].current_version_id == doc.sv1.id  # the prior text stands
+    (run,) = r.world.runs.values()
+    assert run.status is RunStatus.FAILED
+    assert run.failure_reason is RunFailureReason.ARTEFACT_STORE_UNWRITABLE
+
+
+async def test_a6_a_problem_the_completion_already_names_is_not_rewrapped() -> None:
+    """A DomainError from the write stays itself: the run's reason is not 'store unwritable'."""
+    r = WfRig()
+    doc = seed(r)
+
+    async def named(*_: object, **__: object) -> None:
+        raise DomainError(ErrorCode.OPTIMISTIC_LOCK_CONFLICT, "named")
+
+    r.store.put = named  # type: ignore[method-assign]
+    await run_a6(r, doc)
+    (run,) = r.world.runs.values()
+    assert run.status is RunStatus.FAILED
+    assert run.failure_reason is RunFailureReason.INTERNAL  # a rewrap would say store_unwritable
+
+
 async def test_a6_mints_a_section_version_and_no_document_version() -> None:
     r = WfRig()
     doc = seed(r)
