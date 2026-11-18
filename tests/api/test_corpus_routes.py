@@ -298,6 +298,17 @@ def test_migration_failed_result(h: Harness) -> None:
     assert (r.status_code, r.json()["status"]) == (200, "migration_failed")
 
 
+def test_migration_failed_reason_refuses_a_nul_character(h: Harness) -> None:
+    """#80: the reason is stored in a text column, and Postgres refuses a NUL there."""
+    _, tgt, mid = _migration(h)
+    r = h.client.post(
+        f"/api/v1/internal/collections/{tgt.id}/migration-result",
+        json={"migration_id": mid, "result": "failed", "reason": "a\x00b"},
+        headers=INTERNAL,
+    )
+    assert r.status_code == 400
+
+
 # --- C-M1 -----------------------------------------------------------------------------------
 
 

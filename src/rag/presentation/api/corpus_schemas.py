@@ -20,6 +20,7 @@ from rag.application.corpus.dtos import (
     PurgeEpochDto,
     RetentionDto,
 )
+from rag.presentation.api.public.text import NoNul
 
 OFFSET_MAX = 2**63 - 1
 """The largest ``bigint``: a bigger offset used to overflow the database integer (a 500)."""
@@ -120,7 +121,7 @@ class MigrationResultRequest(BaseModel):
     migration_id: UUID
     result: Literal["complete", "failed"]
     points_copied: int | None = Field(default=None, ge=0)
-    reason: str | None = Field(default=None, min_length=1, max_length=256)
+    reason: NoNul | None = Field(default=None, min_length=1, max_length=256)
 
     @model_validator(mode="after")
     def _result_fields(self) -> Self:
