@@ -36,7 +36,7 @@ Not constructed here. `platform-fastapicommon` records `platform_http_*` and bui
 | `groundedness_band_total` | counter | `band` | Groundedness score bands |
 | `evidence_tier_total` | counter | `tier` (`NOT_COMPUTED`, `INSUFFICIENT`, `PARTIAL`, `SUPPORTED`) | Derived evidence tiers |
 | `tier0_disagreement_band_total` | counter | `band` | Tier-0 self-consistency disagreement bands (a counter, OBS-3) |
-| `failure_policy_total` | counter | `action` | Failure policy applied to a section |
+| `failure_policy_total` | counter | `declared_policy` | Sections whose combined verdict was not a plain surface, by the pack-declared policy (`block` or `flag`). Nothing is blocked: the answer is stored and returned either way (label was `action`, renamed 2026-11-18) |
 | `completeness_item_missed_total` | counter | `section_type`, `item` | A mandatory completeness item missed |
 | `gap_marker_total` | counter | — | Gap claims |
 | `tokens_total` | counter | `task_class`, `model_profile`, `capability` | Tokens reported by the Gateway |

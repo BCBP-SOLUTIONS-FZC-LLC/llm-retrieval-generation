@@ -62,7 +62,7 @@ LABELS = {
     "groundedness_band_total": ["band"],
     "evidence_tier_total": ["tier"],
     "tier0_disagreement_band_total": ["band"],
-    "failure_policy_total": ["action"],
+    "failure_policy_total": ["declared_policy"],
     "completeness_item_missed_total": ["section_type", "item"],
     "tokens_total": ["task_class", "model_profile", "capability"],
     "delivery_state_total": ["delivery"],
@@ -99,7 +99,11 @@ class PrometheusGenerationObserver:
         self._bands = counter("groundedness_band_total", "Groundedness score bands")
         self._evidence = counter("evidence_tier_total", "Derived evidence tiers")
         self._tier0 = counter("tier0_disagreement_band_total", "Tier 0 disagreement bands")
-        self._policy = counter("failure_policy_total", "Failure policy applied")
+        self._policy = counter(
+            "failure_policy_total",
+            "Sections whose combined verdict was not a plain surface, by the pack-declared policy "
+            "(block or flag); nothing is blocked, the answer is stored and returned either way",
+        )
         self._missed = counter("completeness_item_missed_total", "Mandatory items missed")
         self._gaps = counter("gap_marker_total", "Gap claims")
         self._tokens = counter("tokens_total", "Tokens reported by the Gateway")
@@ -170,8 +174,8 @@ class PrometheusGenerationObserver:
         self._tier0.labels(band=ratio_band(ratio)).inc()
 
     def failure_policy(self, action: str) -> None:
-        """Block or flag."""
-        self._policy.labels(action=action).inc()
+        """The pack-declared policy (block or flag) of a section that did not surface plainly."""
+        self._policy.labels(declared_policy=action).inc()
 
     def completeness_missed(self, section_type: str | None, item: str) -> None:
         """A missed mandatory item (pack-declared section type and item)."""
@@ -246,7 +250,7 @@ class LoggingGenerationObserver:
 
     def failure_policy(self, action: str) -> None:
         """The pack's failure policy fired."""
-        log.info("failure_policy_applied", action=action)
+        log.info("failure_policy_recorded", declared_policy=action)
         self._inner.failure_policy(action)
 
     def completeness_missed(self, section_type: str | None, item: str) -> None:
