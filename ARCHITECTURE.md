@@ -20,7 +20,7 @@ The service is organised in concentric Clean Architecture layers crossed with si
 graph TD
     subgraph entry["Entry points  -  one image"]
         api["presentation/main.py create_app\nFastAPI app factory over fastapicommon.create_platform_app\nlifespan: open both pools, build Container, start relays and consumers when EVENTS_ENABLED\nassert_isolation_config: PG_BOUNCER_MODE must be exactly true"]
-        sweeps["infrastructure/sweeps/__main__.py\npython -m rag.infrastructure.sweeps name or all\nten sweeps, one advisory lock per instance\nexit 0 clean, 1 tenant failed, 2 alert, 64 usage"]
+        sweeps["infrastructure/sweeps/__main__.py\npython -m rag.infrastructure.sweeps name or all\neleven sweeps, one advisory lock per instance\nexit 0 clean, 1 tenant failed, 2 alert, 64 usage"]
         migrate["infrastructure/persistence/migrate.py\nmigrate_all: eventcommon outbox schema first, then numbered sets\nDDL DSN direct to Postgres, never PgBouncer"]
     end
 
@@ -45,7 +45,7 @@ graph TD
         generation["generation/\nflow, generate, extract, regenerate, queries, frames"]
         verification["verification/\nverify ladder, gateway entailer, judge, resampler"]
         workflows["workflows/\nstart, signals, state, operator, bridges"]
-        evt["events/ + sweeps/\ncontracts, consumers use cases, ten sweeps"]
+        evt["events/ + sweeps/\ncontracts, consumers use cases, eleven sweeps"]
     end
 
     subgraph dom["domain/  -  standard library only"]
@@ -76,6 +76,8 @@ graph TD
 | `infrastructure/` | asyncpg repositories, gateway/Tender/IAM/Temporal/Valkey/S3 adapters, outbox relay and SQS consumers, sweeps, observability, `Settings` | `application`, `domain`, third-party SDKs |
 | `presentation/` | FastAPI routers, request/response models, dependencies, error mapping, identity, SSE, docs routes, the app factory | `application`, `domain`, infrastructure config |
 | `corpusscope/` | Scope tokens and resolver, every Qdrant filter, scoped reader | Standard library, pydantic, `qdrant_client`, itself |
+| `engine/` | The Worker Pool's only door in: run, outline, section, fact and version writes, building blocks, the composition root. Public and versioned (`ENGINE_API_VERSION`); nothing in the service imports it and it never imports Temporal | `application`, `domain`, `infrastructure`; `presentation` from `bootstrap` only |
+| `llm_models/` | The plain types of that boundary (`llm_models.workers`); a Temporal workflow imports them in its sandbox | Standard library only |
 
 ---
 
@@ -606,7 +608,7 @@ Every dependency failure has one defined behaviour; none is answered with a defa
 | Repository, integration | `tests/repository/`, `tests/integration/` | Docker (`postgres:18`) | RLS under `FORCE`, triggers, grants, concurrency, migrations |
 | End to end | `tests/e2e/` | Docker | The real app over a real RLS Postgres: flows, security, error shape, infra |
 
-Coverage is about 98.3% for unit + integration, gated at 95% in CI. Coverage is a floor, not the argument: the isolation tests (`tests/repository`, `tests/e2e/test_security.py`) are the ones that must never be weakened. Fakes cannot catch what Postgres catches — the integration run found a real bug (`asyncpg` refusing a `UUID` for a `$1::text` lock key) and a real race (`uq_coll_tender`) that the fakes missed.
+Coverage is about 98.1% for unit + integration, gated at 95% in CI. Coverage is a floor, not the argument: the isolation tests (`tests/repository`, `tests/e2e/test_security.py`) are the ones that must never be weakened. Fakes cannot catch what Postgres catches — the integration run found a real bug (`asyncpg` refusing a `UUID` for a `$1::text` lock key) and a real race (`uq_coll_tender`) that the fakes missed.
 
 ---
 

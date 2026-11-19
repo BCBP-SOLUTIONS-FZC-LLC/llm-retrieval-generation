@@ -27,7 +27,7 @@ Names are the upper-cased `Settings` fields (`src/rag/infrastructure/config.py`)
 | Sweeps | `CORPUS_SWEEP_DATABASE_URL`, `GENERATION_SWEEP_DATABASE_URL`, `SWEEP_POOL_MAX_CONNS` (≥ 2) |
 | Stores | `VALKEY_URL`, `QDRANT_URL`, `QDRANT_API_KEY`, `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT_URL`, `S3_KMS_KEY_ID` |
 | Embedding size | `EMBEDDING_DIMENSION` (optional; unset = a wrong-size embed vector is not checked; with it set the vector is checked and a mismatch degrades at the `embed` stage). An assumption: no peer records the size |
-| Peers | `GATEWAY_BASE_URL`, `GATEWAY_CHAT_PATH` / `_EMBEDDINGS_PATH` / `_RERANK_PATH` / `_TOKENIZE_PATH` / `_MODELS_PATH` and `GATEWAY_TENANT_HEADER` / `_RESIDENCY_HEADER` / `_PLAN_HEADER` / `_PREFERRED_MODEL_HEADER`, `TENDER_BASE_URL`, `IAM_BASE_URL` (Org & Membership), `TENDER_ACL_BASE_URL` and `USER_PROFILE_BASE_URL` (each falls back to `IAM_BASE_URL` when empty), `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, `TEMPORAL_TASK_QUEUE`, `…_ENTERPRISE`, `…_STRICT` |
+| Peers | `GATEWAY_BASE_URL`, `GATEWAY_CHAT_PATH` / `_EMBEDDINGS_PATH` / `_RERANK_PATH` / `_TOKENIZE_PATH` / `_MODELS_PATH` and `GATEWAY_TENANT_HEADER` / `_RESIDENCY_HEADER` / `_PLAN_HEADER` / `_PREFERRED_MODEL_HEADER`, `TENDER_BASE_URL`, `IAM_BASE_URL` (Org & Membership), `TENDER_ACL_BASE_URL` and `USER_PROFILE_BASE_URL` (each falls back to `IAM_BASE_URL` when empty), `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE` (required outside `local`/`dev`/`test`), `TEMPORAL_TASK_QUEUE`, `…_ENTERPRISE`, `…_STRICT` and the three `TEMPORAL_TASK_QUEUE_EXTRACTION*`, `TEMPORAL_TLS_CERT_PATH` / `_KEY_PATH` / `_CA_PATH` |
 | Events | `EVENTS_ENABLED`, `AWS_REGION`, `AWS_ENDPOINT_URL`, `GENERATION_TOPIC_ARN`, `INDEX_TOPIC_ARN`, `DOCUMENT_QUEUE_URL`, `DOMAINPROFILE_QUEUE_URL`, `IAM_MEMBERSHIP_QUEUE_URL`, `TENDER_QUEUE_URL`, `USAGE_QUEUE_URL`, `SQS_MAX_RECEIVE_COUNT` (ours, default 3), `OUTBOX_PRUNE_OLDER_THAN_DAYS`. Tuning is `eventcommon`'s own, read from the process environment: `OUTBOX_POLL_INTERVAL`, `OUTBOX_BATCH_SIZE`, `OUTBOX_MAX_ATTEMPTS`, `OUTBOX_PUBLISH_TIMEOUT`, `OUTBOX_DRAIN_TIMEOUT`, `SQS_CONCURRENCY`, `SQS_MAX_MESSAGES`, `SQS_WAIT_SECONDS`, `SQS_HANDLER_TIMEOUT`, `SQS_VISIBILITY_TIMEOUT` (service default 60s), `SQS_QUEUE_DEPTH_INTERVAL` (service default 30s); durations need a unit (`5s`). |
 | Behaviour | `SCOPE_*`, `RRF_K`, `RERANK_*`, `FANOUT_MAX_*`, `IDEMPOTENCY_TTL_SECONDS`, `REQUEST_TIMEOUT_SECONDS` (120, must exceed R-4's 90 s), `DR_MODE`, `REFINER_*_ENABLED`, `VERIFY_*`, … |
 | Platform | `APP_ENV`, `APP_NAME`, `OBSERVABILITY_DOMAIN`, `ENABLE_METRICS` (false until the `llm` domain is registered), `ENABLE_TRACING`, `PROBLEM_TYPE_BASE` |
@@ -36,7 +36,7 @@ Startup refuses: `PG_BOUNCER_MODE` ≠ `true`; an unreachable database at the in
 
 ## 12. Sweeps
 
-Run as `python -m rag.infrastructure.sweeps <name>|all`, intended as CronJobs from the service image (**planned** — no image or chart yet). Exit `0` clean or skipped, `1` a tenant failed, `2` an alert, `64` usage. Ten sweeps: orphan-artefacts, stalled-generations, idempotency-keys, retrieval-sets, graph-checkpoints, outbox, processed-events, audit-chain, tenant-purge, stalled-promotions. Per-instance advisory lock; `DR_MODE` disables the destructive ones.
+Run as `python -m rag.infrastructure.sweeps <name>|all`, intended as CronJobs from the service image (**planned** — no image or chart yet). Exit `0` clean or skipped, `1` a tenant failed, `2` an alert, `64` usage. Eleven sweeps: orphan-artefacts, stalled-generations, quiet-async-runs (an alert on a silent async run, database only), idempotency-keys, retrieval-sets, graph-checkpoints, outbox, processed-events, audit-chain, tenant-purge, stalled-promotions. Per-instance advisory lock; `DR_MODE` disables the destructive ones.
 
 ## 13. Observability
 
@@ -52,7 +52,7 @@ Logs, spans and `llm_retrieval_generation_*` metrics through `fastapicommon`. **
 
 ## 16. Testing
 
-Layers and markers in [`CONTRIBUTING.md`](../CONTRIBUTING.md#testing-requirements). Coverage ≈ 98.3% (unit + integration), gate 95% (`.github/scripts/coverage-gate.sh`). e2e runs separately (`make test-e2e`, Ryuk disabled in CI).
+Layers and markers in [`CONTRIBUTING.md`](../CONTRIBUTING.md#testing-requirements). Coverage ≈ 98.1% (unit + integration), gate 95% (`.github/scripts/coverage-gate.sh`). e2e runs separately (`make test-e2e`, Ryuk disabled in CI).
 
 ## 17. Known gaps
 
