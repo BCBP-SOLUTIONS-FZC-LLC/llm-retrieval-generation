@@ -9,10 +9,11 @@ and guarded again by the database triggers (AS-5).
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from rag.domain.generation.artefact import Artefact
+from rag.domain.generation.artefact import Artefact, ArtefactVersion
 from rag.domain.generation.repositories import CompletionRows, IdempotencyRace
 from rag.domain.generation.run import GenerationRun
 from rag.domain.generation.section import ArtefactSection
@@ -245,6 +246,63 @@ class PgGenerationWriteRepository:
         )
         return int(r["done"]), int(r["total"])
 
+    async def insert_document_version(
+        self, tx: Conn, av: ArtefactVersion, section_version_ids: Sequence[UUID]
+    ) -> None:
+        """The document version and its ``artefact_version_sections`` links (AV-3)."""
+        await tx.execute(
+            "INSERT INTO artefact_versions (id, artefact_id, tenant_id, version_no, "
+            "minted_reason, "
+            "origin, evidence_tier, completeness, eligibility_state, requested_mode, "
+            "effective_mode, clamped, clamp_reason, domain_profile_version, "
+            "language_pack_version, "
+            "model_profile_id, prompt_hash, parser_version, chunker_version, "
+            "generation_run_id, "
+            "output_schema_version, delivery, degradation_markers, instruction, "
+            "instruction_refinement_id, review_context_read, review_context_ref, "
+            "disclaimer_ref) "
+            "VALUES ($1, $2, $3, $4, $5, $6::artefact_origin, $7::evidence_tier, "
+            "$8::completeness_verdict, $9::eligibility_state, $10::generation_mode, "
+            "$11::generation_mode, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, "
+            "$22::delivery_state, $23::jsonb, $24, $25, $26, $27, $28)",
+            av.id,
+            av.artefact_id,
+            av.tenant_id,
+            av.version_no,
+            av.minted_reason,
+            av.origin.value,
+            av.evidence_tier.value,
+            av.completeness.value,
+            av.eligibility_state.value,
+            av.requested_mode.value,
+            av.effective_mode.value,
+            av.clamped,
+            av.clamp_reason,
+            av.domain_profile_version,
+            av.language_pack_version,
+            av.model_profile_id,
+            av.prompt_hash,
+            av.parser_version,
+            av.chunker_version,
+            av.generation_run_id,
+            av.output_schema_version,
+            av.delivery.value,
+            dump_json(av.degradation_markers),
+            av.instruction,
+            av.instruction_refinement_id,
+            av.review_context_read,
+            av.review_context_ref,
+            av.disclaimer_ref,
+        )
+        for section_version_id in section_version_ids:
+            await tx.execute(
+                "INSERT INTO artefact_version_sections (artefact_version_id, section_version_id, "
+                "tenant_id) VALUES ($1, $2, $3)",
+                av.id,
+                section_version_id,
+                av.tenant_id,
+            )
+
     async def insert_completion(self, tx: Conn, rows: CompletionRows) -> None:
         """Section version, document version, link, groundedness, claims, completeness."""
         sv, av = rows.section_version, rows.artefact_version
@@ -274,57 +332,7 @@ class PgGenerationWriteRepository:
             dump_json(sv.degradation_markers),
         )
         if av is not None:
-            await tx.execute(
-                "INSERT INTO artefact_versions (id, artefact_id, tenant_id, version_no, "
-                "minted_reason, "
-                "origin, evidence_tier, completeness, eligibility_state, requested_mode, "
-                "effective_mode, clamped, clamp_reason, domain_profile_version, "
-                "language_pack_version, "
-                "model_profile_id, prompt_hash, parser_version, chunker_version, "
-                "generation_run_id, "
-                "output_schema_version, delivery, degradation_markers, instruction, "
-                "instruction_refinement_id, review_context_read, review_context_ref, "
-                "disclaimer_ref) "
-                "VALUES ($1, $2, $3, $4, $5, $6::artefact_origin, $7::evidence_tier, "
-                "$8::completeness_verdict, $9::eligibility_state, $10::generation_mode, "
-                "$11::generation_mode, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, "
-                "$22::delivery_state, $23::jsonb, $24, $25, $26, $27, $28)",
-                av.id,
-                av.artefact_id,
-                av.tenant_id,
-                av.version_no,
-                av.minted_reason,
-                av.origin.value,
-                av.evidence_tier.value,
-                av.completeness.value,
-                av.eligibility_state.value,
-                av.requested_mode.value,
-                av.effective_mode.value,
-                av.clamped,
-                av.clamp_reason,
-                av.domain_profile_version,
-                av.language_pack_version,
-                av.model_profile_id,
-                av.prompt_hash,
-                av.parser_version,
-                av.chunker_version,
-                av.generation_run_id,
-                av.output_schema_version,
-                av.delivery.value,
-                dump_json(av.degradation_markers),
-                av.instruction,
-                av.instruction_refinement_id,
-                av.review_context_read,
-                av.review_context_ref,
-                av.disclaimer_ref,
-            )
-            await tx.execute(
-                "INSERT INTO artefact_version_sections (artefact_version_id, section_version_id, "
-                "tenant_id) VALUES ($1, $2, $3)",
-                av.id,
-                sv.id,
-                av.tenant_id,
-            )
+            await self.insert_document_version(tx, av, [sv.id])
         if rows.groundedness is not None:
             g = rows.groundedness
             await tx.execute(

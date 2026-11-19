@@ -34,6 +34,9 @@ class GatewayContext:
     residency_mode: str = "standard"
     preferred_model: str | None = None
     tenant_id: UUID | None = None
+    correlation_id: str | None = None
+    """``run:section:attempt`` for a worker's call, so a retried call's cost is reconciled to its
+    section (workers LLD G-14). ``x-request-id`` stays fresh per call (the usage record's id)."""
 
 
 class GatewayError(Exception):

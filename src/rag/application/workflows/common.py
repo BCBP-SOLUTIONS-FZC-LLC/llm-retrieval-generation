@@ -78,6 +78,41 @@ def recipients_of(run: GenerationRun) -> list[Recipient]:
     return [Recipient(str(r["kind"]), str(r["id"])) for r in raw if isinstance(r, dict)]
 
 
+async def publish_run_progress(
+    events: EventPublisher, runs: RunRepository, clock: Clock, tx: TxHandle, run: GenerationRun
+) -> None:
+    """``GenerationProgressed`` in the caller's transaction.
+
+    ``progress_seq`` is the run's trigger-bumped ``record_version``, assigned by the very write
+    that changed the state (EVT-13). Shared by the signal routes here and the engine's writes, so
+    both services publish one shape.
+    """
+    done, total = await runs.count_sections(tx, run.artefact_id)
+    await events.publish(
+        tx,
+        build_event(
+            run.tenant_id,
+            tender_subject(run.tender_id),
+            GenerationProgressed(
+                artefact_id=str(run.artefact_id),
+                generation_id=str(run.id),
+                principal_id=str(run.principal_id),
+                progress_seq=run.record_version,
+                run_status=run.status,
+                sections_complete=done,
+                sections_total=total,
+                outline_state=run.outline_state,
+                observed_at=clock.now().isoformat().replace("+00:00", "Z"),
+                tender_id=None if run.tender_id is None else str(run.tender_id),
+                stage=run.current_stage,
+                reason=run.failure_reason if run.status is RunStatus.SUSPENDED else None,
+                recipients=recipients_of(run),
+            ),
+            correlation_id=str((run.run_input or {}).get("correlation_id") or ""),
+        ),
+    )
+
+
 class RunActions:
     """Collaborators and helpers of the gate, cancel, resume and rematerialise use cases."""
 
@@ -143,35 +178,8 @@ class RunActions:
     async def publish_progress(
         self, tx: TxHandle, run: GenerationRun, artefact: Artefact | None = None
     ) -> None:
-        """``GenerationProgressed``.
-
-        ``progress_seq`` is the run's trigger-bumped ``record_version``, assigned by the very write
-        that changed the state (EVT-13).
-        """
-        done, total = await self.runs.count_sections(tx, run.artefact_id)
-        await self.events.publish(
-            tx,
-            build_event(
-                run.tenant_id,
-                tender_subject(run.tender_id),
-                GenerationProgressed(
-                    artefact_id=str(run.artefact_id),
-                    generation_id=str(run.id),
-                    principal_id=str(run.principal_id),
-                    progress_seq=run.record_version,
-                    run_status=run.status,
-                    sections_complete=done,
-                    sections_total=total,
-                    outline_state=run.outline_state,
-                    observed_at=self.clock.now().isoformat().replace("+00:00", "Z"),
-                    tender_id=None if run.tender_id is None else str(run.tender_id),
-                    stage=run.current_stage,
-                    reason=run.failure_reason if run.status is RunStatus.SUSPENDED else None,
-                    recipients=recipients_of(run),
-                ),
-                correlation_id=str((run.run_input or {}).get("correlation_id") or ""),
-            ),
-        )
+        """``GenerationProgressed`` (see ``publish_run_progress``)."""
+        await publish_run_progress(self.events, self.runs, self.clock, tx, run)
 
     # --- ending a run -------------------------------------------------------------------------
     async def revoke_scope(self, actor: UUID | None, run_id: UUID) -> None:
@@ -283,4 +291,11 @@ class RunActions:
         self.obs.workflow_signal(signal, "sent")
 
 
-__all__ = ["GenerationCancelled", "RunActions", "SignalAck", "not_found", "recipients_of"]
+__all__ = [
+    "GenerationCancelled",
+    "RunActions",
+    "SignalAck",
+    "not_found",
+    "publish_run_progress",
+    "recipients_of",
+]
