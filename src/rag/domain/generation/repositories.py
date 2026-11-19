@@ -245,6 +245,12 @@ class GenerationWriteRepository(Protocol):
         """Insert the section version, the document version and its link, and the reports."""
         ...
 
+    async def insert_document_version(
+        self, tx: Tx, av: ArtefactVersion, section_version_ids: Sequence[UUID]
+    ) -> None:
+        """Insert a document version and link it to the section versions it rolls up (AV-3)."""
+        ...
+
     async def count_sections(self, tx: Tx, artefact_id: UUID) -> tuple[int, int]:
         """``(complete, total)`` section rows of the artefact, for ``SectionCompleted``."""
         ...

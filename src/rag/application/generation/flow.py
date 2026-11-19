@@ -134,6 +134,8 @@ class AdmissionRequest:
     """W-6: ``schema_ref`` and other identifiers carried on the run input (never content)."""
     recipients: tuple[Recipient, ...] = ()
     """Echoed on the events, never inferred (LD-83)."""
+    pinned_pack_version: str | None = None
+    """A run in flight re-reads the pack version it pinned at start (ASYNC-3), never the latest."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -312,7 +314,9 @@ class AdmitGeneration:
         named = set(req.scope.collection_ids) & {c.id for c in scope.collections}
         if named:
             await self._gate.require_collections_open(sorted(named))
-        bundle, markers = await resolve_or_default(self._packs, identity.tenant_id)
+        bundle, markers = await resolve_or_default(
+            self._packs, identity.tenant_id, pinned_version=req.pinned_pack_version
+        )
         dp = bundle.domain_profile
         if req.check_pack is not None:
             req.check_pack(bundle)

@@ -239,6 +239,23 @@ class ExtractStructured:
         task.add_done_callback(self._tasks.discard)
         return await asyncio.shield(task)
 
+    async def run_admitted(
+        self, a: Admitted, cmd: ExtractCommand, schema: ExtractionSchema
+    ) -> ExtractionOutcome:
+        """W-6's body (workers LLD §6.3): extract for a run that already exists.
+
+        The shell and the run exist and ``begin_stage(extract)`` already opened the run, so this
+        retrieves, extracts and records, and does not start it. A failure closes the run exactly as
+        R-4's does (``lifecycle.fail``, one terminal event), so the workflow's own ``fail_run``
+        then finds it terminal and writes nothing.
+        """
+        began = time.monotonic()
+        with self._binder.bind(a.identity.tenant_id):
+            pre = await self._pre_dispatch(a, cmd, schema)
+            if isinstance(pre, ExtractionOutcome):
+                return pre
+            return await self._dispatch(a, cmd, schema, pre, began, start=False)
+
     async def _run(
         self, a: Admitted, cmd: ExtractCommand, schema: ExtractionSchema, began: float
     ) -> ExtractionOutcome:
@@ -324,11 +341,14 @@ class ExtractStructured:
         schema: ExtractionSchema,
         d: _Dispatch,
         began: float,
+        *,
+        start: bool = True,
     ) -> ExtractionOutcome:
         ctx = GatewayContext(
             a.identity.plan, a.identity.residency_mode.value, tenant_id=a.identity.tenant_id
         )
-        await self._lifecycle.start(a)
+        if start:
+            await self._lifecycle.start(a)
         try:
             done = await self._gw.complete(
                 TASK_EXTRACT,
