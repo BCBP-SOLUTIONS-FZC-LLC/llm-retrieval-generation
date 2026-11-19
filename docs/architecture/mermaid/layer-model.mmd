@@ -1,7 +1,7 @@
 graph TD
     subgraph entry["Entry points  -  one image"]
         api["presentation/main.py create_app\nFastAPI app factory over fastapicommon.create_platform_app\nlifespan: open both pools, build Container, start relays and consumers when EVENTS_ENABLED\nassert_isolation_config: PG_BOUNCER_MODE must be exactly true"]
-        sweeps["infrastructure/sweeps/__main__.py\npython -m rag.infrastructure.sweeps name or all\nten sweeps, one advisory lock per instance\nexit 0 clean, 1 tenant failed, 2 alert, 64 usage"]
+        sweeps["infrastructure/sweeps/__main__.py\npython -m rag.infrastructure.sweeps name or all\neleven sweeps, one advisory lock per instance\nexit 0 clean, 1 tenant failed, 2 alert, 64 usage"]
         migrate["infrastructure/persistence/migrate.py\nmigrate_all: eventcommon outbox schema first, then numbered sets\nDDL DSN direct to Postgres, never PgBouncer"]
     end
 
@@ -26,7 +26,7 @@ graph TD
         generation["generation/\nflow, generate, extract, regenerate, queries, frames"]
         verification["verification/\nverify ladder, gateway entailer, judge, resampler"]
         workflows["workflows/\nstart, signals, state, operator, bridges"]
-        evt["events/ + sweeps/\ncontracts, consumers use cases, ten sweeps"]
+        evt["events/ + sweeps/\ncontracts, consumers use cases, eleven sweeps"]
     end
 
     subgraph dom["domain/  -  standard library only"]

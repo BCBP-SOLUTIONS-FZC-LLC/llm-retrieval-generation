@@ -1,6 +1,6 @@
 # Versioning and releases
 
-This repository is a **deployed Python (FastAPI) microservice**, not a library other services `pip install` — the `rag` package is internal to this process, and `pyproject.toml`'s `[project]` metadata exists so this repo builds and locks, not for import by sibling repos. What gets versioned here is the **container image** (`ghcr.io/bcbp-solutions-fzc-llc/llm-retrieval-generation`, planned — see [Planned (not yet in place)](#planned-not-yet-in-place)) plus the runtime contract Tender, Ingestion, IAM, the Worker Pool, the Model Gateway, and operators depend on. Versions are published with **Git tags** and described in [CHANGELOG.md](./CHANGELOG.md).
+This repository is a **deployed Python (FastAPI) microservice**, not a library other services `pip install` — the `rag` package is internal to this process, with **one exception**: `rag.engine` (and the stdlib-only `llm_models.workers`) is the public, versioned API the Worker Pool imports. `ENGINE_API_VERSION` follows SemVer, `src/rag/engine/engine_api_v1.json` records its shape, and a contract test fails if the shape moves without a version change. The rest of `pyproject.toml`'s `[project]` metadata exists so this repo builds and locks. What gets versioned here is the **container image** (`ghcr.io/bcbp-solutions-fzc-llc/llm-retrieval-generation`, planned — see [Planned (not yet in place)](#planned-not-yet-in-place)) plus the runtime contract Tender, Ingestion, IAM, the Worker Pool, the Model Gateway, and operators depend on. Versions are published with **Git tags** and described in [CHANGELOG.md](./CHANGELOG.md).
 
 This document follows the same SemVer / image-tag / maintainer-process layout as [`iam-org-membership/VERSIONING.md`](https://github.com/BCBP-SOLUTIONS-FZC-LLC/iam-org-membership/blob/main/VERSIONING.md). Where that service has a mechanism this one does not have yet (Dockerfile, `release.yml`, Helm chart, Cosign signing), the section says so instead of describing it as if it existed. Every such item is marked **Planned** where it appears and tracked in one table in [Planned (not yet in place)](#planned-not-yet-in-place).
 
@@ -136,7 +136,7 @@ When cutting a tagged release:
    make ci           # fmt-check + lint + typecheck + test-ci (needs Docker)
    make test-e2e     # real app over a real RLS Postgres
    ```
-   `validate-test.yml`'s coverage gate is **95%** (`.github/scripts/coverage-gate.sh`); measured coverage is about 98.3% for unit + integration.
+   `validate-test.yml`'s coverage gate is **95%** (`.github/scripts/coverage-gate.sh`); measured coverage is about 98.1% for unit + integration.
 
 5. **Create and push an annotated tag**:
    ```bash
@@ -178,6 +178,7 @@ Anything in this document marked **Planned** is the intended design, kept here s
 | Item | What it will do | Where this document refers to it | Status |
 |------|-----------------|----------------------------------|--------|
 | `Dockerfile` | Build the service image. The `api/` and `docs/swagger/` files must ship alongside the package, because `/asyncapi` and `/swagger` read them from the repo root | Consume a release; Run and migrate | **Done** (`Dockerfile`, `.dockerignore`, `.docker-digests`; `make docker-build`, `make pin-base-images`; the image itself is not yet built or published by CI) |
+| Engine distribution to `llm-workers` | The Worker Pool depends on this repository's wheel by **git tag** until an internal package index exists; a scheduled job opens a pull request there when a new engine tag appears | Package scope above | Planned (the tag is the mechanism; no job exists) |
 | Image jobs in `ci.yml` (build, scan, smoke, push) | Publish `main` images with git-SHA / branch tags | Image tag scheme | Planned |
 | Cosign keyless signing | Sign every pushed image; consumers verify before deploying | Pull and verify the image | **Done** in `release.yml`, never run |
 | `.github/workflows/release.yml` | Tag-triggered validate → build and scan (CVE gate, nothing pushed before it passes) → smoke → push → SBOM → sign | Maintainer release process | **Done**, never run (no tag has been pushed; SLSA provenance export is not copied from IAM) |

@@ -11,13 +11,13 @@ confirmed by the Worker Pool owner.
 
 | Argument | Value |
 |---|---|
-| Namespace | `llm-generation` (`TEMPORAL_NAMESPACE`) |
+| Namespace | `llm-generation` (`TEMPORAL_NAMESPACE`). **Required outside `local`, `dev` and `test`** (one namespace per environment on the shared cluster). mTLS with `TEMPORAL_TLS_CERT_PATH` and `TEMPORAL_TLS_KEY_PATH`, a CA in `TEMPORAL_TLS_CA_PATH` only for a private authority; a certificate needs its key. The names are this service's choice until the Workflow team confirms theirs |
 | Workflow type **(assumed)** | `GenerationWorkflow` (W-1, A-5) or `ExtractionWorkflow` (W-6) |
 | `workflow_id` | `generation_runs.workflow_id` (RUN-2): `{artefact_id}` for an original, `regen:{base_version_id}` for an A-5 regeneration. Unique per tenant (`uq_run_workflow`) |
-| Task queue (WP-10) **(names assumed)** | `llm-generation`; `llm-generation-enterprise` for `plan = enterprise`; `llm-generation-strict` for any non-standard `residency_mode` (strict wins over plan) |
+| Task queue (WP-10) **(names assumed)** | Six, by run kind then tier: generation `llm-generation`, `llm-generation-enterprise` (`plan = enterprise`, compared in lower case against `ENTERPRISE_PLANS`), `llm-generation-strict` (any non-standard `residency_mode`; strict wins over plan); extraction (W-6, `kind = extraction`) `llm-extraction`, `llm-extraction-enterprise`, `llm-extraction-strict`. Names come from `TEMPORAL_TASK_QUEUE*` |
 | Id reuse / conflict policy | W-1, W-6, A-5, orphan sweep: `REJECT_DUPLICATE` + `FAIL`; `WorkflowAlreadyStarted` is treated as success (ASYNC-2). W-8 only: `ALLOW_DUPLICATE` + `FAIL` (a closed id may be reused, a live one answers `409`) |
 | Timeout / retry | 2 s per call, 2 retries with backoff (0.2 s, 0.5 s); failure is `503 WORKFLOW_ENGINE_UNAVAILABLE` and leaves the run `pending` (recoverable by the orphan sweep) |
-| Input | `GenerationWorkflowInput`, below. The same JSON is stored in `generation_runs.run_input`, so a lost workflow restarts with it (RUN-8) |
+| Input | `GenerationWorkflowInput`, below. The same JSON is stored in `generation_runs.run_input`, so a lost workflow restarts with it (RUN-8). **What Temporal receives differs in one key:** the reviewer's `instruction` is replaced by `instruction_ref` (the generation run id) on every start, so the words never reach Temporal history (ASYNC-12). The Worker Pool decodes both forms with `llm_models.workers.GenerationWorkflowInput.from_dict` and reads the words back through `rag.engine.refine_instruction` |
 
 `GenerationWorkflowInput` (JSON object; identifiers and a scope seed only, ASYNC-12 / GEN-11 / WP-9):
 
@@ -29,7 +29,7 @@ scope_seed { tender_id, collection_ids[], collection_types[] }        // a seed,
 kind            "document" | "extraction"
 outline_gate    bool (a pack may force true)
 origin          "original" | "regeneration"
-base_version_id (regeneration) , instruction (A-5: the reviewer's own words, <= 2000 chars)
+base_version_id (regeneration) , instruction (A-5: the reviewer's own words, <= 2000 chars; stored only, sent as instruction_ref)
 schema_ref, trigger_document_version_id   (W-6 only)
 recipients[ {kind, id} ]                  // echoed on every event of the run (LD-83, provisional)
 ```
@@ -69,10 +69,13 @@ This service writes (always in one transaction with its event and audit entry):
 The Worker Pool writes (as `rag_activity`): `pending -> outline_building`, `outline_building -> awaiting_outline_approval`
 (sets `outline_state = ready`, `outline_version`, `outline_ready_at`, `gate_expires_at`), `pending -> generating` (no gate),
 `generating -> suspended` (**with `failure_reason = quota_exhausted`**: the quota consumer selects on it),
-`generating -> complete | failed` (a failed run always carries `failure_reason`, ck_run_failure; the vocabulary gained `schema_violation` in migration 0005, which R-4 uses, so an activity's exhaustive switch on the reason needs the new value),
+`generating -> complete | failed` (a failed run always carries `failure_reason`, ck_run_failure; the vocabulary gained `schema_violation` in migration 0005, which R-4 uses, and `tenant_suspended` in migration 0006, so an activity's exhaustive switch on the reason needs both),
 `awaiting_outline_approval -> failed/gate_expired` (WP-15), `current_stage` at each phase, `coherence` / `coherence_computed_at`
-(WP-16), the section rows and versions, `document_facts`, `fact_conflicts` (detection), `graph_checkpoints`, the
-verification rows, and the outbox rows for the events below.
+(WP-16), `suspended_at` (migration 0006: written on entering `suspended`, cleared on leaving it), the section rows and versions
+(and a `DELETE` of a `pending` section with no version, for an outline revision; a trigger refuses any other delete),
+`document_facts`, `fact_conflicts` (detection), `graph_checkpoints`, the verification rows, and the outbox rows for the events below.
+The artefact moves `pending -> generating` (an A-5 run: `complete -> generating`, and back to `complete` on failure, AS-7) when the
+run's first stage begins, so the orphan sweep, which selects `pending` artefacts, never restarts a live gated run.
 
 `progress_seq` of `GenerationProgressed` is the run's `record_version` as returned by the very `UPDATE` that changed the state
 (the table trigger bumps it on every write); this service uses it that way, and activities must too (EVT-13).
@@ -91,7 +94,7 @@ verification rows, and the outbox rows for the events below.
 | WP-5 / WP-15 | The gate is the `approve_outline` / `revise_outline` / `cancel` signals plus a timer at `gate_expires_at` (`REVIEW_GATE_DAYS`); on expiry an activity fails the run `gate_expired` and publishes `GenerationFailed` |
 | WP-6 / WP-7 | Bounded parent history; stage-2 fan-out bounded at `FANOUT_MAX_PER_DOCUMENT` (5) per document and 10 per tenant by a semaphore in the workflow |
 | WP-8 | Schema validation failures, quota denials and residency denials are non-retryable. A quota refusal suspends the run instead of ending it (LD-70) |
-| WP-10 | Honour the three task queues above; a strict-residency tenant never runs on the shared queue |
+| WP-10 | Honour the six task queues above; a strict-residency tenant never runs on a shared queue |
 | WP-12 | Temporal availability only affects W-1, W-6, A-5 and the signal routes (`503`); R-1 to R-4, A-6 and every read are unaffected |
 | WP-13 | Publish the activity timeout, heartbeat and `maximum_attempts` (`ACTIVITY_START_TO_CLOSE_SECONDS`, `ACTIVITY_HEARTBEAT_SECONDS`, `ACTIVITY_MAX_ATTEMPTS`) |
 | WP-14 | A global concurrency bound across tenants (`FANOUT_MAX_GLOBAL`) is still nobody's (§20 OQ-48) |
@@ -99,8 +102,8 @@ verification rows, and the outbox rows for the events below.
 
 Events the Worker Pool publishes (via the outbox, in the transaction of the state change): `OutlineReady`,
 `GenerationProgressed` (every stage transition), `SectionCompleted`, `GenerationGapReported`, `GenerationCompleted`
-(and `ArtefactRegenerated` where an A-5 run mints a document version, `minted_reason` per §4.3.2), `GenerationFailed`,
-`ExtractionCompleted`. Events published by **this** service for these flows: `GenerationStarted` (every admission),
+(and `ArtefactRegenerated` where an A-5 run mints a document version, `minted_reason` per §4.3.2; `GenerationCompleted` carries
+`sections_failed` and `sections_gap`), `GenerationFailed`, `ExtractionCompleted`. Events published by **this** service for these flows: `GenerationStarted` (every admission),
 `GenerationProgressed` (W-3, W-4, W-7), `GenerationCancelled` (W-5), `GenerationFailed` (`scope_revoked` on a signal route),
 `SectionCompleted` with `origin = regeneration` and `superseded_version_ids` (A-6). Every event carries the originating
 principal and the `recipients` from the run input.
@@ -112,11 +115,43 @@ principal and the `recipients` from the run input.
   *artefact* again under the same `workflow_id` from `run_input` once (`ORPHAN_PENDING_SECONDS`). **Gap:** an A-5 run is `pending`
   on an artefact that is `complete`, which the sweep does not select; only the client's repeat recovers it.
 * **Lost workflow (W-8, §18.9).** `POST /api/v1/operator/generations/{id}/rematerialise` (operator only, ticket required) starts the
-  workflow again under the same id from `run_input` for a run `suspended` or `awaiting_outline_approval`; the new workflow
+  workflow again under the same id from `run_input` for a run `suspended`, `awaiting_outline_approval` or `generating` (a live workflow answers `409`, so a healthy run is never started twice); the new workflow
   continues from `current_stage`, re-arms the gate timer from `gate_expires_at`, and skips every `complete` section.
 * **Quota restored (LD-70).** The `TenantQuotaRestored` consumer signals `resume` only for runs `suspended` with
   `failure_reason = quota_exhausted`, after re-reading the principal's memberships from IAM and re-resolving scope.
 * **Signal lost after commit.** A repeat of W-3, W-4 (same `outline_version` and outline) or W-5 re-raises the signal while the
   row still reads the post-state. W-7 does not: a lost W-7 signal leaves the run `generating`, indistinguishable from a normal one,
-  and W-8 refuses it (it restarts only `suspended` / `awaiting_outline_approval` runs, §5.7.14). It is not recoverable from this
-  service today; the zombie-run sweep (§21.2) that would alert on it is not built. Recorded as a gap in the implementation plan.
+  and an operator can restart it with W-8, which now accepts a `generating` run (§5.7.14). The quiet-async-runs sweep (§21.2,
+  `QUIET_ASYNC_RUN_SECONDS`) alerts when such a run has no run or section write for an hour; the zombie-run sweep for
+  `suspended` / `awaiting_outline_approval` runs is still not built (it needs Temporal's liveness). Recorded in the implementation plan.
+* **Purge and offboarding.** A tender purge and a tenant purge send a best-effort `cancel` to the live workflows of the scope
+  before they delete the rows (`WorkflowCanceller`); a failed signal never blocks the erasure. A worker whose rows are gone gets
+  `RunGone` from the engine and ends quietly.
+* **Stalled sweep.** It acts on synchronous runs only. An async run is never failed for being quiet: its gate and quota
+  suspension last up to 30 days and the workflow writes the run row only at stage edges.
+
+## 6. The engine the Worker Pool imports (`rag.engine`, `llm_models.workers`)
+
+The Worker Pool (`llm-workers`) is a separate repository and does not copy this service's rules. It imports **one** package from
+this distribution, `rag.engine`, and the stdlib-only plain types `llm_models.workers`, pinned by git tag (workers LLD §4, WB-1..8).
+
+| Item | Where |
+|---|---|
+| Public API, version `ENGINE_API_VERSION` (semantic) | `src/rag/engine/__init__.py` (`__all__`) |
+| Recorded shape, compared by a contract test here and in `llm-workers` (WB-4) | `src/rag/engine/engine_api_v1.json`, regenerated with `python -m rag.engine.snapshot` |
+| Run writes | `begin_stage`, `suspend_for_quota`, `complete_run`, `fail_run`, `run_state` (`runs.py`) |
+| Outline and sections | `save_outline` (gated or not), `begin_section`, `save_section`, `save_section_gap`, `fail_section` (`sections.py`) |
+| Facts, coherence, version | `record_facts` (supersedes first, `DF-2`), `record_coherence`, `mint_document_version`, `record_checkpoint` (names, timings and counts only) (`documents.py`) |
+| Building blocks | `load_pack` (the pinned version), `reresolve`, `retrieve`, `compose_prompt`, `call_model`, `verify`, `refine_instruction`, `run_extraction` (`blocks.py`) |
+| Errors (no Temporal import, WB-7) | `RunGone`, `RunTerminal`, `QuotaRefused`, `ScopeRevoked`, `ResidencyRefused`, `SchemaViolation`, `InferenceUnavailable`, `NothingToMint` |
+| Composition root, no application and no lifespan | `rag.engine.bootstrap.build_engine(settings)` |
+
+Every write function takes the run's row `FOR UPDATE`, applies the domain machine, publishes its event in the same transaction,
+returns without writing where the run is already terminal, and is idempotent (WB-6, WB-8). A missing row is `RunGone`, never a
+failure. A quota refusal is `QuotaRefused` from every model-calling block, and every Gateway call carries
+`x-correlation-id = run:section:attempt` so a retried call's cost is tied to its section. The functions run as `rag_activity`
+(tested against real Postgres in `tests/repository/test_engine_writes.py`).
+
+**Assumed, not confirmed by the Worker Pool owner:** the function names and signatures above are this service's proposal until
+`llm-workers` slice 0 finalises them; an outline entry is `(ref, section_type, is_foundation)`; a document with a section that
+ended without a version rolls up with that section counted as `INSUFFICIENT` and completeness `partial` (workers LLD WOQ-4).

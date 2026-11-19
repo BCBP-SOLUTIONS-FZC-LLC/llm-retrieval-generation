@@ -73,6 +73,7 @@ Full per-file descriptions in **[`key-files.md`](key-files.md)**. Most-touched e
 - `src/rag/presentation/dependencies.py` — `Container`, `build_container`; `*_dependencies.py` compose each module
 - `src/rag/application/generation/{flow,generate}.py` — admission, run lifecycle, completion, the short-form engine
 - `src/rag/application/retrieval/pipeline.py` — the retrieval pipeline
+- `src/rag/engine/` and `src/llm_models/workers.py` — the public, versioned API the Worker Pool (`llm-workers`) imports: run, outline, section and version writes, the building blocks, `bootstrap.build_engine`, plus the stdlib-only plain types. `ENGINE_API_VERSION` and `engine_api_v1.json` guard its shape; nothing else in the service imports it and it never imports `temporalio`
 - `src/rag/corpusscope/resolver.py` — scope resolution
 - `src/rag/infrastructure/events/{publisher,routing,relay,consumers,runtime}.py` — outbox, relays, consumers
 - `src/rag/infrastructure/persistence/{pools,migrate}.py` — pools with the tenant GUC provider; migration wiring
