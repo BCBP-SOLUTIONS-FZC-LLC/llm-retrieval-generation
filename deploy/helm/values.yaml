@@ -212,7 +212,7 @@ migrations:
     backoffLimit: 1
     activeDeadlineSeconds: 900
 
-# The ten sweeps, one CronJob each. The schedules are PROPOSED: the LLD names the sweeps but not
+# The eleven sweeps, one CronJob each. The schedules are PROPOSED: the LLD names the sweeps but not
 # their cadence, so tune them with the first week of data. Each sweep holds a per-sweep advisory
 # lock, so an overlapping run skips. Exit code 2 (an audit-chain break) must page.
 sweeps:
@@ -232,6 +232,9 @@ cronjobs:
   stalled-generations:
     schedule: "*/5 * * * *"
     sweep: stalled-generations
+  quiet-async-runs:
+    schedule: "*/15 * * * *"
+    sweep: quiet-async-runs
   idempotency-keys:
     schedule: "0 * * * *"
     sweep: idempotency-keys

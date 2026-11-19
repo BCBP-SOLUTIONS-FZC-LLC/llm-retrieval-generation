@@ -12,12 +12,14 @@ from fastapi import Request
 from pgcommon import Pool
 
 from rag.application.shared.ports import TransactionRunner
+from rag.application.workflows.bridges import WorkflowCanceller
 from rag.domain.shared.errors import ErrorCode
 from rag.infrastructure.config import Settings
 from rag.infrastructure.persistence.corpus.transactions import CorpusTransactionRunner
 from rag.infrastructure.persistence.generation.probes import CorpusTenderGate
 from rag.infrastructure.persistence.transactions import PgTransactionRunner
 from rag.infrastructure.storage.artefact_content_store import S3ArtefactContentStore
+from rag.infrastructure.temporal.factory import build_workflow_client
 from rag.presentation.corpus_dependencies import CorpusServices, build_corpus_services
 from rag.presentation.generate_dependencies import GenerateServices, build_generate_services
 from rag.presentation.generation_dependencies import GenerationServices, build_generation_services
@@ -71,6 +73,7 @@ def build_container(settings: Settings, corpus_pool: Pool, generation_pool: Pool
     generate = build_generate_services(
         settings, generation_tx, corpus_runner, retrieval, scope, store
     )
+    workflow_client = build_workflow_client(settings)  # one lazy client for starts and cancels
     return Container(
         settings=settings,
         corpus_pool=corpus_pool,
@@ -78,7 +81,11 @@ def build_container(settings: Settings, corpus_pool: Pool, generation_pool: Pool
         corpus_tx=PgTransactionRunner(corpus_pool),
         generation_tx=generation_tx,
         generation=build_generation_services(
-            settings, generation_tx, scope=scope.adapter, store=store
+            settings,
+            generation_tx,
+            scope=scope.adapter,
+            store=store,
+            canceller=WorkflowCanceller(workflow_client),
         ),
         corpus=build_corpus_services(
             settings, corpus_runner, scope=scope.adapter, points=scope.points
@@ -94,6 +101,7 @@ def build_container(settings: Settings, corpus_pool: Pool, generation_pool: Pool
             scope.adapter,
             store,
             CorpusTenderGate(corpus_runner),
+            client=workflow_client,
         ),
     )
 

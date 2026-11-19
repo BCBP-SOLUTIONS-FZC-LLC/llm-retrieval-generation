@@ -78,6 +78,7 @@ class Settings(PlatformSettings):
     orphan_pending_seconds: PosInt = 300
     retrieval_set_orphan_min_age_days: PosInt = 30
     stalled_generating_seconds: PosInt = 900
+    quiet_async_run_seconds: PosInt = 3600
     groundedness_partial_threshold: Unit = 0.70
     groundedness_supported_threshold: Unit = 0.95
     idempotency_ttl_seconds: PosInt = 3600
@@ -145,6 +146,14 @@ class Settings(PlatformSettings):
     # WP-10: dedicated queues for enterprise-tier and strict-residency tenants (names are ours).
     temporal_task_queue_enterprise: str = "llm-generation-enterprise"
     temporal_task_queue_strict: str = "llm-generation-strict"
+    temporal_task_queue_extraction: str = "llm-extraction"
+    temporal_task_queue_extraction_enterprise: str = "llm-extraction-enterprise"
+    temporal_task_queue_extraction_strict: str = "llm-extraction-strict"
+    # mTLS to the cluster (the Workflow Engine team's, workers LLD WF-3). All empty: no TLS (local).
+    # A cert needs its key. The CA is only for a private authority. One client cert per caller.
+    temporal_tls_cert_path: str = ""
+    temporal_tls_key_path: str = ""
+    temporal_tls_ca_path: str = ""
     gateway_base_url: str = "http://model-gateway.internal"
     tender_base_url: str = "http://tender.internal"
     iam_base_url: str = "http://iam.internal"

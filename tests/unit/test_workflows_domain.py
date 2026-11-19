@@ -224,10 +224,14 @@ def test_resumable_on_quota_needs_the_quota_reason() -> None:
     assert not gate.resumable_on_quota(other)  # only quota_exhausted may be resumed by the consumer
 
 
-@pytest.mark.parametrize("status", [RunStatus.SUSPENDED, RunStatus.AWAITING_OUTLINE_APPROVAL])
-def test_rematerialise_only_runs_waiting_on_a_person(status: RunStatus) -> None:
+@pytest.mark.parametrize(
+    "status", [RunStatus.SUSPENDED, RunStatus.AWAITING_OUTLINE_APPROVAL, RunStatus.GENERATING]
+)
+def test_rematerialise_only_live_runs_that_wait_or_may_have_lost_their_workflow(
+    status: RunStatus,
+) -> None:
     gate.require_restartable(replace(_gated(), status=status))
-    for bad in (RunStatus.GENERATING, RunStatus.COMPLETE, RunStatus.FAILED, RunStatus.PENDING):
+    for bad in (RunStatus.COMPLETE, RunStatus.FAILED, RunStatus.PENDING, RunStatus.CANCELLED):
         run = replace(_gated(), status=bad, failure_reason=RunFailureReason.INTERNAL)
         with pytest.raises(DomainError):
             gate.require_restartable(run)

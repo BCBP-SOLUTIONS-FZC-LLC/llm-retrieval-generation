@@ -390,6 +390,9 @@ class FakePurgeRepo:
     def __init__(self, artefacts: Sequence[Artefact]) -> None:
         self.artefacts = list(artefacts)
         self.deleted: list[tuple[UUID, UUID | None, list[UUID]]] = []
+        self.live: list[str] = []
+        """Workflow ids of live async runs in scope."""
+        self.order: list[str] = []
 
     async def list_artefacts_for_purge(
         self, tx: Any, tenant_id: UUID, tender_id: UUID | None
@@ -400,9 +403,15 @@ class FakePurgeRepo:
             if a.tenant_id == tenant_id and (tender_id is None or a.tender_id == tender_id)
         ]
 
+    async def live_workflow_ids(
+        self, tx: Any, tenant_id: UUID, tender_id: UUID | None
+    ) -> list[str]:
+        return list(self.live)
+
     async def delete_artefact_trees(
         self, tx: Any, tenant_id: UUID, tender_id: UUID | None, artefact_ids: Sequence[UUID]
     ) -> None:
+        self.order.append("delete")
         self.deleted.append((tenant_id, tender_id, list(artefact_ids)))
         self.artefacts = [a for a in self.artefacts if a.id not in set(artefact_ids)]
 

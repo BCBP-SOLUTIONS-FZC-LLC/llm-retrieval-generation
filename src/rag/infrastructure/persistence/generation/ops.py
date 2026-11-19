@@ -14,6 +14,7 @@ from rag.application.events.ports import SuspendedRun
 from rag.domain.generation.ops import (
     ArchivableArtefact,
     FailedArtefact,
+    QuietRun,
     StuckArtefact,
 )
 from rag.infrastructure.persistence.generation.rows import load_json
@@ -89,11 +90,27 @@ class PgSweepRepository:
         rows = await tx.fetch(
             _STUCK_SELECT + "WHERE a.status = 'generating' AND a.updated_at < $1 "
             "AND NOT EXISTS (SELECT 1 FROM generation_runs l WHERE l.artefact_id = a.id "
-            f"AND l.status IN {_LIVE_RUN} AND l.updated_at >= $1) "
+            f"AND l.status IN {_LIVE_RUN} AND (l.workflow_id IS NOT NULL OR l.updated_at >= $1)) "
             f"ORDER BY a.updated_at LIMIT {_BATCH}",
             before,
         )
         return [_stuck(r) for r in rows]
+
+    async def quiet_async_runs(self, tx: Conn, before: datetime) -> list[QuietRun]:
+        """Async ``generating`` runs whose row and sections are all quiet since ``before``."""
+        rows = await tx.fetch(
+            "SELECT r.id, r.artefact_id, r.current_stage, "
+            "GREATEST(r.updated_at, COALESCE(s.last_write, r.updated_at)) AS quiet_since "
+            "FROM generation_runs r LEFT JOIN LATERAL (SELECT max(updated_at) AS last_write "
+            "FROM artefact_sections WHERE artefact_id = r.artefact_id) s ON true "
+            "WHERE r.status = 'generating' AND r.workflow_id IS NOT NULL "
+            "AND GREATEST(r.updated_at, COALESCE(s.last_write, r.updated_at)) < $1 "
+            f"ORDER BY quiet_since LIMIT {_BATCH}",
+            before,
+        )
+        return [
+            QuietRun(r["id"], r["artefact_id"], r["current_stage"], r["quiet_since"]) for r in rows
+        ]
 
     async def fail_artefact(
         self, tx: Conn, artefact_id: UUID, now: datetime

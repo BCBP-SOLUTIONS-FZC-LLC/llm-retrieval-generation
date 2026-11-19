@@ -99,6 +99,7 @@ async def artefact(
     run_status: str | None = "generating",
     age: str = "2 hours",
     kind: str = "document",
+    workflow: bool = True,
 ) -> tuple[UUID, UUID | None]:
     """An artefact (and one run) whose timestamps are ``age`` old; triggers off to backdate."""
     conn = await db.admin()
@@ -129,7 +130,7 @@ async def artefact(
                 tender,
                 seed.USER,
                 run_status,
-                f"wf-{art}",
+                f"wf-{art}" if workflow else None,
             )
         return art, run
     finally:
@@ -201,6 +202,7 @@ async def test_the_sweeper_lists_tenants_that_rag_app_cannot_and_nothing_more(
     now = (await (await db.admin()).fetchval("SELECT now()")) + timedelta(hours=1)
     assert set(await directory.tenants_with_work(s.STALLED_GENERATIONS, now)) == {A, B}
     assert await directory.tenants_with_work(s.ORPHAN_ARTEFACTS, now) == []
+    assert set(await directory.tenants_with_work(s.QUIET_ASYNC_RUNS, now)) == {A, B}
     # the same statement as rag_app with no tenant bound sees nothing (RLS, no BYPASSRLS)
     assert (
         await db.app.with_conn(
@@ -223,8 +225,10 @@ async def test_the_sweeper_lists_tenants_that_rag_app_cannot_and_nothing_more(
 
 # --- statements ------------------------------------------------------------------------------
 async def test_stalled_and_pending_selection_and_fail_artefact(db: Db) -> None:
-    quiet, run = await artefact(db, A, status="generating", run_status="generating")
-    recent, _ = await artefact(db, A, status="generating", run_status="generating", age="1 minute")
+    quiet, run = await artefact(db, A, status="generating", run_status="generating", workflow=False)
+    recent, _ = await artefact(
+        db, A, status="generating", run_status="generating", age="1 minute", workflow=False
+    )
     pending, _ = await artefact(db, A, status="pending", run_status="pending", age="1 hour")
     repo, tx = PgSweepRepository(), db.app_tx
     admin = await db.admin()
@@ -275,7 +279,7 @@ async def test_stalled_and_pending_selection_and_fail_artefact(db: Db) -> None:
 
 
 async def test_a_live_run_keeps_a_quiet_artefact_out_of_the_stalled_sweep(db: Db) -> None:
-    art, run = await artefact(db, A, status="generating", run_status="generating")
+    art, run = await artefact(db, A, status="generating", run_status="generating", workflow=False)
     await admin_sql(db, ("UPDATE generation_runs SET updated_at = now() WHERE id = $1", (run,)))
     now = await (await db.admin()).fetchval("SELECT now()")
     with as_tenant(A):
@@ -283,6 +287,58 @@ async def test_a_live_run_keeps_a_quiet_artefact_out_of_the_stalled_sweep(db: Db
             lambda t: PgSweepRepository().stalled_artefacts(t, now - timedelta(minutes=15))
         )
     assert found == []
+
+
+async def test_an_async_run_is_never_stalled_however_quiet_but_a_sync_one_is(db: Db) -> None:
+    gated, _ = await artefact(
+        db, A, status="generating", run_status="generating"
+    )  # workflow_id set
+    waiting, _ = await artefact(db, A, status="generating", run_status="awaiting_outline_approval")
+    sync, _ = await artefact(db, A, status="generating", run_status="generating", workflow=False)
+    now = await (await db.admin()).fetchval("SELECT now()")
+    with as_tenant(A):
+        found = await db.app_tx.run_in_tx(
+            lambda t: PgSweepRepository().stalled_artefacts(t, now - timedelta(minutes=15))
+        )
+    assert [x.artefact_id for x in found] == [sync]
+    assert gated not in {x.artefact_id for x in found} | {waiting}
+
+
+async def test_quiet_async_runs_counts_section_writes_as_life_and_ignores_sync_and_waiting(
+    db: Db,
+) -> None:
+    quiet_art, quiet_run = await artefact(db, A, status="generating", run_status="generating")
+    busy_art, busy_run = await artefact(db, A, status="generating", run_status="generating")
+    await artefact(db, A, status="generating", run_status="generating", workflow=False)
+    await artefact(db, A, status="generating", run_status="awaiting_outline_approval")
+    await artefact(db, A, status="generating", run_status="suspended")
+    conn = await db.admin()
+    try:  # the busy run's row is old, but one of its sections was written a minute ago
+        await conn.execute(
+            "INSERT INTO artefact_sections (artefact_id, tenant_id, section_type, ordinal, state) "
+            "VALUES ($1, $2, 'body', 1, 'generating')",
+            busy_art,
+            A,
+        )
+        now = await conn.fetchval("SELECT now()")
+    finally:
+        await conn.close()
+    with as_tenant(A):
+        found = await db.app_tx.run_in_tx(
+            lambda t: PgSweepRepository().quiet_async_runs(t, now - timedelta(minutes=30)),
+            read_only=True,
+        )
+    assert [(q.run_id, q.artefact_id, q.current_stage) for q in found] == [
+        (quiet_run, quiet_art, "stage2")
+    ]
+    assert busy_run not in {q.run_id for q in found}
+    with as_tenant(B):  # another tenant sees nothing of A's
+        assert (
+            await db.app_tx.run_in_tx(
+                lambda t: PgSweepRepository().quiet_async_runs(t, now), read_only=True
+            )
+            == []
+        )
 
 
 async def test_idempotency_keys_orphan_sets_and_checkpoints(db: Db) -> None:
@@ -432,8 +488,8 @@ async def test_the_stalled_sweep_runs_as_rag_app_under_each_tenants_bound_scope(
 ) -> None:
     """Directory via ``rag_sweeper``; work via ``rag_app`` whose GUC comes from ``bind_tenant_scope``:
     state change, ``GenerationFailed`` outbox row and chain entry in one transaction per artefact."""
-    art_a, _ = await artefact(db, A)
-    art_b, _ = await artefact(db, B)
+    art_a, _ = await artefact(db, A, workflow=False)  # synchronous runs: an async one is exempt
+    art_b, _ = await artefact(db, B, workflow=False)
     tx = PgTransactionRunner(scoped_app)
     sweep = s.StalledGeneratingArtefacts(
         tx,

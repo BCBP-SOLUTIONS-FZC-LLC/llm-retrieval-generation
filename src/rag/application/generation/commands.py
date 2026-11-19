@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapicommon.logging import get_logger
 
-from rag.application.generation.ports import ArtefactContentStore
+from rag.application.generation.ports import ArtefactContentStore, RunCanceller
 from rag.application.shared.ports import TransactionRunner, TxHandle
 from rag.domain.generation import audit
 from rag.domain.generation.audit import AuditEntry, AuditEntryDraft
@@ -74,6 +74,7 @@ class PurgeArtefacts:
     audit: AppendAuditEntry
     store: ArtefactContentStore
     clock: Clock
+    canceller: RunCanceller | None = None
 
     async def execute(
         self,
@@ -84,7 +85,17 @@ class PurgeArtefacts:
         service_account_id: UUID,
         reason: str,
     ) -> PurgeResult:
-        """Delete the scope's artefacts; ``event_id`` seeds each entry's idempotent source id."""
+        """Delete the scope's artefacts; ``event_id`` seeds each entry's idempotent source id.
+
+        Live workflows get a best-effort ``cancel`` first, so they stop spending tokens instead of
+        finding their rows gone. A failed signal never blocks the erasure: the worker's next engine
+        call finds no row (``RunGone``) and ends quietly (workers LLD P0-6).
+        """
+        if self.canceller is not None:
+            live = await self.tx.run_in_tx(
+                lambda tx: self.purge.live_workflow_ids(tx, tenant_id, tender_id), read_only=True
+            )
+            await self.canceller.cancel(live, reason)
 
         async def work(tx: TxHandle) -> list[UUID]:
             artefacts = await self.purge.list_artefacts_for_purge(tx, tenant_id, tender_id)

@@ -205,6 +205,36 @@ async def test_workflow_id_is_unique_within_a_tenant_while_set(db: Db) -> None:
 
 
 # --- the guarded gate UPDATE ------------------------------------------------------------------------
+async def test_resuming_a_suspended_run_clears_suspended_at(db: Db) -> None:
+    """G-3: the deadline lives on the row while suspended and is gone once the run moves on."""
+    _, run_id, _ = await long_form(db, status="suspended", outline="approved")
+    conn = await db.admin()
+    try:
+        await conn.execute(
+            "UPDATE generation_runs SET suspended_at = now(), failure_reason = 'quota_exhausted' "
+            "WHERE id = $1",
+            run_id,
+        )
+    finally:
+        await conn.close()
+    run = await sql(db, A, lambda c: runs.get_run(c, run_id), read_only=True)
+    assert (await row(db, "generation_runs", run_id))["suspended_at"] is not None
+    after = replace(run)
+    after.resume()
+    assert await sql(
+        db,
+        A,
+        lambda c: runs.save_gate(
+            c,
+            after,
+            expected_status=RunStatus.SUSPENDED,
+            expected_record_version=run.record_version,
+        ),
+    )
+    got = await row(db, "generation_runs", run_id)
+    assert (got["status"], got["suspended_at"]) == ("generating", None)
+
+
 async def test_save_gate_is_one_guarded_update_on_status_and_record_version(db: Db) -> None:
     _, run_id, _ = await long_form(db)
     run = await sql(db, A, lambda c: runs.get_run(c, run_id), read_only=True)

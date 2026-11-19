@@ -8,6 +8,7 @@ principal who has no request, so the principal is re-read from IAM (ASYNC-11).
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from fastapicommon.logging import get_logger
@@ -15,6 +16,7 @@ from fastapicommon.logging import get_logger
 from rag.application.events.ports import SuspendedRun
 from rag.application.shared.ports import TransactionRunner, TxHandle
 from rag.application.workflows.ports import (
+    SIGNAL_CANCEL,
     WORKFLOW_EXTRACTION,
     WORKFLOW_GENERATION,
     PrincipalDirectory,
@@ -124,3 +126,22 @@ class QuotaRunResumer:
             if exc.code not in SKIPPED:
                 raise
             log.info("quota_resume_skipped", code=exc.code.value)
+
+
+class WorkflowCanceller:
+    """``RunCanceller``: a ``cancel`` signal to each live workflow before a purge deletes its rows.
+
+    Best effort. A workflow that is already gone, an engine that is down or one that was never
+    wired must not hold up an erasure, so every failure is logged and swallowed (workers LLD P0-6).
+    """
+
+    def __init__(self, workflows: WorkflowClient) -> None:
+        self._workflows = workflows
+
+    async def cancel(self, workflow_ids: Sequence[str], reason: str) -> None:
+        """Signal ``cancel`` to every id; never raises."""
+        for workflow_id in workflow_ids:
+            try:
+                await self._workflows.signal(workflow_id, SIGNAL_CANCEL, {"reason": reason})
+            except Exception:  # noqa: BLE001 - best effort, the purge goes on
+                log.warning("purge_cancel_not_delivered", workflow_id=workflow_id, exc_info=True)

@@ -24,6 +24,8 @@ _GENERATION = {
     "WHERE status = 'pending' AND created_at < $1",
     s.STALLED_GENERATIONS: "SELECT DISTINCT tenant_id FROM artefacts "
     "WHERE status = 'generating' AND updated_at < $1",
+    s.QUIET_ASYNC_RUNS: "SELECT DISTINCT tenant_id FROM generation_runs "
+    "WHERE status = 'generating' AND updated_at < $1",  # a superset: the sweep filters workflow_id
     s.IDEMPOTENCY_KEYS: "SELECT DISTINCT tenant_id FROM generation_runs "
     "WHERE idempotency_key IS NOT NULL AND created_at < $1",
     s.RETRIEVAL_SETS: "SELECT DISTINCT tenant_id FROM retrieval_sets "
