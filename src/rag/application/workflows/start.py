@@ -48,22 +48,33 @@ log = get_logger(__name__)
 
 @dataclass(frozen=True, slots=True)
 class QueueNames:
-    """The three generation queues (WP-10)."""
+    """The six queues (WP-10): generation and extraction, each shared, enterprise and strict.
+
+    Extraction has its own queues so a burst of long document runs cannot hold back the short
+    extractions queued behind them (workers LLD WQ-2).
+    """
 
     default: str = "llm-generation"
     enterprise: str = "llm-generation-enterprise"
     strict: str = "llm-generation-strict"
+    extraction: str = "llm-extraction"
+    extraction_enterprise: str = "llm-extraction-enterprise"
+    extraction_strict: str = "llm-extraction-strict"
 
     def for_input(self, run_input: dict[str, object] | None) -> str:
-        """The queue for the plan and residency a run's input carries."""
+        """The queue for the kind, plan and residency a run's input carries."""
         plan = (run_input or {}).get("plan")
         residency = str((run_input or {}).get("residency_mode") or "standard")
+        if (run_input or {}).get("kind") == "extraction":
+            names = (self.extraction, self.extraction_enterprise, self.extraction_strict)
+        else:
+            names = (self.default, self.enterprise, self.strict)
         return task_queue_for(
             plan if isinstance(plan, str) else None,
             residency,
-            default=self.default,
-            enterprise=self.enterprise,
-            strict=self.strict,
+            default=names[0],
+            enterprise=names[1],
+            strict=names[2],
         )
 
 

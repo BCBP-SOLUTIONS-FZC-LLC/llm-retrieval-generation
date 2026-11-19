@@ -16,10 +16,11 @@ from fastapicommon.logging import get_logger
 from temporalio.client import Client
 from temporalio.common import WorkflowIDConflictPolicy, WorkflowIDReusePolicy
 from temporalio.exceptions import WorkflowAlreadyStartedError
-from temporalio.service import RPCError, RPCStatusCode
+from temporalio.service import RPCError, RPCStatusCode, TLSConfig
 
 from rag.application.workflows.ports import StartOutcome, StartRequest
 from rag.domain.shared.errors import DomainError, ErrorCode
+from rag.domain.workflows.input import for_wire
 
 log = get_logger(__name__)
 CALL_TIMEOUT_SECONDS = 2.0
@@ -55,11 +56,15 @@ class TemporalWorkflowClient:
         self._lock = asyncio.Lock()
 
     @classmethod
-    def for_address(cls, address: str, namespace: str) -> TemporalWorkflowClient:
-        """A client that connects to ``address`` / ``namespace`` lazily."""
+    def for_address(
+        cls, address: str, namespace: str, tls: TLSConfig | None = None
+    ) -> TemporalWorkflowClient:
+        """A client that connects to ``address`` / ``namespace`` lazily (mTLS when ``tls``)."""
 
         async def connect() -> Client:
-            return await Client.connect(address, namespace=namespace, lazy=True)
+            return await Client.connect(
+                address, namespace=namespace, lazy=True, tls=False if tls is None else tls
+            )
 
         return cls(connect)
 
@@ -96,10 +101,12 @@ class TemporalWorkflowClient:
             else WorkflowIDReusePolicy.REJECT_DUPLICATE
         )
 
+        wire_input = for_wire(request.run_input)  # never the reviewer's words (ASYNC-12)
+
         async def call(client: Client) -> None:
             await client.start_workflow(
                 request.workflow_type,
-                request.run_input,
+                wire_input,
                 id=request.workflow_id,
                 task_queue=request.task_queue,
                 id_reuse_policy=reuse,

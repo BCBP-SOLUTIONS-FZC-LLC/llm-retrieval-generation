@@ -152,6 +152,30 @@
       "title": "Section Count",
       "type": "integer"
     },
+    "sections_failed": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sections Failed"
+    },
+    "sections_gap": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sections Gap"
+    },
     "tender_id": {
       "anyOf": [
         {

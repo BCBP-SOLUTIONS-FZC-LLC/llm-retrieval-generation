@@ -13,7 +13,7 @@ from rag.application.generation.commands import (
     PurgeArtefacts,
     RecordDocumentPurge,
 )
-from rag.application.generation.ports import ArtefactContentStore
+from rag.application.generation.ports import ArtefactContentStore, RunCanceller
 from rag.application.generation.queries import (
     GetArtefact,
     GetRetrievalSet,
@@ -64,6 +64,7 @@ def build_generation_services(
     *,
     scope: ScopeAuthorizer | None = None,
     store: ArtefactContentStore | None = None,
+    canceller: RunCanceller | None = None,
 ) -> GenerationServices:
     """Construct the use cases over the generation pool's transaction runner."""
     scope = scope or UnwiredScopeAuthorizer()
@@ -86,7 +87,7 @@ def build_generation_services(
         append_audit=audit,
         mark_superseded=MarkVersionsSuperseded(PgVersionRepository()),
         purge_artefacts=PurgeArtefacts(
-            tx, PgArtefactPurgeRepository(), audit, store, SystemClock()
+            tx, PgArtefactPurgeRepository(), audit, store, SystemClock(), canceller
         ),
         record_document_purge=RecordDocumentPurge(tx, sets),
     )

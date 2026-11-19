@@ -215,6 +215,7 @@ class RunFailureReason(StrEnum):
     ARTEFACT_STORE_UNWRITABLE = "artefact_store_unwritable"
     GATE_EXPIRED = "gate_expired"
     SCHEMA_VIOLATION = "schema_violation"
+    TENANT_SUSPENDED = "tenant_suspended"
     INTERNAL = "internal"
 
 

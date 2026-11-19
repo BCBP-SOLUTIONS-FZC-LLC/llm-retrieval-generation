@@ -1,4 +1,4 @@
-"""The scheduled sweeps of §21.2 (ten of the eleven; see ``infrastructure.sweeps`` for the rest).
+"""The scheduled sweeps of §21.2 (ten of the eleven, plus the quiet-async-runs alert).
 
 All are idempotent, tenant-scoped (none publishes under a system tenant, LD-19) and off the
 request path. A per-tenant sweep asks a ``TenantDirectory`` which tenants have work, binds each
@@ -46,6 +46,7 @@ PROCESSED_EVENTS = "processed-events"
 AUDIT_CHAIN = "audit-chain"
 TENANT_PURGE = "tenant-purge"
 STALLED_PROMOTIONS = "stalled-promotions"
+QUIET_ASYNC_RUNS = "quiet-async-runs"
 
 
 class TenantScopeFactory(Protocol):
@@ -245,7 +246,9 @@ class StalledGeneratingArtefacts(_PerTenantSweep):
     """``generating`` artefacts past ``STALLED_GENERATING_SECONDS`` with no live run -> ``failed``.
 
     The gap a crash between §7.5's two writes leaves: a synchronous run has no workflow to recover
-    it. A cancelled artefact is ``cancelled``, so this cannot reach one (ART-6).
+    it. A cancelled artefact is ``cancelled``, so this cannot reach one (ART-6). An artefact with a
+    live **async** run is never touched: its workflow may wait days at a gate or a quota pause and
+    writes the run only at stage edges, so quiet is normal. ``QuietAsyncRuns`` watches those.
     """
 
     name = STALLED_GENERATIONS
@@ -279,6 +282,54 @@ class StalledGeneratingArtefacts(_PerTenantSweep):
             return failed
 
         return await self._tx.run_in_tx(work)
+
+
+class QuietAsyncRuns(_PerTenantSweep):
+    """Alert on async ``generating`` runs silent past ``QUIET_ASYNC_RUN_SECONDS`` (LLD P0-1).
+
+    Silent means no write to the run row and to any of its sections. It reads the database only
+    (LD-88, ASYNC-5: this service never asks Temporal), so it cannot tell a lost workflow from a
+    slow one. It alerts and never acts: an operator decides, and W-8 restarts a ``generating`` run
+    (a live workflow answers ``409``). Not destructive, so it also runs under ``DR_MODE``.
+    """
+
+    name = QUIET_ASYNC_RUNS
+
+    def __init__(
+        self, tx: TransactionRunner, repo: SweepRepository, *, quiet_seconds: int, **kw: object
+    ) -> None:
+        super().__init__(**kw)  # type: ignore[arg-type]
+        self._tx, self._repo, self._seconds = tx, repo, quiet_seconds
+        self._quiet: list[str] = []
+
+    def _cutoff(self) -> datetime:
+        return self._clock() - timedelta(seconds=self._seconds)
+
+    async def _tenant(self, tenant_id: UUID) -> int:
+        runs = await self._tx.run_in_tx(
+            lambda tx: self._repo.quiet_async_runs(tx, self._cutoff()), read_only=True
+        )
+        for run in runs:
+            log.warning(
+                "ALERT quiet_async_run",
+                tenant_id=str(tenant_id),
+                run_id=str(run.run_id),
+                artefact_id=str(run.artefact_id),
+                stage=run.current_stage,
+                quiet_since=run.quiet_since.isoformat(),
+            )
+            self._quiet.append(
+                f"run {run.run_id} of tenant {tenant_id} quiet since {run.quiet_since}"
+            )
+        return len(runs)
+
+    async def run(self) -> SweepOutcome:
+        """Run once; every quiet run is an alert."""
+        self._quiet.clear()
+        out = await super().run()
+        return SweepOutcome(
+            out.name, out.tenants, out.affected, out.failed_tenants, out.skipped, tuple(self._quiet)
+        )
 
 
 class ClearIdempotencyKeys(_PerTenantSweep):

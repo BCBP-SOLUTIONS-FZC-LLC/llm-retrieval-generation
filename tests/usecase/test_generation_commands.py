@@ -66,6 +66,49 @@ async def test_tender_purge_audits_each_artefact_then_deletes_then_clears_s3() -
     assert (result.s3_deleted, result.s3_failed) == (2, False)
 
 
+class RecordingCanceller:
+    def __init__(self, repo: FakePurgeRepo) -> None:
+        self.repo, self.calls = repo, []
+
+    async def cancel(self, workflow_ids: list[str], reason: str) -> None:
+        self.repo.order.append("cancel")
+        self.calls.append((list(workflow_ids), reason))
+
+
+async def test_a_purge_cancels_the_live_workflows_first_and_then_deletes() -> None:
+    """P0-6: the worker is told to stop before its rows are erased, not after."""
+    a = make_artefact()
+    uc, repo, _, _ = purge_uc([a])
+    repo.live = ["wf-1", "regen:v1"]
+    uc = PurgeArtefacts(
+        uc.tx, repo, uc.audit, uc.store, uc.clock, canceller := RecordingCanceller(repo)
+    )
+    await uc.execute(
+        tenant_id=TENANT,
+        tender_id=TENDER,
+        event_id=uuid4(),
+        service_account_id=SERVICE_ACCOUNT,
+        reason="tender_purged",
+    )
+    assert canceller.calls == [(["wf-1", "regen:v1"], "tender_purged")]
+    assert repo.order == ["cancel", "delete"]
+
+
+async def test_a_purge_with_nothing_live_still_deletes_and_without_a_canceller_just_deletes() -> (
+    None
+):
+    uc, repo, _, _ = purge_uc([make_artefact()])  # no canceller wired (a bare unit)
+    repo.live = ["wf-1"]
+    await uc.execute(
+        tenant_id=TENANT,
+        tender_id=TENDER,
+        event_id=uuid4(),
+        service_account_id=SERVICE_ACCOUNT,
+        reason="tender_purged",
+    )
+    assert repo.order == ["delete"]
+
+
 async def test_tenant_purge_covers_free_standing_answers_and_clears_the_tenant_prefix() -> None:
     """ART-8: a tender-less answer is deleted by the tenant purge; S3 goes by tenant prefix."""
     answer = make_artefact(tender_id=None, kind=ArtefactKind.ANSWER)

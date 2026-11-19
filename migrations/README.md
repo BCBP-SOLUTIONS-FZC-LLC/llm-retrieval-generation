@@ -32,7 +32,8 @@ instance** (`0002`, `0003`, ... in merge order, no gaps, never renumbered). Name
 | `0003_generation_events_sweeps` | | outbox grants (`rag_app`: S/I/U/D, `rag_activity`: INSERT + sequence); `rag_sweeper` on `artefacts`, `generation_runs`, `retrieval_sets`, `graph_checkpoints`, `artefact_audit_chain` |
 | `0004_generation_workflows` | | `uq_run_workflow` (RUN-2: one run row per `workflow_id`), `idx_fc_section` |
 | `0005_generation_schema_violation_reason` | | `run_failure_reason` gains `schema_violation` (R-4); the down rebuilds the type, a row holding the value reads `internal` |
-| `0006_generation_*` ... | | later generation slices |
+| `0006_generation_worker_pool_support` | | `run_failure_reason` gains `tenant_suspended` (the down rebuilds the type, a row holding the value reads `internal`); `generation_runs.suspended_at`; `rag_sweeper` reads `status` and `updated_at` of `generation_runs`; `rag_activity` may `DELETE` an `artefact_sections` row, and the trigger `reject_unsafe_section_delete` refuses any section that is not `pending` or that holds a version |
+| `0007_generation_*` ... | | later generation slices |
 
 The LLD's phase split (§4.11: tables, then FKs, then triggers/RLS, then seed) is applied **per file**: a slice's
 file creates its tables, then the foreign keys to tables that already exist, then triggers, indexes, RLS

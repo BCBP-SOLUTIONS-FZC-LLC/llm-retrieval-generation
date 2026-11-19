@@ -102,6 +102,8 @@ SAMPLES: dict[str, Any] = {
         generation_id=G,
         tender_id=T,
         coherence_verdict=CoherenceVerdict.CONSISTENT,
+        sections_failed=1,
+        sections_gap=2,
     ),
     c.GENERATION_FAILED: c.GenerationFailed(
         A,

@@ -70,7 +70,9 @@ class PgRunRepository:
             "UPDATE generation_runs SET status = $4::run_status, "
             "outline_state = $5::outline_state, outline_version = $6, "
             "current_stage = $7::run_stage, failure_reason = $8::run_failure_reason, "
-            "failed_at_stage = $9::run_stage "
+            "failed_at_stage = $9::run_stage, "
+            # suspended_at: set by the engine on entering `suspended`, cleared on leaving it
+            "suspended_at = CASE WHEN $4::run_status = 'suspended' THEN suspended_at END "
             "WHERE id = $1 AND status = $2::run_status AND record_version = $3 "
             "RETURNING record_version",
             run.id,
