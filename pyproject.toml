@@ -33,7 +33,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/rag"]
+packages = ["src/rag", "src/llm_models"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

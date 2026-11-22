@@ -131,6 +131,8 @@ class HttpModelGateway:
         headers = {s.gateway_residency_header: ctx.residency_mode}
         if ctx.tenant_id:
             headers[s.gateway_tenant_header] = str(ctx.tenant_id)  # the per-tenant budget key
+        if ctx.correlation_id:
+            headers["x-correlation-id"] = ctx.correlation_id
         if ctx.plan:
             headers[s.gateway_plan_header] = ctx.plan
         if ctx.preferred_model:

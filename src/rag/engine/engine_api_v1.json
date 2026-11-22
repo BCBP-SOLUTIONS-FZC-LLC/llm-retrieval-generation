@@ -1,0 +1,236 @@
+{
+  "engine_api_version": "1.0.0",
+  "engine_types": {
+    "Blocks": {
+      "admit": "AdmitGeneration",
+      "directory": "PrincipalDirectory",
+      "extractor": "ExtractStructured",
+      "gateway": "ModelGateway",
+      "packs": "PackResolver",
+      "pipeline": "RetrievalPipeline",
+      "recorder": "RecordRetrievalSet",
+      "refiner": "InstructionRefiner",
+      "scope": "ScopeProvider",
+      "verifier": "VerifySection"
+    },
+    "ConflictDraft": {
+      "established_by_section_id": "UUID",
+      "established_value": "str",
+      "fact_key": "str",
+      "other_value": "str",
+      "section_id": "UUID"
+    },
+    "Engine": {
+      "container": "Container",
+      "pools": "tuple[Pool, ...]",
+      "services": "EngineServices"
+    },
+    "EngineServices": {
+      "audit": "AppendAuditEntry",
+      "blocks": "Any",
+      "clock": "Clock",
+      "engine": "PgEngineRepository",
+      "events": "EventPublisher",
+      "facts": "FactRepository",
+      "review_gate_days": "int",
+      "runs": "RunRepository",
+      "store": "ArtefactContentStore",
+      "tx": "TransactionRunner",
+      "writes": "GenerationWriteRepository"
+    },
+    "FactDraft": {
+      "fact_key": "str",
+      "section_id": "UUID",
+      "value": "str"
+    },
+    "GapDraft": {
+      "blocking": "bool",
+      "empty_collections": "tuple[str, ...]",
+      "missing_roles": "tuple[str, ...]",
+      "reason": "str",
+      "unresolved_entities": "tuple[str, ...]"
+    },
+    "ModelAnswer": {
+      "completion_tokens": "int",
+      "finish_reason": "str",
+      "model": "str",
+      "prompt_tokens": "int",
+      "serving_tier": "str",
+      "text": "str"
+    },
+    "OutlineEntry": {
+      "is_foundation": "bool",
+      "ref": "str",
+      "section_type": "str"
+    },
+    "Retrieved": {
+      "outcome": "RetrievalOutcome",
+      "retrieval_set_id": "UUID"
+    },
+    "RunContext": {
+      "input": "GenerationWorkflowInput",
+      "services": "EngineServices"
+    },
+    "ScopeSnapshot": {
+      "collections": "int",
+      "narrowed": "bool"
+    },
+    "SectionDraft": {
+      "auto_retry_count": "int",
+      "content": "bytes",
+      "markers": "tuple[dict[str, str], ...]",
+      "model_profile_id": "str",
+      "prompt_hash": "str",
+      "retrieval_set_id": "UUID",
+      "scope_narrowed": "bool",
+      "serving_tier": "str",
+      "verification": "VerificationResult"
+    }
+  },
+  "errors": [
+    "EngineError",
+    "InferenceUnavailable",
+    "NothingToMint",
+    "QuotaRefused",
+    "ResidencyRefused",
+    "RunGone",
+    "RunTerminal",
+    "SchemaViolation",
+    "ScopeRevoked"
+  ],
+  "functions": {
+    "begin_section": "(ctx: 'RunContext', section_id: 'UUID') -> 'bool'",
+    "begin_stage": "(ctx: 'RunContext', stage: 'str') -> 'bool'",
+    "build_engine": "(settings: 'Settings', *, directory: 'PrincipalDirectory | None' = None) -> 'Engine'",
+    "call_model": "(ctx: 'RunContext', task: 'str', prompt: 'ComposedPrompt', *, section_ref: 'str', attempt: 'int', deadline_seconds: 'float') -> 'ModelAnswer'",
+    "complete_run": "(ctx: 'RunContext', minted: 'MintedVersion') -> 'bool'",
+    "compose_prompt": "(*, task: 'str', skeleton: 'str', tenant_overrides: 'str', user_context: 'str', chunks: 'Sequence[PromptChunk]', user_prompt: 'str') -> 'ComposedPrompt'",
+    "fail_run": "(ctx: 'RunContext', reason: 'str', stage: 'str | None' = None) -> 'bool'",
+    "fail_section": "(ctx: 'RunContext', section_id: 'UUID', reason: 'str') -> 'SectionOutcome'",
+    "gateway_context": "(ctx: 'RunContext', section_ref: 'str' = 'run', attempt: 'int' = 1) -> 'GatewayContext'",
+    "load_pack": "(ctx: 'RunContext') -> 'PackBundle'",
+    "mint_document_version": "(ctx: 'RunContext') -> 'MintedVersion'",
+    "record_checkpoint": "(ctx: 'RunContext', section_id: 'UUID', activity_run_id: 'str', nodes: 'Sequence[tuple[str, int, int]]') -> 'None'",
+    "record_coherence": "(ctx: 'RunContext', verdict: 'str', conflicts: 'Sequence[ConflictDraft]') -> 'CoherenceResult'",
+    "record_facts": "(ctx: 'RunContext', facts: 'Sequence[FactDraft]') -> 'int'",
+    "refine_instruction": "(ctx: 'RunContext', *, section_text: 'str', section_type: 'str', mandatory_clauses: 'Sequence[str]', facts: 'Sequence[DocumentFact]', bundle: 'PackBundle') -> 'RefineRun | None'",
+    "reresolve": "(ctx: 'RunContext', level: 'GrantLevel' = <GrantLevel.GENERATE: 'generate'>) -> 'ScopeSnapshot'",
+    "retrieve": "(ctx: 'RunContext', query: 'str', *, section_type: 'str | None' = None, limit: 'int | None' = None) -> 'Retrieved'",
+    "run_extraction": "(ctx: 'RunContext') -> 'ExtractionResult'",
+    "run_scope": "(services: 'EngineServices', run_input: 'Mapping[str, Any]') -> 'AsyncIterator[RunContext]'",
+    "run_state": "(ctx: 'RunContext') -> 'RunState'",
+    "save_outline": "(ctx: 'RunContext', entries: 'Sequence[OutlineEntry]', *, gated: 'bool') -> 'OutlineSaved'",
+    "save_section": "(ctx: 'RunContext', section_id: 'UUID', draft: 'SectionDraft') -> 'SectionOutcome'",
+    "save_section_gap": "(ctx: 'RunContext', section_id: 'UUID', gap: 'GapDraft') -> 'SectionOutcome'",
+    "suspend_for_quota": "(ctx: 'RunContext') -> 'bool'",
+    "translate": "(exc: 'Exception') -> 'Exception'",
+    "verify": "(ctx: 'RunContext', request: 'VerificationRequest', *, prompt: 'ComposedPrompt', deadline_seconds: 'float', section_ref: 'str' = 'run', attempt: 'int' = 1) -> 'VerificationResult'"
+  },
+  "plain_types": {
+    "ApproveOutlinePayload": {
+      "outline_version": "int"
+    },
+    "CancelPayload": {
+      "reason": "str"
+    },
+    "CoherenceResult": {
+      "conflict_count": "int",
+      "verdict": "str"
+    },
+    "ExtractionResult": {
+      "artefact_version_id": "str | None",
+      "evidence_tier": "str | None",
+      "refusal_reason": "str | None",
+      "state": "str"
+    },
+    "GenerationWorkflowInput": {
+      "artefact_id": "str",
+      "base_version_id": "str | None",
+      "capability": "str",
+      "correlation_id": "str",
+      "domain_profile_version": "str",
+      "extras": "Mapping[str, str]",
+      "generation_run_id": "str",
+      "instruction_ref": "str | None",
+      "kind": "str",
+      "language_pack_version": "str",
+      "origin": "str",
+      "outline_gate": "bool",
+      "plan": "str | None",
+      "principal_id": "str",
+      "recipients": "tuple[Recipient, ...]",
+      "requested_mode": "str",
+      "residency_mode": "str",
+      "scope_seed": "ScopeSeed",
+      "target_ref": "str | None",
+      "tenant_id": "str",
+      "tender_id": "str | None",
+      "trace_id": "str"
+    },
+    "MintedVersion": {
+      "completeness": "str",
+      "evidence_tier": "str",
+      "version_id": "str",
+      "version_no": "int"
+    },
+    "OutlineSaved": {
+      "gate_expires_at": "str | None",
+      "outline_version": "int | None",
+      "section_ids": "tuple[str, ...]"
+    },
+    "Recipient": {
+      "id": "str",
+      "kind": "str"
+    },
+    "ReviseOutlinePayload": {
+      "outline_version": "int",
+      "sections": "tuple[SectionSpec, ...]"
+    },
+    "RunResult": {
+      "failure_reason": "str | None",
+      "status": "str"
+    },
+    "RunState": {
+      "failure_reason": "str | None",
+      "gate_expires_at": "str | None",
+      "outline_state": "str",
+      "outline_version": "int | None",
+      "section_refs": "tuple[SectionRef, ...]",
+      "stage": "str | None",
+      "status": "str",
+      "suspended_at": "str | None"
+    },
+    "ScopeSeed": {
+      "collection_ids": "tuple[str, ...]",
+      "collection_types": "tuple[str, ...]",
+      "tender_id": "str | None"
+    },
+    "SectionJob": {
+      "run_input": "Mapping[str, Any]",
+      "section_id": "str",
+      "stage": "str"
+    },
+    "SectionOutcome": {
+      "evidence_tier": "str | None",
+      "failure_reason": "str | None",
+      "gap_reason": "str | None",
+      "quota_suspended": "bool",
+      "section_id": "str",
+      "skipped_terminal": "bool",
+      "state": "str",
+      "version_id": "str | None"
+    },
+    "SectionRef": {
+      "is_foundation": "bool",
+      "ordinal": "int",
+      "ref": "str | None",
+      "section_id": "str",
+      "section_type": "str",
+      "state": "str"
+    },
+    "SectionSpec": {
+      "ref": "str",
+      "type": "str"
+    }
+  }
+}

@@ -8,6 +8,7 @@ Router's; custom values must reach the wire on every call.
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from typing import Any
 from uuid import uuid4
 
@@ -80,6 +81,19 @@ async def test_the_defaults_are_agent_routers_paths_and_the_usual_headers() -> N
     h = seen[0].headers
     assert h["x-tenant-id"] == str(TENANT) and h["x-residency-mode"] == "strict"
     assert h["x-plan"] == "pro" and h["x-preferred-model"] == "m1"
+
+
+async def test_a_workers_correlation_id_reaches_every_call_it_makes() -> None:
+    """G-14: ``run:section:attempt`` links a retried call's cost to its section."""
+    seen: list[httpx.Request] = []
+    ctx = replace(CTX, correlation_id="run-1:2.1:3")
+    g = _gateway(Settings(), seen)
+    await g.embed(["t"], ctx=ctx)
+    await g.complete("judge", "s", "u", ctx=ctx, deadline_seconds=1)
+    assert [r.headers["x-correlation-id"] for r in seen] == ["run-1:2.1:3"] * 2
+    plain: list[httpx.Request] = []
+    await _gateway(Settings(), plain).embed(["t"], ctx=CTX)
+    assert "x-correlation-id" not in plain[0].headers  # an API request keeps the platform's own
 
 
 async def test_custom_paths_and_header_names_reach_the_wire_on_every_call() -> None:
