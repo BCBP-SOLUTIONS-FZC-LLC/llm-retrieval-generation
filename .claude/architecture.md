@@ -24,7 +24,7 @@ src/rag/
     workflows/                 start, signals, state, operator, common, bridges, observability, ports
     packs/                     resolve, ports
     events/                    contracts (stdlib only), consumers (use cases), ports
-    sweeps/                    sweeps (ten sweeps)
+    sweeps/                    sweeps (eleven sweeps)
     shared/                    events (DomainEvent, EventPublisher), gateway ports, scope, observability, ports
   infrastructure/              imports application, domain, SDKs
     persistence/               pools, migrate, transactions, corpus/, generation/ (repositories, writes, ops, workflows)
@@ -41,6 +41,8 @@ src/rag/
     api/{public,internal,operator}/   routers + *_models.py; sse.py
     dependencies.py, *_dependencies.py, errors.py, identity.py, api_docs.py, main.py
   corpusscope/                 stdlib + pydantic + qdrant_client + itself: token, resolver, filters, qdrant
+  engine/                      the Worker Pool's door in (ENGINE_API_VERSION): runs, sections, documents, blocks, bootstrap; nothing imports it, no temporalio
+src/llm_models/                plain types shared with llm-workers: standard library only
 migrations/{corpus,generation}/   NNNN_name.up.sql + .down.sql
 schemas/events/                   derived JSON Schemas
 api/ docs/swagger/                generated contracts

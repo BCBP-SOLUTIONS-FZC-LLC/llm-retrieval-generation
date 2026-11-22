@@ -19,7 +19,7 @@ The Retrieval & Generation Service of the LLM subsystem — the **only component
 | `retrieval_sets`, `retrieval_set_chunks`, `query_refinements`, `instruction_refinements` — what was retrieved and refined | Model weights, provider credentials, routing, residency enforcement, quota (the Model Gateway) |
 | `groundedness_reports`, `claim_verifications`, `completeness_checks`, `document_facts`, `fact_conflicts`, `artefact_audit_chain` | Workflow and activity **logic**, including the LangGraph graphs (the Worker Pool; this service starts and signals the run and owns the tables its activities write) |
 | `processed_events` ledger, the outbox on both databases, `corpusscope` (scope resolution and every Qdrant filter) | Users, tenants, roles, memberships (IAM — this service is identity-agnostic and stores only UUID references) |
-| Ten sweeps (orphans, stalls, idempotency keys, retrieval sets, checkpoints, outbox, ledger, audit chain, tenant purge, promotions) | Domain Profiles and Language Packs (Tender — pulled and cached, never stored) |
+| Eleven sweeps (orphans, stalls, quiet async runs, idempotency keys, retrieval sets, checkpoints, outbox, ledger, audit chain, tenant purge, promotions) | Domain Profiles and Language Packs (Tender — pulled and cached, never stored) |
 
 Every request carries identity as `x-*` headers injected by the gateway after authentication; the service trusts nothing else (API-1). Tenant isolation is enforced by Postgres row-level security (`FORCE` on, no `BYPASSRLS` role) **and** by a mandatory compound Qdrant filter built in one place (`corpusscope`).
 
@@ -87,7 +87,7 @@ Reserved, not mounted: `C-I3`, `C-I9`. Retired: `C-T1`, `C-T2`.
 
 | ID | Method and path | Purpose |
 |---|---|---|
-| W-8 | `POST /api/v1/operator/generations/{id}/rematerialise` | Restart a lost run from its row; audited; `platform_operator` only |
+| W-8 | `POST /api/v1/operator/generations/{id}/rematerialise` | Restart a lost run (`suspended`, awaiting approval or `generating`) from its row; audited; `platform_operator` only |
 | C-M1 | `GET /api/internal/models` | Model ids a tenant may select; `503 INFERENCE_UNAVAILABLE` where unreadable |
 
 ### Health and documentation
@@ -111,6 +111,8 @@ src/rag/
   infrastructure/  persistence (asyncpg), gateway, tender, iam, temporal, cache, storage, events, sweeps, observability
   presentation/    FastAPI routers (public / internal / operator), dependencies, errors, app factory
   corpusscope/     scope resolution + every Qdrant filter (vendored library; sole importer of qdrant_client)
+  engine/          the public, versioned API the Worker Pool imports (writes, building blocks, bootstrap; nothing else imports it)
+src/llm_models/    plain types of the Worker Pool boundary (standard library only)
 migrations/{corpus,generation}/   numbered SQL sets, one per database
 schemas/events/                   JSON Schemas derived from the event contracts
 ```
@@ -262,7 +264,7 @@ Troubleshooting: count stays 0 → `EVENTS_ENABLED` is still false or the app wa
 
 ## Testing
 
-~1,550 tests (1,509 unit + integration, 32 e2e, 14 against a live gateway); coverage about 98.3% for unit + integration.
+~1,630 tests (1,581 unit + integration, 32 e2e, 14 against a live gateway); coverage about 98.1% for unit + integration.
 
 | Group | Where | Needs |
 |---|---|---|

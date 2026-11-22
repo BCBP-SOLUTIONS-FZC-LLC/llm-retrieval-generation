@@ -33,7 +33,7 @@ Enums (`0001_types_and_functions`): `artefact_status` (`pending, generating, com
 |---|---|---|
 | `rag_owner` | Owns every object (NOLOGIN) | Migrations `SET ROLE rag_owner`; `FORCE` RLS binds it |
 | `rag_app` | Request handlers and consumers (NOLOGIN group; login `rag_app_login` locally) | Non-superuser, no `BYPASSRLS` |
-| `rag_activity` | Worker Pool activities | `INSERT` + sequence on the outbox; per-table grants on the activity tables |
+| `rag_activity` | Worker Pool activities | `INSERT` + sequence on the outbox; per-table grants on the activity tables; `DELETE` on `artefact_sections` only for a `pending` section with no version (trigger `reject_unsafe_section_delete`, migration 0006). **No login may be a member of both `rag_app` and `rag_activity`:** the trigger would then refuse the API's purge deletes of started sections |
 | `rag_sweeper` | Sweeps' enumeration pools | Column-limited `SELECT` and a `FOR SELECT … USING (true)` policy per table; no writes |
 | migration/DDL role | `migrate`, direct to Postgres | Never through PgBouncer (session-scoped advisory lock) |
 

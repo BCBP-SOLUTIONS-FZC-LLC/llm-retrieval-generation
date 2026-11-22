@@ -69,13 +69,29 @@ See [`runbook-audit-chain-break.md`](../runbook-audit-chain-break.md).
 
 ### RagStalledGenerations *(proposed)*
 
-**Meaning.** Artefacts stuck in `generating` or `pending`.
+**Meaning.** Artefacts stuck in `generating` or `pending`. The stalled sweep acts on **synchronous** runs only; an async run is never failed for being quiet (see `RagQuietAsyncRuns`).
 
 **Triage.**
 1. Run `python -m rag.infrastructure.sweeps stalled-generations` and `orphan-artefacts` and read the outcome (`affected`, `failed_tenants`).
 2. The orphan sweep needs a workflow engine to restart runs; with `TEMPORAL_ADDRESS` unset it **skips** (never a false verdict).
 3. A long-form run with no Worker Pool will sit `pending` — that is the known gap, not an incident.
 4. A-5 runs on a `complete` artefact are never seen by the orphan sweep; only the client's repeat restarts a failed A-5 start.
+
+### RagQuietAsyncRuns *(proposed)*
+
+**Meaning.** The `quiet-async-runs` sweep (CronJob, every 15 minutes, exit code `2`) found a `generating` async run whose row and every section have had no write for `QUIET_ASYNC_RUN_SECONDS` (default 3,600). It reads the database only, so it cannot tell a lost workflow from a slow one. It alerts and changes nothing.
+
+**Triage.**
+1. The log line `ALERT quiet_async_run` names `tenant_id`, `run_id`, `artefact_id`, `stage` and `quiet_since`.
+2. Is a long stage the cause? A stage 2 of many sections at five in parallel can run an hour; a tenant waiting for a slot, the facts step and the coherence pass also write no section. Raise `QUIET_ASYNC_RUN_SECONDS` if the alert is the pattern and not an incident.
+3. Is the Worker Pool up (pods polling the run's queue, `llm-generation*` or `llm-extraction*`)? Temporal's UI shows the workflow under the run's `workflow_id` (`generation_runs.workflow_id`).
+4. A workflow that is gone: restart it with W-8 (`POST /api/v1/operator/generations/{id}/rematerialise`, operator only, ticket required). It accepts a `generating` run; a live workflow answers `409`, so a healthy run is never started twice, and the new workflow continues from `current_stage` and skips every finished section.
+
+### RagOutboxAgeWorkers *(proposed)*
+
+**Meaning.** Events the Worker Pool wrote (`OutlineReady`, `SectionCompleted`, `GenerationCompleted`, ...) wait in `llm_generation.outbox_events`: the outbox relay runs only in the API pods (`rag_activity` may insert and nothing else), so worker events stop when the API pods are down.
+
+**Triage.** As `RagOutboxBacklog`: `SELECT count(*), min(created_at) FROM outbox_events WHERE published_at IS NULL` on `llm_generation`; are the API pods running, is `EVENTS_ENABLED=true`. Alert on the age of the oldest unpublished row, not on a count.
 
 ### RagPurgeIncomplete *(proposed)*
 
@@ -100,7 +116,7 @@ See [`runbook-audit-chain-break.md`](../runbook-audit-chain-break.md).
 
 **Meaning.** `503 WORKFLOW_ENGINE_UNAVAILABLE` on W-1, W-3..W-7, A-5.
 
-**Triage.** `TEMPORAL_ADDRESS` set and reachable? Runs admitted before the outage stay `pending`; a repeat of the same `Idempotency-Key` (W-1/W-6) or `base_version_id` (A-5) starts them. A signal lost after a committed gate transition is **unrecoverable from here** for W-7 (W-8 refuses a `generating` run) — escalate to the Worker Pool owners.
+**Triage.** `TEMPORAL_ADDRESS` set and reachable? Runs admitted before the outage stay `pending`; a repeat of the same `Idempotency-Key` (W-1/W-6) or `base_version_id` (A-5) starts them. A signal lost after a committed gate transition is recoverable by an operator through W-8 once the run is `generating` (alerted by `RagQuietAsyncRuns`); before this revision it was **unrecoverable from here** for W-7 (W-8 refuses a `generating` run) — escalate to the Worker Pool owners.
 
 ## Performance
 

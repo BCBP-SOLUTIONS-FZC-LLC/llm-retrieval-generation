@@ -30,7 +30,7 @@ Synchronous, never streamed. Gateway deadline 90 s (capped by the 120 s request 
 
 1. Re-resolve scope (ASYNC-11). Empty → one transaction: run `failed/scope_revoked`, artefact `failed`, sections closed, audit entry, `GenerationFailed`; answer `404`.
 2. Otherwise one guarded `UPDATE … WHERE status AND record_version`; the returned version is `progress_seq`. W-5 writes the run and the artefact (`cancelled`) in one transaction.
-3. The signal is sent **after** the row commit (LD-88). A repeat of a signal whose row already reads the post-state re-raises the lost signal. A lost W-7 signal is unrecoverable from here (W-8 refuses a `generating` run).
+3. The signal is sent **after** the row commit (LD-88). A repeat of a signal whose row already reads the post-state re-raises the lost signal. A lost W-7 signal leaves the run `generating`; `quiet-async-runs` alerts on it and an operator restarts it with W-8, which accepts a `generating` run (a live workflow answers `409`).
 
 ## 8.6 A-5 / A-6 / A-7 Regeneration
 
@@ -46,7 +46,7 @@ Each SQS message: decode (Glue on the two IAM queues) → tenant must be a UUID 
 
 ## 8.9 Sweeps
 
-`python -m rag.infrastructure.sweeps <name>|all`: orphan-artefacts, stalled-generations, idempotency-keys, retrieval-sets, graph-checkpoints, outbox, processed-events (per-consumer retention), audit-chain (alert, exit 2), tenant-purge phase two, stalled-promotions. Each holds `pg_try_advisory_xact_lock` per instance and skips if it cannot. `DR_MODE` disables the four destructive-under-skew sweeps and tenant purge. Not built: zombie-run, orphan-S3-object, retention.
+`python -m rag.infrastructure.sweeps <name>|all`: orphan-artefacts, stalled-generations (synchronous runs only), quiet-async-runs (alert, database only, exit 2), idempotency-keys, retrieval-sets, graph-checkpoints, outbox, processed-events (per-consumer retention), audit-chain (alert, exit 2), tenant-purge phase two, stalled-promotions. Each holds `pg_try_advisory_xact_lock` per instance and skips if it cannot. `DR_MODE` disables the four destructive-under-skew sweeps and tenant purge. Not built: zombie-run (needs Temporal liveness), orphan-S3-object, retention. A tender or tenant purge sends a best-effort `cancel` to the live workflows of its scope before it deletes the rows.
 
 ## 8.10 Concurrency
 
