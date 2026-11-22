@@ -9,9 +9,9 @@ import pytest
 from temporalio.common import WorkflowIDConflictPolicy, WorkflowIDReusePolicy
 from temporalio.exceptions import WorkflowAlreadyStartedError
 from temporalio.service import RPCError, RPCStatusCode
-from tests.support_workflows import FakeWorkflows
+from tests.support_workflows import FakeWorkflows, engine_down
 
-from rag.application.workflows.bridges import OrphanRestarter
+from rag.application.workflows.bridges import OrphanRestarter, WorkflowCanceller
 from rag.application.workflows.ports import (
     SIGNAL_APPROVE,
     SIGNAL_CANCEL,
@@ -20,7 +20,7 @@ from rag.application.workflows.ports import (
 )
 from rag.application.workflows.start import QueueNames
 from rag.domain.shared.errors import DomainError, ErrorCode
-from rag.infrastructure.config import Settings
+from rag.infrastructure.config import ConfigError, Settings
 from rag.infrastructure.temporal.client import TemporalWorkflowClient
 from rag.infrastructure.temporal.factory import build_workflow_client, queue_names
 from rag.infrastructure.temporal.unwired import UnwiredWorkflowClient
@@ -89,6 +89,26 @@ async def test_start_sends_the_deterministic_id_queue_input_and_reject_duplicate
     )
     assert call["id_reuse_policy"] is WorkflowIDReusePolicy.REJECT_DUPLICATE  # §9.2
     assert call["id_conflict_policy"] is WorkflowIDConflictPolicy.FAIL
+
+
+async def test_the_reviewers_words_never_reach_temporal_history() -> None:
+    """P0-4: an A-5 instruction is replaced by ``instruction_ref`` on every start, restart too."""
+    r = Rig()
+    stored = {"generation_run_id": "run-1", "instruction": "make it shorter", "tenant_id": "t"}
+    for restart in (False, True):  # W-1/A-5/orphan start, and W-8's restart
+        await r.client.start(
+            StartRequest("wf-1", "GenerationWorkflow", "q", stored, restart=restart)
+        )
+    for call in r.temporal.start_calls:
+        assert "instruction" not in call["arg"] and call["arg"]["instruction_ref"] == "run-1"
+        assert "make it shorter" not in repr(call)
+    assert stored["instruction"] == "make it shorter"  # the stored input is untouched
+
+
+async def test_an_input_without_an_instruction_is_sent_as_it_is() -> None:
+    r = Rig()
+    await r.client.start(REQUEST)
+    assert r.temporal.start_calls[0]["arg"] == {"tenant_id": "t"}
 
 
 async def test_an_already_started_workflow_is_success_not_an_error() -> None:
@@ -186,7 +206,7 @@ def test_no_address_means_the_fail_closed_stand_in() -> None:
 
 
 def test_an_address_builds_a_lazy_client_in_the_llm_generation_namespace() -> None:
-    s = Settings(temporal_address="temporal.internal:7233")
+    s = Settings(temporal_address="temporal.internal:7233", environment="test")
     assert s.temporal_namespace == "llm-generation"  # §9.1
     client = build_workflow_client(s)
     assert isinstance(client, TemporalWorkflowClient) and client.available  # no I/O yet
@@ -199,6 +219,83 @@ def test_queue_names_come_from_settings() -> None:
         "llm-generation-enterprise",
         "llm-generation-strict",
     )
+    assert (q.extraction, q.extraction_enterprise, q.extraction_strict) == (
+        "llm-extraction",
+        "llm-extraction-enterprise",
+        "llm-extraction-strict",
+    )
+
+
+@pytest.mark.parametrize(
+    ("kind", "plan", "residency", "queue"),
+    [
+        ("document", None, "standard", "g"),
+        ("document", "enterprise", "standard", "g-e"),
+        ("document", "enterprise", "strict", "g-s"),
+        ("extraction", None, "standard", "x"),
+        ("extraction", "Enterprise", "standard", "x-e"),
+        ("extraction", "enterprise", "strict", "x-s"),  # strict wins over plan, as for documents
+        (None, "starter", "standard", "g"),  # a stored input without a kind is a document
+    ],
+)
+def test_the_queue_follows_kind_plan_and_residency(
+    kind: str | None, plan: str | None, residency: str, queue: str
+) -> None:
+    names = QueueNames("g", "g-e", "g-s", "x", "x-e", "x-s")
+    body = {"kind": kind, "plan": plan, "residency_mode": residency}
+    assert names.for_input(body) == queue
+
+
+def test_a_certificate_without_its_key_or_a_ca_alone_is_refused() -> None:
+    for kw in (
+        {"temporal_tls_cert_path": "c.pem"},
+        {"temporal_tls_key_path": "k.pem"},
+        {"temporal_tls_ca_path": "ca.pem"},
+    ):
+        with pytest.raises(ConfigError):
+            build_workflow_client(Settings(temporal_address="t:7233", environment="test", **kw))
+
+
+def test_outside_local_environments_the_namespace_must_be_named() -> None:
+    with pytest.raises(ConfigError, match="TEMPORAL_NAMESPACE"):
+        build_workflow_client(Settings(temporal_address="t:7233", environment="prod"))
+    named = Settings(
+        temporal_address="t:7233", environment="prod", temporal_namespace="llm-generation-prod"
+    )
+    assert build_workflow_client(named).available
+    unwired = Settings(temporal_address="", environment="prod")  # no engine: nothing to name
+    assert build_workflow_client(unwired).available is False
+
+
+def test_the_namespace_set_through_the_environment_passes_the_production_check(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Production sets it with ``TEMPORAL_NAMESPACE`` (Helm), not a keyword: that must count."""
+    monkeypatch.setenv("APP_ENV", "prod")
+    monkeypatch.setenv("TEMPORAL_ADDRESS", "t:7233")
+    with pytest.raises(ConfigError, match="TEMPORAL_NAMESPACE"):
+        build_workflow_client(Settings())
+    monkeypatch.setenv("TEMPORAL_NAMESPACE", "llm-generation-prod")
+    assert build_workflow_client(Settings()).available
+
+
+def test_mtls_files_become_the_connection_tls_config(tmp_path: Any) -> None:
+    from rag.infrastructure.temporal.factory import _tls
+
+    for name, body in (("c.pem", b"CERT"), ("k.pem", b"KEY"), ("ca.pem", b"CA")):
+        (tmp_path / name).write_bytes(body)
+    paths = {
+        "temporal_tls_cert_path": str(tmp_path / "c.pem"),
+        "temporal_tls_key_path": str(tmp_path / "k.pem"),
+    }
+    tls = _tls(Settings(**paths, temporal_tls_ca_path=str(tmp_path / "ca.pem")))
+    assert (tls.client_cert, tls.client_private_key, tls.server_root_ca_cert) == (
+        b"CERT",
+        b"KEY",
+        b"CA",
+    )
+    assert _tls(Settings(**paths)).server_root_ca_cert is None  # a public CA needs none
+    assert _tls(Settings()) is None
 
 
 async def test_the_unwired_client_refuses_both_calls() -> None:
@@ -209,7 +306,7 @@ async def test_the_unwired_client_refuses_both_calls() -> None:
         assert exc.value.code is ErrorCode.WORKFLOW_ENGINE_UNAVAILABLE
 
 
-QUEUES = QueueNames("q", "q-ent", "q-strict")
+QUEUES = QueueNames("q", "q-ent", "q-strict", "x", "x-ent", "x-strict")
 
 
 async def test_the_orphan_sweeps_starter_restarts_from_the_stored_input() -> None:
@@ -225,7 +322,7 @@ async def test_the_orphan_sweeps_starter_restarts_from_the_stored_input() -> Non
         "q-ent",
         False,
     )
-    assert (second.workflow_type, second.task_queue) == ("ExtractionWorkflow", "q-strict")
+    assert (second.workflow_type, second.task_queue) == ("ExtractionWorkflow", "x-strict")
 
 
 async def test_the_starter_refuses_a_run_with_no_workflow_so_the_sweep_fails_it() -> None:
@@ -238,3 +335,16 @@ async def test_the_starter_refuses_a_run_with_no_workflow_so_the_sweep_fails_it(
 def test_the_starter_is_unavailable_exactly_when_the_client_is() -> None:
     assert OrphanRestarter(FakeWorkflows(available=False), QUEUES).available is False
     assert OrphanRestarter(FakeWorkflows(), QUEUES).available is True
+
+
+async def test_the_purge_canceller_signals_every_workflow_and_swallows_every_failure() -> None:
+    wf = FakeWorkflows()
+    await WorkflowCanceller(wf).cancel(["a", "regen:b"], "tender_purged")
+    assert wf.signals == [
+        ("a", SIGNAL_CANCEL, {"reason": "tender_purged"}),
+        ("regen:b", SIGNAL_CANCEL, {"reason": "tender_purged"}),
+    ]
+    down = FakeWorkflows()
+    down.fail_signal = engine_down()  # engine down or workflow gone: the erasure still goes on
+    await WorkflowCanceller(down).cancel(["a", "b"], "tender_purged")
+    await WorkflowCanceller(UnwiredWorkflowClient()).cancel(["a"], "tenant_purged")

@@ -28,7 +28,7 @@ from rag.application.sweeps import sweeps as s
 from rag.domain.corpus.tenant_lifecycle import TenantLifecycle, TenantState
 from rag.domain.generation import audit
 from rag.domain.generation.audit import AuditEntry, AuditEntryDraft
-from rag.domain.generation.ops import FailedArtefact, StuckArtefact
+from rag.domain.generation.ops import FailedArtefact, QuietRun, StuckArtefact
 from rag.domain.shared.enums import ArtefactKind, AuditActorType, CollectionStatus
 from rag.infrastructure.events.schemas import validate_published
 
@@ -71,6 +71,7 @@ class Repo:
         self.scope = scope
         self.pending: dict[UUID, list[StuckArtefact]] = {}
         self.stalled: dict[UUID, list[StuckArtefact]] = {}
+        self.quiet: dict[UUID, list[QuietRun]] = {}
         self.failed: list[UUID] = []
         self.cleared: list[tuple[UUID | None, datetime]] = []
         self.set_batches: list[int] = []
@@ -88,6 +89,10 @@ class Repo:
     async def stalled_artefacts(self, tx: Any, before: datetime) -> list[StuckArtefact]:
         self._guard()
         return self.stalled.get(self.scope.current, [])  # type: ignore[arg-type]
+
+    async def quiet_async_runs(self, tx: Any, before: datetime) -> list[QuietRun]:
+        self._guard()
+        return self.quiet.get(self.scope.current, [])  # type: ignore[arg-type]
 
     async def fail_artefact(
         self, tx: Any, artefact_id: UUID, now: datetime
@@ -251,6 +256,39 @@ async def test_orphan_second_failure_fails_the_artefact_publishes_and_audits() -
     )
     assert entry.draft.actor_id == SERVICE_ACCOUNT
     assert k["directory"].asked[0][1] == NOW - timedelta(seconds=300)
+
+
+# --- quiet async runs ---------------------------------------------------------------------------
+async def test_quiet_async_runs_alert_per_tenant_and_change_nothing() -> None:
+    k = kit(TENANT, OTHER)
+    repo = Repo(k["scope"])
+    since = NOW - timedelta(hours=2)
+    repo.quiet[TENANT] = [QuietRun(uuid4(), uuid4(), "stage2", since)]
+    repo.quiet[OTHER] = [
+        QuietRun(uuid4(), uuid4(), None, since),
+        QuietRun(uuid4(), uuid4(), "stage1", since),
+    ]
+    out = await s.QuietAsyncRuns(FakeTx(), repo, quiet_seconds=3600, **common(k)).run()
+    assert (out.tenants, out.affected, out.failed_tenants) == (2, 3, 0)
+    assert len(out.alerts) == 3 and not out.ok  # the runner exits 2
+    assert k["directory"].asked == [(s.QUIET_ASYNC_RUNS, NOW - timedelta(seconds=3600))]
+    assert repo.failed == []  # it alerts and never acts
+
+
+async def test_quiet_async_runs_is_clean_when_nothing_is_quiet_and_runs_under_dr_mode() -> None:
+    k = kit(TENANT, dr_mode=True)
+    out = await s.QuietAsyncRuns(FakeTx(), Repo(k["scope"]), quiet_seconds=60, **common(k)).run()
+    assert out.skipped is None and out.ok and out.alerts == ()  # not destructive: DR keeps alerting
+
+
+async def test_a_second_run_does_not_repeat_the_first_runs_alerts() -> None:
+    k = kit(TENANT)
+    repo = Repo(k["scope"])
+    repo.quiet[TENANT] = [QuietRun(uuid4(), uuid4(), "stage2", NOW)]
+    sweep = s.QuietAsyncRuns(FakeTx(), repo, quiet_seconds=60, **common(k))
+    assert len((await sweep.run()).alerts) == 1
+    repo.quiet.clear()
+    assert (await sweep.run()).alerts == ()
 
 
 # --- stalled generations ------------------------------------------------------------------------

@@ -8,7 +8,8 @@ Postgres advisory lock for its duration, on the instance it targets, and **skips
 transaction held for the sweep, because session locks do not survive PgBouncer's transaction mode.
 
 Sweeps use their own small pools, never the request pools (§18.8), and the enumeration pools log
-in as a member of ``rag_sweeper`` (``directory``). Of §21.2's eleven, ten are here. The zombie-run
+in as a member of ``rag_sweeper`` (``directory``). Of §21.2's eleven, ten are here, plus
+``quiet-async-runs`` (an alert on silent async runs that reads only the database). The zombie-run
 sweep needs Temporal's liveness and the orphan-rendered-objects sweep needs an S3 listing; neither
 dependency exists yet, so they are not faked.
 """
@@ -33,6 +34,7 @@ from rag.application.generation.clock import SystemClock
 from rag.application.generation.commands import AppendAuditEntry, PurgeArtefacts
 from rag.application.shared.ports import TransactionRunner
 from rag.application.sweeps import sweeps as s
+from rag.application.workflows.bridges import WorkflowCanceller
 from rag.infrastructure.config import Settings
 from rag.infrastructure.events.publisher import OutboxEventPublisher
 from rag.infrastructure.persistence.corpus.repositories import (
@@ -51,7 +53,7 @@ from rag.infrastructure.persistence.pools import bind_tenant_scope, pool_config
 from rag.infrastructure.persistence.transactions import PgTransactionRunner
 from rag.infrastructure.storage.artefact_content_store import S3ArtefactContentStore
 from rag.infrastructure.sweeps.directory import PgTenantDirectory
-from rag.infrastructure.temporal.factory import build_orphan_restarter
+from rag.infrastructure.temporal.factory import build_orphan_restarter, build_workflow_client
 
 log = get_logger(__name__)
 
@@ -59,6 +61,7 @@ CORPUS_SWEEPS = frozenset({s.TENANT_PURGE, s.STALLED_PROMOTIONS})
 NAMES = (
     s.ORPHAN_ARTEFACTS,
     s.STALLED_GENERATIONS,
+    s.QUIET_ASYNC_RUNS,
     s.IDEMPOTENCY_KEYS,
     s.RETRIEVAL_SETS,
     s.GRAPH_CHECKPOINTS,
@@ -160,6 +163,9 @@ def build_sweep(settings: Settings, pools: Pools, name: str) -> Any:
             stalled_seconds=settings.stalled_generating_seconds,
             **common,
         ),
+        s.QUIET_ASYNC_RUNS: lambda: s.QuietAsyncRuns(
+            generation_tx, sweeps, quiet_seconds=settings.quiet_async_run_seconds, **common
+        ),
         s.IDEMPOTENCY_KEYS: lambda: s.ClearIdempotencyKeys(
             generation_tx, sweeps, ttl_seconds=settings.idempotency_ttl_seconds, **common
         ),
@@ -186,6 +192,7 @@ def build_sweep(settings: Settings, pools: Pools, name: str) -> Any:
                     kms_key_id=settings.s3_kms_key_id,
                 ),
                 SystemClock(),
+                WorkflowCanceller(build_workflow_client(settings)),
             ),
             PurgeTenantCorpus(
                 corpus_tx,

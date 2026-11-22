@@ -35,6 +35,16 @@ class StuckArtefact:
 
 
 @dataclass(frozen=True, slots=True)
+class QuietRun:
+    """An async run in ``generating`` whose row and sections have been silent too long."""
+
+    run_id: UUID
+    artefact_id: UUID
+    current_stage: str | None
+    quiet_since: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class FailedArtefact:
     """What ``fail_artefact`` closed: the figures ``GenerationFailed`` carries."""
 
@@ -70,7 +80,16 @@ class SweepRepository(Protocol):
         ...
 
     async def stalled_artefacts(self, tx: Tx, before: datetime) -> list[StuckArtefact]:
-        """``status = 'generating'``, not updated since ``before``, with no live run."""
+        """``status = 'generating'``, not updated since ``before``, with no live run.
+
+        A live run with a ``workflow_id`` is never stalled here: its workflow waits for days at a
+        gate or a quota pause, and writes the run only at stage edges. ``quiet_async_runs`` watches
+        those.
+        """
+        ...
+
+    async def quiet_async_runs(self, tx: Tx, before: datetime) -> list[QuietRun]:
+        """Async ``generating`` runs with no run or section write since ``before``."""
         ...
 
     async def fail_artefact(

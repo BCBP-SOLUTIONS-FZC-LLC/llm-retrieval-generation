@@ -31,6 +31,7 @@ DEPT = UUID("0a3f0000-0000-7000-8000-0000000000d1")
 
 
 def container(**settings: object):  # noqa: ANN202
+    settings.setdefault("environment", "test")
     return build_container(Settings(**settings), FakePool("c", []), FakePool("g", []))  # type: ignore[arg-type]
 
 

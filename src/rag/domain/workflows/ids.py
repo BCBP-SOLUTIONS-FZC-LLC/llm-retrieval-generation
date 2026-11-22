@@ -5,6 +5,12 @@ from __future__ import annotations
 from uuid import UUID
 
 REGEN_PREFIX = "regen:"
+ENTERPRISE_PLANS = frozenset({"enterprise"})
+"""Plans that get the enterprise queues, compared in lower case.
+
+One constant so the API service and the Worker Pool (which imports the engine) can never disagree
+on which tenants are enterprise (workers LLD WQ-1).
+"""
 
 
 def original_workflow_id(artefact_id: UUID) -> str:
@@ -29,9 +35,9 @@ def task_queue_for(
     default: str,
     enterprise: str,
     strict: str,
-    enterprise_plans: frozenset[str] = frozenset({"enterprise"}),
+    enterprise_plans: frozenset[str] = ENTERPRISE_PLANS,
 ) -> str:
-    """The generation queue for the tenant (WP-10): strict residency, then enterprise, else shared.
+    """The queue for the tenant (WP-10): strict residency, then enterprise, else shared.
 
     Strict residency wins over plan: a strict tenant needs a queue of its own whatever it pays.
     """

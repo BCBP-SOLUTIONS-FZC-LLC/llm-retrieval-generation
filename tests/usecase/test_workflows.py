@@ -749,10 +749,30 @@ async def test_w8_repeat_while_the_new_workflow_is_live_is_a_409() -> None:
     assert len(r.world.audit.entries) == 1
 
 
-@pytest.mark.parametrize("status", [RunStatus.GENERATING, RunStatus.COMPLETE, RunStatus.CANCELLED])
-async def test_w8_only_suspended_or_awaiting_runs_are_restartable(status: RunStatus) -> None:
+async def test_w8_restarts_a_generating_run_and_a_live_workflow_still_answers_409() -> None:
+    """The quiet-async-runs alert points an operator at a ``generating`` run: W-8 accepts it."""
     r = WfRig()
-    _, run, _ = seed_document(r.world, status=status, outline_state=OutlineState.APPROVED)
+    _, run, _ = seed_document(
+        r.world, status=RunStatus.GENERATING, outline_state=OutlineState.APPROVED
+    )
+    assert run.workflow_id is not None
+    r.workflows.live.add(run.workflow_id)  # the workflow is in fact alive: never two for one run
+    await raises(
+        r.rematerialise.execute(OPERATOR, run.id, "OPS-1", None), ErrorCode.WORKFLOW_STATE_CONFLICT
+    )
+    r.workflows.live.clear()
+    await r.rematerialise.execute(OPERATOR, run.id, "OPS-1", None)
+    start = r.workflows.starts[-1]
+    assert start.restart and start.workflow_id == run.workflow_id
+
+
+@pytest.mark.parametrize("status", [RunStatus.COMPLETE, RunStatus.CANCELLED, RunStatus.FAILED])
+async def test_w8_only_live_runs_are_restartable(status: RunStatus) -> None:
+    r = WfRig()
+    reason = RunFailureReason.INTERNAL if status is RunStatus.FAILED else None
+    _, run, _ = seed_document(
+        r.world, status=status, outline_state=OutlineState.APPROVED, failure_reason=reason
+    )
     await raises(
         r.rematerialise.execute(OPERATOR, run.id, "OPS-1", None), ErrorCode.WORKFLOW_STATE_CONFLICT
     )

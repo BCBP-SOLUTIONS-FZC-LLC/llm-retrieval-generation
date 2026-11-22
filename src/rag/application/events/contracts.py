@@ -239,6 +239,10 @@ class GenerationCompleted:
     tender_id: str | None = _opt()
     coherence_verdict: CoherenceVerdict | None = _opt()
     recipients: list[Recipient] = field(default_factory=list)
+    sections_failed: int | None = _opt()
+    """Sections that ended ``failed`` (a document run only; absent on a one-section run)."""
+    sections_gap: int | None = _opt()
+    """Sections that ended as a gap (a document run only; absent on a one-section run)."""
 
 
 @dataclass(frozen=True, slots=True)

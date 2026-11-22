@@ -42,6 +42,7 @@
         "artefact_store_unwritable",
         "gate_expired",
         "schema_violation",
+        "tenant_suspended",
         "internal"
       ],
       "title": "RunFailureReason",

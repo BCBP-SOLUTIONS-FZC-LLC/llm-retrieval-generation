@@ -216,6 +216,44 @@ async def test_mark_versions_superseded_flags_only_versions_that_include_the_sec
 # --- ART-9 --------------------------------------------------------------------------------
 
 
+async def test_live_workflow_ids_are_the_scopes_unfinished_async_runs(db: Db) -> None:
+    """P0-6: a purge cancels exactly the workflows still running in its scope, per tenant."""
+    live = await seeded(db, A, TENDER_1)
+    ended = await seeded(db, A, TENDER_1)
+    other_tender = await seeded(db, A, TENDER_2)
+    foreign = await seeded(db, B, TENDER_1)
+    conn = await db.admin()
+    try:
+        for graph, status, wf in (
+            (live, "generating", "wf-live"),
+            (ended, "complete", "wf-ended"),
+            (other_tender, "suspended", "wf-other-tender"),
+            (foreign, "generating", "wf-foreign"),
+        ):
+            await conn.execute(
+                "UPDATE generation_runs SET status = $2::run_status, workflow_id = $3 WHERE id = $1",
+                graph.run,
+                status,
+                wf,
+            )
+        await conn.execute(  # a synchronous run has no workflow to cancel
+            "UPDATE generation_runs SET workflow_id = NULL WHERE id = $1", ended.run
+        )
+    finally:
+        await conn.close()
+    repo = PgArtefactPurgeRepository()
+
+    async def ids(tenant: UUID, tender: UUID | None) -> list[str]:
+        with as_tenant(tenant):
+            return await db.app_tx.run_in_tx(
+                lambda c: repo.live_workflow_ids(c, tenant, tender), read_only=True
+            )
+
+    assert await ids(A, TENDER_1) == ["wf-live"]
+    assert sorted(await ids(A, None)) == ["wf-live", "wf-other-tender"]  # a tenant purge
+    assert await ids(B, TENDER_1) == ["wf-foreign"]
+
+
 async def test_tender_purge_deletes_the_tenders_tree_and_nothing_else(db: Db) -> None:
     """ART-9: one tender's artefacts and every row hanging from them; the chain is kept."""
     doomed = await seeded(db, A, TENDER_1)

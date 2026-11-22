@@ -148,6 +148,10 @@ class ArtefactPurgeRepository(Protocol):
         """The tender's artefacts, or every artefact of the tenant where ``tender_id`` is None."""
         ...
 
+    async def live_workflow_ids(self, tx: Tx, tenant_id: UUID, tender_id: UUID | None) -> list[str]:
+        """``workflow_id`` of every live async run in the same scope as the purge."""
+        ...
+
     async def delete_artefact_trees(
         self, tx: Tx, tenant_id: UUID, tender_id: UUID | None, artefact_ids: Sequence[UUID]
     ) -> None:

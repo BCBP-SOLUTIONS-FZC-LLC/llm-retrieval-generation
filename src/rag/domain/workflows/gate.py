@@ -12,8 +12,10 @@ from rag.domain.generation.run import GenerationRun
 from rag.domain.shared.enums import OutlineState, RunFailureReason, RunStatus
 from rag.domain.shared.errors import DomainError, ErrorCode
 
-RESTARTABLE = frozenset({RunStatus.SUSPENDED, RunStatus.AWAITING_OUTLINE_APPROVAL})
-"""W-8: only a run waiting on a person can have lost its workflow in a way an operator restarts."""
+RESTARTABLE = frozenset(
+    {RunStatus.SUSPENDED, RunStatus.AWAITING_OUTLINE_APPROVAL, RunStatus.GENERATING}
+)
+"""W-8: a run waiting on a person, or generating (a lost workflow shows as a quiet run)."""
 
 
 def conflict(detail: str) -> DomainError:
@@ -85,9 +87,14 @@ def resume(run: GenerationRun) -> None:
 
 
 def require_restartable(run: GenerationRun) -> None:
-    """W-8: the run is suspended or awaiting outline approval."""
+    """W-8: the run is suspended, awaiting outline approval or generating.
+
+    A ``generating`` run is restartable because the quiet-async-runs alert points an operator at
+    one whose workflow may be lost. A live workflow still answers ``409`` at the start (the id is
+    reused only when it is closed), so a healthy run is never started twice.
+    """
     if run.status not in RESTARTABLE:
-        raise conflict("The run is not suspended or awaiting outline approval.")
+        raise conflict("The run is not suspended, awaiting outline approval or generating.")
 
 
 def resumable_on_quota(run: GenerationRun) -> bool:

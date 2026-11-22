@@ -17,6 +17,8 @@ from rag.domain.generation.exceptions import InvariantViolation
 
 FORBIDDEN_KEYS = frozenset({"departments", "roles", "scope_token", "token", "content", "prompt"})
 """Names that would mean authority or content in a run input (ASYNC-6, ASYNC-11, ASYNC-12)."""
+INSTRUCTION_REF = "instruction_ref"
+"""What replaces ``instruction`` on the wire: the run's own id, whose row holds the words."""
 MAX_SCALAR_CHARS = 512
 """No identifier or reference is longer; a longer value is content by another name."""
 
@@ -125,3 +127,19 @@ class WorkflowInput:
             out["recipients"] = [{"kind": k, "id": i} for k, i in self.recipients]
         out.update(self.extras)
         return out
+
+
+def for_wire(run_input: dict[str, Any]) -> dict[str, Any]:
+    """The run input as Temporal receives it: no reviewer text (ASYNC-12, workers LLD P0-4).
+
+    The stored ``generation_runs.run_input`` keeps the instruction (it is in our database, and a
+    restart reads it from there). Temporal history is outside purge and erasure, so what is sent
+    carries ``instruction_ref`` (the generation run id) and the worker reads the words back through
+    the engine. Every start (W-1, W-6, A-5, the orphan restart, W-8) goes through the one client
+    that applies this, so no path can send the text.
+    """
+    if "instruction" not in run_input:
+        return run_input
+    out = {k: v for k, v in run_input.items() if k != "instruction"}
+    out[INSTRUCTION_REF] = run_input["generation_run_id"]
+    return out

@@ -11,6 +11,14 @@ from uuid import UUID
 from rag.domain.shared.identity import RequestIdentity
 
 
+class RunCanceller(Protocol):
+    """Best-effort ``cancel`` of live workflows before their rows are erased (workers LLD P0-6)."""
+
+    async def cancel(self, workflow_ids: Sequence[str], reason: str) -> None:
+        """Signal each workflow. Never raises: erasure must not wait on the engine."""
+        ...
+
+
 class ArtefactContentStore(Protocol):
     """Section text in S3, tenant-prefixed, KMS encryption context carrying ``tenant_id``."""
 

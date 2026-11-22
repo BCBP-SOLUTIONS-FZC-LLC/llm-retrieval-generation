@@ -917,6 +917,18 @@ components:
         section_count:
           title: Section Count
           type: integer
+        sections_failed:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: null
+          title: Sections Failed
+        sections_gap:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: null
+          title: Sections Gap
         tender_id:
           anyOf:
           - type: string
@@ -1089,6 +1101,7 @@ components:
       - artefact_store_unwritable
       - gate_expired
       - schema_violation
+      - tenant_suspended
       - internal
       title: RunFailureReason
       type: string
@@ -1272,6 +1285,7 @@ components:
       - artefact_store_unwritable
       - gate_expired
       - schema_violation
+      - tenant_suspended
       - internal
       title: RunFailureReason
       type: string

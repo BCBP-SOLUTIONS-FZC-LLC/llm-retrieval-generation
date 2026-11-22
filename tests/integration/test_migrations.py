@@ -115,7 +115,7 @@ async def test_library_schemas_apply_on_generation(dsns: dict[str, str]) -> None
 
 
 async def test_the_failure_reason_enum_grows_and_rolls_back(dsns: dict[str, str]) -> None:
-    """0005 adds ``schema_violation``; its down rebuilds the type and keeps data readable."""
+    """0005 adds ``schema_violation``, 0006 ``tenant_suspended``; each down keeps data readable."""
     pool = await Pool.create(Config(dsn=dsns["generation"], max_conns=1, min_conns=1))
     try:
         await apply_library_schemas(pool, "generation")
@@ -124,8 +124,17 @@ async def test_the_failure_reason_enum_grows_and_rolls_back(dsns: dict[str, str]
     runner = Runner(dsns["generation"], MIGRATIONS / "generation")
     await runner.up()
     labels = "SELECT unnest(enum_range(NULL::run_failure_reason))::text"
-    assert "schema_violation" in await _names(dsns["generation"], labels)
-    await runner.down(1)
+    both = await _names(dsns["generation"], labels)
+    assert {"schema_violation", "tenant_suspended", "internal"} <= both
+    run_cols = (
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'generation_runs'"
+    )
+    assert "suspended_at" in await _names(dsns["generation"], run_cols)
+    await runner.down(1)  # 0006
+    after = await _names(dsns["generation"], labels)
+    assert "tenant_suspended" not in after and {"schema_violation", "internal"} <= after
+    assert "suspended_at" not in await _names(dsns["generation"], run_cols)
+    await runner.down(1)  # 0005
     after = await _names(dsns["generation"], labels)
     assert "schema_violation" not in after and "internal" in after
     cols = await _names(
@@ -135,4 +144,4 @@ async def test_the_failure_reason_enum_grows_and_rolls_back(dsns: dict[str, str]
     )
     assert cols == {"artefact_sections", "generation_runs"}
     await runner.up()
-    assert "schema_violation" in await _names(dsns["generation"], labels)
+    assert {"schema_violation", "tenant_suspended"} <= await _names(dsns["generation"], labels)

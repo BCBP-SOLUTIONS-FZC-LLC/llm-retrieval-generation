@@ -436,6 +436,20 @@ class PgArtefactPurgeRepository:
             )
         return [rows.artefact(r) for r in found]
 
+    async def live_workflow_ids(
+        self, tx: Conn, tenant_id: UUID, tender_id: UUID | None
+    ) -> list[str]:
+        """Workflows of the scope's runs that have not ended (a ``cancel`` target)."""
+        found = await tx.fetch(
+            "SELECT workflow_id FROM generation_runs WHERE tenant_id = $1 "
+            "AND ($2::uuid IS NULL OR tender_id = $2) AND workflow_id IS NOT NULL "
+            "AND status IN ('pending','outline_building','awaiting_outline_approval',"
+            "'generating','suspended') ORDER BY created_at",
+            tenant_id,
+            tender_id,
+        )
+        return [r["workflow_id"] for r in found]
+
     async def delete_artefact_trees(
         self, tx: Conn, tenant_id: UUID, tender_id: UUID | None, artefact_ids: Sequence[UUID]
     ) -> None:
