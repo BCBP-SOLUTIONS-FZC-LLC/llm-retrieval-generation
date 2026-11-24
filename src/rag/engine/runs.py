@@ -191,7 +191,7 @@ async def fail_run(ctx: RunContext, reason: str, stage: str | None = None) -> bo
     """``failed`` with the reason, ``GenerationFailed`` and an audit entry, once.
 
     ``UPDATE ... WHERE status`` is non-terminal: a repeat finds a terminal row and changes and
-    publishes nothing, so a run has exactly one terminal event (WE-5, G-13). Completed sections
+    publishes nothing, so a run has exactly one terminal event (WEV-5, G-13). Completed sections
     stay durable (AOB-5). Returns whether this call ended the run.
     """
     why = RunFailureReason(reason)

@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code when working with the **Retrieval & Generation Service** (`llm-retrieval-generation`), a Python/FastAPI microservice in the LLM subsystem (Tender Management SaaS platform). It implements the LLD at `docs/lld/llm-lld-retrieval-generation-service.md`; where the LLD and the LLM HLD disagree, the HLD is authoritative. Build status, per-slice deviations, assumed peer contracts and the traceability matrix are in `docs/implementation-plan.md` — read it before changing behaviour the LLD describes.
 
-The subsystem has four planned deployables: Ingestion, Retrieval & Generation (this repo), Worker Pool and Model Gateway (Agent Router, formerly Envoy AI Gateway). **Only this one exists here.** Workflow and activity logic, including every LangGraph graph, is the Worker Pool's (scope cut S-1); the Gateway is Agent Router (formerly Envoy AI Gateway, renamed September 2026), whose route configuration is not in this repo.
+The subsystem has four planned deployables: Ingestion, Retrieval & Generation (this repo), Worker Pool and Model Gateway (Agent Router, formerly Envoy AI Gateway). **Only this one exists here.** The Worker Pool runs and registers the workflows and activities and owns every LangGraph graph (scope cut S-1), calling this repo's `rag.engine` for every table write and building block; the Gateway is Agent Router (formerly Envoy AI Gateway, renamed September 2026), whose route configuration is not in this repo.
 
 ## What This Repo Is
 
