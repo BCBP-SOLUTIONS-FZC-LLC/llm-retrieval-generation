@@ -257,7 +257,7 @@ async def test_a_gated_run_goes_from_outline_to_a_minted_document_as_rag_activit
         ).version_id == minted.version_id  # a repeat
 
         assert await runs.complete_run(ctx, minted) is True
-        assert await runs.complete_run(ctx, minted) is False  # exactly one terminal event (WE-5)
+        assert await runs.complete_run(ctx, minted) is False  # exactly one terminal event (WEV-5)
         assert (
             await runs.fail_run(ctx, "internal") is False
         )  # terminal: nothing written, nothing published

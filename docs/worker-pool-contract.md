@@ -12,9 +12,9 @@ confirmed by the Worker Pool owner.
 | Argument | Value |
 |---|---|
 | Namespace | `llm-generation` (`TEMPORAL_NAMESPACE`). **Required outside `local`, `dev` and `test`** (one namespace per environment on the shared cluster). mTLS with `TEMPORAL_TLS_CERT_PATH` and `TEMPORAL_TLS_KEY_PATH`, a CA in `TEMPORAL_TLS_CA_PATH` only for a private authority; a certificate needs its key. The names are this service's choice until the Workflow team confirms theirs |
-| Workflow type **(assumed)** | `GenerationWorkflow` (W-1, A-5) or `ExtractionWorkflow` (W-6) |
+| Workflow type | `GenerationWorkflow` (W-1, A-5) or `ExtractionWorkflow` (W-6). Fixed by the workers LLD (LW-2, rev 0.2, draft) |
 | `workflow_id` | `generation_runs.workflow_id` (RUN-2): `{artefact_id}` for an original, `regen:{base_version_id}` for an A-5 regeneration. Unique per tenant (`uq_run_workflow`) |
-| Task queue (WP-10) **(names assumed)** | Six, by run kind then tier: generation `llm-generation`, `llm-generation-enterprise` (`plan = enterprise`, compared in lower case against `ENTERPRISE_PLANS`), `llm-generation-strict` (any non-standard `residency_mode`; strict wins over plan); extraction (W-6, `kind = extraction`) `llm-extraction`, `llm-extraction-enterprise`, `llm-extraction-strict`. Names come from `TEMPORAL_TASK_QUEUE*` |
+| Task queue (WP-10) **(names assumed until the platform team names the namespaces and confirms them, workers LLD PL-9)** | Six, by run kind then tier: generation `llm-generation`, `llm-generation-enterprise` (`plan = enterprise`, compared in lower case against `ENTERPRISE_PLANS`), `llm-generation-strict` (any non-standard `residency_mode`; strict wins over plan); extraction (W-6, `kind = extraction`) `llm-extraction`, `llm-extraction-enterprise`, `llm-extraction-strict`. Names come from `TEMPORAL_TASK_QUEUE*` |
 | Id reuse / conflict policy | W-1, W-6, A-5, orphan sweep: `REJECT_DUPLICATE` + `FAIL`; `WorkflowAlreadyStarted` is treated as success (ASYNC-2). W-8 only: `ALLOW_DUPLICATE` + `FAIL` (a closed id may be reused, a live one answers `409`) |
 | Timeout / retry | 2 s per call, 2 retries with backoff (0.2 s, 0.5 s); failure is `503 WORKFLOW_ENGINE_UNAVAILABLE` and leaves the run `pending` (recoverable by the orphan sweep) |
 | Input | `GenerationWorkflowInput`, below. The same JSON is stored in `generation_runs.run_input`, so a lost workflow restarts with it (RUN-8). **What Temporal receives differs in one key:** the reviewer's `instruction` is replaced by `instruction_ref` (the generation run id) on every start, so the words never reach Temporal history (ASYNC-12). The Worker Pool decodes both forms with `llm_models.workers.GenerationWorkflowInput.from_dict` and reads the words back through `rag.engine.refine_instruction` |
@@ -43,7 +43,7 @@ per section and re-resolve scope (WP-4, SCOPE-3). A-6 (section regeneration) is 
 Addressed to the run's `workflow_id`. A signal to a workflow that no longer exists is reported to the caller as `503`
 (the run is a zombie; W-8 restarts it).
 
-| Signal **(names assumed)** | Payload | Raised by | What the workflow does |
+| Signal (names fixed by the workers LLD, LW-2) | Payload | Raised by | What the workflow does |
 |---|---|---|---|
 | `approve_outline` | `{outline_version}` | W-3 | Leaves the gate wait, runs stage 1. The row is already `generating`, `outline_state = approved`, `current_stage = stage1` |
 | `revise_outline` | `{outline_version (already incremented), sections: [{ref, type}]}` | W-4 | Loops to the outline activity with the edited outline (references and types only, never content). The row is already `outline_building`, `outline_state = revising`. The outline activity moves `revising -> building -> ready` and rewrites the section rows |

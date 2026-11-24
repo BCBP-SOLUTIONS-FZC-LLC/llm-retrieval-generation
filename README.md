@@ -384,7 +384,7 @@ For Claude Code, `.claude/settings.json` registers two hooks (`format-python.sh`
 
 ## Out of scope
 
-- **Workflow and activity logic, and every LangGraph graph** — the Worker Pool (scope cut S-1). No worker exists yet, so outline, stage and coherence steps, `OutlineReady`, gate expiry and the suspend path are untested end to end.
+- **The workflows, the orchestration activities and every LangGraph graph** — the Worker Pool (scope cut S-1; its design is `docs/lld/llm-lld-workers-service.md`, draft 2). It calls this service's `rag.engine` for every table write and building block. No worker exists yet, so outline, stage and coherence steps, `OutlineReady`, gate expiry and the suspend path are untested end to end.
 - **Ingestion's write path** — parsing, chunking, embedding, Qdrant writes, the lexical table (S-2, DEP-5).
 - **Model Gateway configuration** — only the HTTP client and adapter live here (S-3).
 - **Output content safety** — Tender's, not ours (§15.3).

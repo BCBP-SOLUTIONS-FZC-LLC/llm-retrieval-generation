@@ -14,7 +14,7 @@ Two Postgres instances: `llm_corpus` (collections, grants, index_generations, re
 ### Scope cuts taken from the LLD itself (recorded as assumptions)
 | # | Cut | LLD basis |
 |---|---|---|
-| S-1 | Temporal workflow/activity **logic** is the Worker Pool's. This service implements only start/signal client, run-row admission, state reads | §2.3, §9 |
+| S-1 | The Worker Pool (`llm-workers`) **runs and registers** the Temporal workflows and activities, and owns the section graph and the orchestration. The reusable logic they call (every table write and the building blocks) is this service's `rag.engine`. This service implements the start/signal client, run-row admission, state reads and that engine | §2.3, §9 |
 | S-2 | Ingestion write path, chunking, embedding, Qdrant writes | §2.2, DEP-5 |
 | S-3 | Model Gateway config (Agent Router, formerly Envoy AI Gateway) - only an HTTP client port + adapter | §22.1, LD-68 |
 | S-4 | Tender / IAM / Domain Profile services - outbound ports + HTTP adapters only | §22 |
