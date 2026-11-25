@@ -20,7 +20,7 @@ from uuid import UUID
 from rag.domain.generation.exceptions import InvariantViolation
 from rag.domain.shared.enums import AuditActorType
 
-SOURCE_SERVICE = "llm-rag-service"
+SOURCE_SERVICE = "llm-retrieval-generation"
 METADATA_MAX_BYTES = 8192
 
 # Entry types (4.6.3 table): (entry_type, action)

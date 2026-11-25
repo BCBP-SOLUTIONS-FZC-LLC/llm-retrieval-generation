@@ -255,7 +255,7 @@ C-I1 is the simplest route that emits an event (`CollectionProvisioned`). The ou
 1. In `.env` set `EVENTS_ENABLED=true` (optionally `OUTBOX_POLL_INTERVAL=1s`), then `make run`.
 2. Call C-I1 with a **fresh** `tender_id` (a repeat returns `200` and emits nothing).
 3. In floci-ui (http://localhost:4501) open SQS → `llm-events-probe-q`: the message count rises by one. floci-ui shows counts only, not message bodies.
-4. `make events-peek` prints the event envelopes (`type`, `source: llm-rag-service`, `tenant_id`, `subject`, `data`). It does not consume them.
+4. `make events-peek` prints the event envelopes (`type`, `source: llm-retrieval-generation`, `tenant_id`, `subject`, `data`). It does not consume them.
 5. To empty the queue: `aws sqs purge-queue` through the floci container (`docker compose exec floci aws --endpoint-url http://localhost:4566 …`).
 
 Troubleshooting: count stays 0 → `EVENTS_ENABLED` is still false or the app was not restarted; `401/403` → missing `x-tenant-id`; `200` instead of `201` → that `tender_id` already exists.

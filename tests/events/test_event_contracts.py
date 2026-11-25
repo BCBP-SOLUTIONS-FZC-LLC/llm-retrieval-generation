@@ -192,7 +192,7 @@ async def test_envelope_carries_every_mandatory_field(name: str) -> None:
     wire = json.loads(body)
     assert UUID(event_id).version == 7 and wire["id"] == event_id
     assert type_ == wire["type"] == name and name[0].isupper() and "." not in name
-    assert wire["source"] == EVENT_SOURCE == "llm-rag-service"
+    assert wire["source"] == EVENT_SOURCE == "llm-retrieval-generation"
     assert wire["time"] and wire["tenant_id"] == tenant == str(TENANT)
     assert wire["subject"] == f"tenders/{TENDER}" and wire["correlation_id"] == "corr-1"
     assert "actor" not in wire and "ip_address" not in wire and "user_agent" not in wire

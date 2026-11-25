@@ -36,7 +36,7 @@ from rag.domain.shared.enums import (
     SectionState,
 )
 
-SOURCE = "llm-rag-service"
+SOURCE = "llm-retrieval-generation"
 """Envelope ``source``: a constant, never carrying an environment (§12.2)."""
 
 TOPIC_GENERATION = "llm-generation-events"
