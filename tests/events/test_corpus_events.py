@@ -53,7 +53,7 @@ async def test_publisher_enqueues_a_canonical_envelope_on_the_callers_connection
     assert str(UUID(event_id)) == event_id
     wire = json.loads(body)
     assert wire["id"] == event_id and wire["type"] == "CollectionProvisioned"
-    assert wire["source"] == EVENT_SOURCE == "llm-rag-service"
+    assert wire["source"] == EVENT_SOURCE == "llm-retrieval-generation"
     assert wire["subject"] == f"tenders/{TENDER}" and wire["tenant_id"] == str(TENANT)
     assert wire["data"] == event.payload
 

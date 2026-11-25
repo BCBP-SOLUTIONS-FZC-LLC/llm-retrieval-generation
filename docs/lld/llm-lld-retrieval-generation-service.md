@@ -1268,7 +1268,7 @@ CREATE TABLE artefact_audit_chain (
   artefact_id       uuid NOT NULL,                -- a plain id, no foreign key (AC-6)
   target_type       text,                         -- artefact | artefact_version | section | section_version | fact_conflict
   target_id         text,
-  source_service    text NOT NULL DEFAULT 'llm-rag-service',
+  source_service    text NOT NULL DEFAULT 'llm-retrieval-generation',
   source_event_type text NOT NULL,                -- this service's own entry name
   source_event_id   text NOT NULL,                -- the outbox event id, else a UUIDv7 minted in the transaction
   trace_id          text,
@@ -4028,7 +4028,7 @@ The transport is SNS and SQS (MD-07). SNS is the topic service that fans out eve
 |---|---|---|---|
 | `id` | `id` | `new_envelope`, a UUIDv7 | The consumer idempotency key (`EVT-6`). **Mandatory** |
 | `type` | `type` | us | The event type, PascalCase (§12.6, LD-49). **Mandatory** |
-| `source` | `source` | us | The constant `llm-rag-service`, stable across environments. **Mandatory** |
+| `source` | `source` | us | The constant `llm-retrieval-generation`, stable across environments. **Mandatory** |
 | `time` | `time` | `new_envelope` | Event time, always set; required by `parse_envelope`. **Mandatory** |
 | `tenant_id` | `tenant_id` | us, from the transaction's GUC, never from a request body (`API-1`) | Contextual |
 | `trace_id`, `correlation_id` | same | us, propagated from the originating request or the run's input | Contextual |
@@ -4040,7 +4040,7 @@ The transport is SNS and SQS (MD-07). SNS is the topic service that fans out eve
 
 **The field is `id`, not `event_id`.** `event_id` is the library's recommended *column* name on a consumer's `processed_events` ledger (§4.6.5), and its SNS message attribute is `EventID`. The envelope field is `id`.
 
-**`source` is mandatory on every envelope.** `llm-rag-service` is this subsystem's constant; it must not carry an environment.
+**`source` is mandatory on every envelope.** `llm-retrieval-generation` is this subsystem's constant; it must not carry an environment.
 
 *Assumption on a platform library, verified against its source at rev 0.9 (§22.6):* The library ships `GlueDecodeCodec`, a decode-only codec (it reads messages but cannot write them). When an envelope carries a `dataschema`, it strips the 18-byte header. It needs no registry client or AWS permission. This service configures it on the two IAM queues (LD-75). Its `encode` always raises, so the publishing side is this service's own encoder (§20 OQ-37). The library's `Codec` is the service's to implement and inject (`SNSPublisher(codec=...)`). This service therefore writes a Glue encoder and frames every event as Tender's interface page requires. Payloads in §12.3 stay plain JSON before framing. On the wire, `data` becomes the base64 wrapper `wrap_codec_payload` produces (LD-82).
 
@@ -5654,7 +5654,7 @@ Temporal availability is a generation dependency and not a retrieval one: W-1 an
 
 ### 18.6 Repository and pipeline
 
-This service is `llm-rag-service`: retrieval, generation, verification, the corpus module and the `llm_generation` migrations (HLD §18.2). The activities that write our tables run in the Worker Pool deployable (`llm-workers`, LD-88; designed in `llm-lld-workers-service.md`). `ASYNC-1` holds because they call the same shared code as a request handler. The pipeline belongs to Platform, and the rows below are what this service requires of it.
+This service is `llm-retrieval-generation`: retrieval, generation, verification, the corpus module and the `llm_generation` migrations (HLD §18.2). The activities that write our tables run in the Worker Pool deployable (`llm-workers`, LD-88; designed in `llm-lld-workers-service.md`). `ASYNC-1` holds because they call the same shared code as a request handler. The pipeline belongs to Platform, and the rows below are what this service requires of it.
 
 | Stage | Trigger | Gates |
 |---|---|---|
@@ -6700,6 +6700,7 @@ This is the record of every change, oldest first. It is for maintainers and is n
 | 2.140 | 2026-11-18 | **The LLD follows the Low-severity fixes from manual testing (implementation-plan, branch `fix/low-severity-items`).** A NUL character and a `version_no` over `int` are refused (§5.2). P-1 and P-2 show `null` for a collection with no active generation (§5.7.15). A cut-short draft keeps its text with a `truncated` marker, and spaces alone are a `503` before the first frame (§5.5); an insufficient outcome is not cached and R-2's refusal is stated (§5.7.2, §11). An open fact conflict is reused (`FC-4`); the A-6 instruction link is documented as absent (§5.7.10). The document roll-up is stored (§4.8.3, `AV-3` wins). A read outage uses `ARTEFACT_STORE_UNWRITABLE` (§24). REGEN-5 is marked not built. The `failure_policy_total` label is `declared_policy` (§16.2). The `budget_allocation` example uses the stored keys (§5.7.5). Small artefact-read behaviours and the R-3 required-input staleness are recorded as accepted. No design decision changes. |
 | 2.141 | 2026-11-19 | **The LLD follows the Worker Pool review (implementation-plan, branch `feat/engine-and-worker-fixes`).** The stalled sweep exempts async runs and a quiet-async-runs sweep alerts (§21.2, LD-105); W-8 accepts a `generating` run (§5.7.14, §18.9); the reviewer's instruction travels as `instruction_ref` (LD-106); six task queues, a required namespace outside dev and mTLS (LD-107); `tenant_suspended`, `suspended_at`, `GenerationCompleted.sections_failed` and `sections_gap`, and `rag_activity` `DELETE` on a pending section (§4.1, §4.2, §12.3, LD-108, migration 0006); a purge sends `cancel` first (LD-109). The engine boundary `rag.engine` and the plain types `llm_models.workers` exist in this repository (`docs/worker-pool-contract.md` §6). The zombie-run sweep stays unbuilt. |
 | 2.142 | 2026-11-24 | **The LLD points at the Worker Pool's own LLD and records what it left open.** The header, §9.3, §18.6, §22.2 and OQ-54 name `llm-lld-workers-service.md` (draft 2, rev 0.2, not yet committed to this repository: it waits for the other teams' answers) as the Worker Pool's design; the `task_queue` and `WP-10` rows say six queues and mark `x-plan`, a missing plan and the Entitlements read as open with other teams (IA-4, H-9, C-1); OQ-67 and OQ-112 gain a status note. No behaviour, route or schema changes |
+| 2.143 | 2026-11-25 | **The event and audit source is `llm-retrieval-generation`, the repository's own name.** It was `llm-rag-service`, the HLD's repository-table name, which the repository never used. §4 (the `artefact_audit_chain` default), §12.2, §12.2's mandatory-source note and §18.6 name the new value; migration `0007` changes the column default only, and audit rows already written keep the value they were hashed with. The older revision rows keep the old name as history. `*-rag-q` queue names, consumer and ledger names, the `rag_*` roles and the `rag` package are unchanged. No route changes |
 
 ---
 

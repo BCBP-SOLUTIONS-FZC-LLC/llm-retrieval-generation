@@ -62,7 +62,7 @@ The pack-cache key shape is an **assumption** (§11.1 does not fix the identity)
 
 ### 7.1 Envelope
 
-`id` (uuidv7), `type`, `source` (`llm-rag-service`), `tenant_id`, `trace_id`, `correlation_id`, `subject` (`tenders/<tender_id>` or absent), `time`, `data`. Message attributes: `EventID`, `TenantID`, `EventType`, `Source`, `Subject`, `traceparent`. **`tenant_id` is never in `data`.**
+`id` (uuidv7), `type`, `source` (`llm-retrieval-generation`), `tenant_id`, `trace_id`, `correlation_id`, `subject` (`tenders/<tender_id>` or absent), `time`, `data`. Message attributes: `EventID`, `TenantID`, `EventType`, `Source`, `Subject`, `traceparent`. **`tenant_id` is never in `data`.**
 
 ### 7.2 Published (17)
 

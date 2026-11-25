@@ -171,7 +171,7 @@ async def test_enqueue_as_rag_app_relay_routes_by_name_and_prune_works(db: Db) -
     assert [e.type for e in gen.published] == ["GenerationCancelled"]
     assert [e.type for e in idx.published] == ["ProfileCacheRefreshed"]
     assert (
-        gen.published[0].source == "llm-rag-service"
+        gen.published[0].source == "llm-retrieval-generation"
         and gen.published[0].subject == f"tenders/{TENDER}"
     )
     await asyncio.sleep(0.05)

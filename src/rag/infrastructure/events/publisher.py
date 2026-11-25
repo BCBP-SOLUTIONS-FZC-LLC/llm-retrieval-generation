@@ -12,7 +12,7 @@ from rag.application.shared.ports import TxHandle
 from rag.infrastructure.events.schemas import validate_published
 
 EVENT_SOURCE = SOURCE
-"""Envelope ``source`` of every event this service publishes: ``llm-rag-service`` (§12.2)."""
+"""Envelope ``source`` of every event this service publishes (§12.2): the repository's own name."""
 
 
 class OutboxEventPublisher:

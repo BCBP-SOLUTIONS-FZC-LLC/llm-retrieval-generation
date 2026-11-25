@@ -130,6 +130,8 @@ async def test_the_failure_reason_enum_grows_and_rolls_back(dsns: dict[str, str]
         "SELECT column_name FROM information_schema.columns WHERE table_name = 'generation_runs'"
     )
     assert "suspended_at" in await _names(dsns["generation"], run_cols)
+    await runner.down(1)  # 0007 (the audit source default; no enum or column effect)
+    assert {"schema_violation", "tenant_suspended"} <= await _names(dsns["generation"], labels)
     await runner.down(1)  # 0006
     after = await _names(dsns["generation"], labels)
     assert "tenant_suspended" not in after and {"schema_violation", "internal"} <= after
