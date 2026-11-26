@@ -33,7 +33,7 @@ from rag.domain.generation.run import GenerationRun
 from rag.domain.generation.section import ArtefactSection, SectionVersion
 from rag.domain.shared.enums import ArtefactOrigin, OutlineState, RunFailureReason, SectionState
 from rag.engine.context import RunContext
-from rag.engine.errors import RunGone, RunTerminal
+from rag.engine.errors import ContentUnavailable, RunGone, RunTerminal
 from rag.infrastructure.persistence.generation.engine import OutlineEntry
 
 
@@ -165,6 +165,39 @@ async def begin_section(ctx: RunContext, section_id: UUID) -> bool:
         return True
 
     return await s.tx.run_in_tx(work)
+
+
+async def load_section_text(ctx: RunContext, section_id: UUID) -> str:
+    """The text of a section's current version, in memory only (WB-5).
+
+    ``""`` where the section has no version (a gap or a failure). The row is read in the run's
+    tenant, the object only under that tenant's prefix, and its bytes must hash to the stored
+    digest (ASV-4), else ``ContentUnavailable``. A section of another artefact is ``RunGone``.
+    """
+    s = ctx.services
+
+    async def read(tx: TxHandle) -> tuple[str, bytes] | None:
+        run = await s.runs.get_run(tx, ctx.run_id)  # no lock: a read-only transaction
+        if run is None:
+            raise RunGone
+        section = await s.engine.get_section(tx, section_id)
+        if section is None or section.artefact_id != run.artefact_id:
+            raise RunGone
+        return await s.engine.current_content(tx, section_id)
+
+    found = await s.tx.run_in_tx(read, read_only=True)
+    if found is None:
+        return ""
+    ref, digest = found
+    try:
+        data = await s.store.get(ctx.tenant_id, ref)
+        if hashlib.sha256(data).digest() != digest:
+            raise ContentUnavailable
+        return data.decode("utf-8")
+    except ContentUnavailable:
+        raise
+    except Exception:  # store outage, a key outside the prefix, bytes that are not text
+        raise ContentUnavailable from None  # the cause can carry text or key names (OBS-2)
 
 
 def _version(

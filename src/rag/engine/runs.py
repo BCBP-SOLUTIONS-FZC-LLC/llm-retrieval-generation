@@ -178,6 +178,12 @@ async def _close_artefact_after_failure(
     ctx: RunContext, tx: TxHandle, run: GenerationRun, artefact: Artefact | None
 ) -> None:
     """A failed original ends ``failed``; a failed regeneration returns to ``complete`` (AS-7)."""
+    if artefact is not None and artefact.status is ArtefactStatus.PENDING:
+        # a run failed before its first stage began: the shell never left `pending`, and the
+        # orphan sweep would restart it (P0-2). `pending -> failed` is an ART-5 edge.
+        artefact.move_to(ArtefactStatus.FAILED)
+        await ctx.services.runs.save_artefact_status(tx, artefact)
+        return
     if artefact is None or artefact.status is not ArtefactStatus.GENERATING:
         return
     keeps_version = (

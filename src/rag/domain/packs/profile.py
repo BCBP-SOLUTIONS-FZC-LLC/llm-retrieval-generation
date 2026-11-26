@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Protocol
+from typing import NamedTuple, Protocol
 from uuid import UUID
 
 from rag.domain.packs.generation import (
@@ -64,6 +64,14 @@ class SectionTypeProfile:
         return self.failure_policy or ("block" if self.compliance else "flag")
 
 
+class SkeletonSection(NamedTuple):
+    """One section of a pack's outline for a capability (workers LLD LW-9, ADR-0003)."""
+
+    ref: str
+    section_type: str
+    is_foundation: bool = False
+
+
 @dataclass(frozen=True, slots=True)
 class DomainProfile:
     """A resolved Domain Profile."""
@@ -91,6 +99,11 @@ class DomainProfile:
     outline_gate_required: bool = False
     """The pack forbids skipping the human gate (W-1 ``outline_gate: false`` is then overridden,
     §5.7.12 "where the pack permits it"). Assumed pack key; the LLD names no field for it."""
+    outline_skeletons: Mapping[str, tuple[SkeletonSection, ...]] = field(default_factory=dict)
+    """The outline per capability, in order, with the foundation flag (ADR-0003 gap 1). Assumed
+    pack key (the workers repository's proposal); absent means no skeleton, never an error."""
+    fact_keys: tuple[str, ...] = ()
+    """The document-wide fact keys the pack tracks (ADR-0003 gap 2). Assumed pack key."""
 
     def profile_for(self, section_type: str | None) -> tuple[SectionTypeProfile, ProfileSource]:
         """The section-type row, else the profile default (§6.7 ladder)."""

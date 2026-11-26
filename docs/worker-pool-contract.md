@@ -140,10 +140,10 @@ this distribution, `rag.engine`, and the stdlib-only plain types `llm_models.wor
 | Public API, version `ENGINE_API_VERSION` (semantic) | `src/rag/engine/__init__.py` (`__all__`) |
 | Recorded shape, compared by a contract test here and in `llm-workers` (WB-4) | `src/rag/engine/engine_api_v1.json`, regenerated with `python -m rag.engine.snapshot` |
 | Run writes | `begin_stage`, `suspend_for_quota`, `complete_run`, `fail_run`, `run_state` (`runs.py`) |
-| Outline and sections | `save_outline` (gated or not), `begin_section`, `save_section`, `save_section_gap`, `fail_section` (`sections.py`) |
+| Outline and sections | `save_outline` (gated or not), `begin_section`, `save_section`, `save_section_gap`, `fail_section`, `load_section_text` (`sections.py`) |
 | Facts, coherence, version | `record_facts` (supersedes first, `DF-2`), `record_coherence`, `mint_document_version`, `record_checkpoint` (names, timings and counts only) (`documents.py`) |
 | Building blocks | `load_pack` (the pinned version), `reresolve`, `retrieve`, `compose_prompt`, `call_model`, `verify`, `refine_instruction`, `run_extraction` (`blocks.py`) |
-| Errors (no Temporal import, WB-7) | `RunGone`, `RunTerminal`, `QuotaRefused`, `ScopeRevoked`, `ResidencyRefused`, `SchemaViolation`, `InferenceUnavailable`, `NothingToMint` |
+| Errors (no Temporal import, WB-7) | `RunGone`, `RunTerminal`, `QuotaRefused`, `ScopeRevoked`, `ResidencyRefused`, `SchemaViolation`, `InferenceUnavailable`, `ContentUnavailable`, `NothingToMint` |
 | Composition root, no application and no lifespan | `rag.engine.bootstrap.build_engine(settings)` |
 
 Every write function takes the run's row `FOR UPDATE`, applies the domain machine, publishes its event in the same transaction,

@@ -64,6 +64,15 @@ class PgEngineRepository:
         )
         return None if r is None else rows.section(r)
 
+    async def current_content(self, tx: Conn, section_id: UUID) -> tuple[str, bytes] | None:
+        """``(content_ref, content_sha256)`` of the section's current version, else ``None``."""
+        r = await tx.fetchrow(
+            "SELECT v.content_ref, v.content_sha256 FROM artefact_sections s "
+            "JOIN artefact_section_versions v ON v.id = s.current_version_id WHERE s.id = $1",
+            section_id,
+        )
+        return None if r is None else (r["content_ref"], bytes(r["content_sha256"]))
+
     async def save_section_state(self, tx: Conn, section: ArtefactSection) -> None:
         """Persist what the section machine moved (AS-5, AS-7)."""
         await tx.execute(

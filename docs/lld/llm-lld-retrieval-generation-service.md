@@ -798,6 +798,7 @@ CREATE INDEX idx_run_gate ON generation_runs (tenant_id, gate_expires_at)
 | `suspended` | `generating` | this service | W-7 raised by a person, or by the quota-restored consumer (LD-70), on quota reset or plan upgrade |
 | `generating` | `complete` | activity | Final version minted |
 | `generating` | `failed` | activity | Terminal failure (`RUN-5`) |
+| `pending`, `outline_building`, `suspended` | `failed` | activity | A failure before the gate, an empty scope, or the 30-day suspension timeout (workers LLD §9.1 step 5); `rag.engine.fail_run` writes it (`RUN-5`, `RUN-7`) |
 | any non-terminal | `cancelled` | this service | W-5 |
 
 This is the run's own state machine. It is separate from `artefact_status` because a gate state belongs to the run, and no artefact lifecycle carries one. Each edge names the writer the From/To table gives it (RUN-7).
@@ -815,6 +816,9 @@ stateDiagram-v2
     suspended --> generating: this service, W-7 or the quota-restored consumer, on quota reset or plan upgrade
     generating --> complete: activity, final version minted
     generating --> failed: activity, terminal failure (RUN-5)
+    pending --> failed: activity, a failure before the gate (`fail_run`)
+    outline_building --> failed: activity, a failure before the gate (`fail_run`)
+    suspended --> failed: activity, the suspension timeout (workers LLD §9.1 step 5)
     pending --> cancelled: this service, W-5
     outline_building --> cancelled: this service, W-5
     awaiting_outline_approval --> cancelled: this service, W-5
@@ -6702,6 +6706,7 @@ This is the record of every change, oldest first. It is for maintainers and is n
 | 2.141 | 2026-11-19 | **The LLD follows the Worker Pool review (implementation-plan, branch `feat/engine-and-worker-fixes`).** The stalled sweep exempts async runs and a quiet-async-runs sweep alerts (§21.2, LD-105); W-8 accepts a `generating` run (§5.7.14, §18.9); the reviewer's instruction travels as `instruction_ref` (LD-106); six task queues, a required namespace outside dev and mTLS (LD-107); `tenant_suspended`, `suspended_at`, `GenerationCompleted.sections_failed` and `sections_gap`, and `rag_activity` `DELETE` on a pending section (§4.1, §4.2, §12.3, LD-108, migration 0006); a purge sends `cancel` first (LD-109). The engine boundary `rag.engine` and the plain types `llm_models.workers` exist in this repository (`docs/worker-pool-contract.md` §6). The zombie-run sweep stays unbuilt. |
 | 2.142 | 2026-11-24 | **The LLD points at the Worker Pool's own LLD and records what it left open.** The header, §9.3, §18.6, §22.2 and OQ-54 name `llm-lld-workers-service.md` (draft 2, rev 0.2, not yet committed to this repository: it waits for the other teams' answers) as the Worker Pool's design; the `task_queue` and `WP-10` rows say six queues and mark `x-plan`, a missing plan and the Entitlements read as open with other teams (IA-4, H-9, C-1); OQ-67 and OQ-112 gain a status note. No behaviour, route or schema changes |
 | 2.143 | 2026-11-25 | **The event and audit source is `llm-retrieval-generation`, the repository's own name.** It was `llm-rag-service`, the HLD's repository-table name, which the repository never used. §4 (the `artefact_audit_chain` default), §12.2, §12.2's mandatory-source note and §18.6 name the new value; migration `0007` changes the column default only, and audit rows already written keep the value they were hashed with. The older revision rows keep the old name as history. `*-rag-q` queue names, consumer and ledger names, the `rag_*` roles and the `rag` package are unchanged. No route changes. **Also LD-110:** progress reaches the browser through the Workflow Stream Gateway, fed by a forwarder of this service's own; EVT-12 gains one exception for it. Planned, not built |
+| 2.144 | 2026-11-26 | **The LLD follows engine 1.1.0 (workers repository ADR-0003, branch `feat/engine-1-1-adr-0003`).** §4.3.6 gains `failed` from `pending`, `outline_building` and `suspended`, written by `rag.engine.fail_run` (the suspension timeout of workers LLD §9.1 step 5 needs the last). No migration: only `ck_run_failure` constrains `failed`, and a reason is always written. `DomainProfile` gains `outline_skeletons` and `fact_keys`, and `rag.engine.load_section_text` reads a section's current text. Where the pack JSON carries the two new keys is the workers repository's proposal, an assumed peer contract (Tender has not confirmed it). Both default to empty, so an existing pack loads unchanged. |
 
 ---
 

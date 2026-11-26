@@ -26,7 +26,7 @@ from rag.application.generation.commands import AppendAuditEntry
 from rag.domain.workflows.input import ScopeSeed, WorkflowInput
 from rag.engine import documents, runs, sections
 from rag.engine.context import EngineServices, RunContext, run_scope
-from rag.engine.errors import NothingToMint, RunGone, RunTerminal
+from rag.engine.errors import ContentUnavailable, NothingToMint, RunGone, RunTerminal
 from rag.infrastructure.events.publisher import OutboxEventPublisher
 from rag.infrastructure.persistence.generation.engine import OutlineEntry, PgEngineRepository
 from rag.infrastructure.persistence.generation.regeneration import PgFactRepository
@@ -413,3 +413,59 @@ async def test_a_document_with_no_section_version_has_nothing_to_mint(db: Db) ->
         await runs.begin_stage(ctx, "stage1")
         with pytest.raises(NothingToMint):  # LW-5: the workflow fails the run instead
             await documents.mint_document_version(ctx)
+
+
+@pytest.mark.parametrize("status", ["pending", "outline_building", "suspended"])
+async def test_fail_run_ends_a_run_from_pending_outline_building_and_suspended(
+    db: Db, status: str
+) -> None:
+    """ADR-0003 gap 5: the 30-day suspension timeout and an early failure are recorded, not lost."""
+    s, _ = services(db)
+    winput, run_id, art = await start_run(db, gated=True, status=status)
+    if status == "suspended":  # a real suspension carries its stamp
+        conn = await db.admin()
+        try:
+            await conn.execute(
+                "UPDATE generation_runs SET suspended_at = now() WHERE id = $1", run_id
+            )
+        finally:
+            await conn.close()
+    async with scoped(s, winput) as ctx:
+        assert await runs.fail_run(ctx, "internal") is True
+        assert await runs.fail_run(ctx, "internal") is False  # one terminal event
+    row = await one(db, "SELECT status, failure_reason FROM generation_runs WHERE id = $1", run_id)
+    assert (row["status"], row["failure_reason"]) == ("failed", "internal")
+    assert (await event_types(db)).count("GenerationFailed") == 1
+    # the artefact never stays `pending` (the orphan sweep would restart it) or `generating`
+    assert (await one(db, "SELECT status FROM artefacts WHERE id = $1", art))["status"] == "failed"
+    if status == "suspended":  # LLD §4.3.6: NULL outside `suspended`
+        stamped = await one(db, "SELECT suspended_at FROM generation_runs WHERE id = $1", run_id)
+        assert stamped["suspended_at"] is None
+
+
+async def test_load_section_text_reads_the_current_version_and_fails_closed(db: Db) -> None:
+    """ADR-0003 gap 3: text in memory only, digest-checked, tenant-prefixed, one artefact only."""
+    s, store = services(db)
+    winput, run_id, art = await start_run(db, gated=False)
+    async with scoped(s, winput) as ctx:
+        await runs.begin_stage(ctx, "outline")
+        saved = await sections.save_outline(ctx, OUTLINE, gated=False)
+        s1, s2, _ = (UUID(i) for i in saved.section_ids)
+        conn = await db.admin()
+        try:
+            rset = await seed.retrieval_set(conn, A, TENDER, art)
+        finally:
+            await conn.close()
+        await sections.begin_section(ctx, s1)
+        await sections.save_section(ctx, s1, draft(rset))
+        assert await sections.load_section_text(ctx, s1) == "section text"
+        assert await sections.load_section_text(ctx, s2) == ""  # no version yet
+        with pytest.raises(RunGone):  # a section that is not this run's artefact
+            await sections.load_section_text(ctx, uuid4())
+        (key,) = store.objects
+        store.objects[key] = b"tampered"  # ASV-4: bytes no longer hash to the stored digest
+        with pytest.raises(ContentUnavailable):
+            await sections.load_section_text(ctx, s1)
+        del store.objects[key]  # the object is gone
+        with pytest.raises(ContentUnavailable):
+            await sections.load_section_text(ctx, s1)

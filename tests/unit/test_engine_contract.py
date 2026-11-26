@@ -22,7 +22,7 @@ def test_the_public_api_matches_the_recorded_snapshot() -> None:
 
 def test_the_version_is_semantic_and_every_export_exists() -> None:
     major, minor, patch = engine.ENGINE_API_VERSION.split(".")
-    assert (major, minor, patch) == ("1", "0", "0")  # v1 until a major change
+    assert (major, minor, patch) == ("1", "1", "0")  # v1 until a major change
     assert all(hasattr(engine, name) for name in engine.__all__)
     assert len(set(engine.__all__)) == len(engine.__all__)
 
