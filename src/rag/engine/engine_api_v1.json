@@ -1,5 +1,5 @@
 {
-  "engine_api_version": "1.0.0",
+  "engine_api_version": "1.1.0",
   "engine_types": {
     "Blocks": {
       "admit": "AdmitGeneration",
@@ -12,6 +12,14 @@
       "refiner": "InstructionRefiner",
       "scope": "ScopeProvider",
       "verifier": "VerifySection"
+    },
+    "ComposedPrompt": {
+      "nonce": "str",
+      "override_attempts": "tuple[str, ...]",
+      "prompt_hash": "str",
+      "refs": "Mapping[str, str]",
+      "system": "str",
+      "user": "str"
     },
     "ConflictDraft": {
       "established_by_section_id": "UUID",
@@ -38,6 +46,10 @@
       "tx": "TransactionRunner",
       "writes": "GenerationWriteRepository"
     },
+    "EvidenceChunk": {
+      "chunk_id": "str",
+      "text": "str"
+    },
     "FactDraft": {
       "fact_key": "str",
       "section_id": "UUID",
@@ -63,6 +75,18 @@
       "ref": "str",
       "section_type": "str"
     },
+    "PromptChunk": {
+      "chunk_id": "str",
+      "clause_ref": "str | None",
+      "document_id": "UUID | None",
+      "document_role": "str",
+      "document_title": "str",
+      "document_version": "int",
+      "excerpt": "str",
+      "heading_path": "str | None",
+      "language": "str",
+      "text": "str"
+    },
     "Retrieved": {
       "outcome": "RetrievalOutcome",
       "retrieval_set_id": "UUID"
@@ -85,9 +109,36 @@
       "scope_narrowed": "bool",
       "serving_tier": "str",
       "verification": "VerificationResult"
+    },
+    "VerificationRequest": {
+      "compliance": "bool",
+      "entailer": "Entailer | None",
+      "evidence": "Sequence[EvidenceChunk]",
+      "judge": "Judge | None",
+      "mandatory_clauses": "Iterable[str]",
+      "refs": "Mapping[str, str]",
+      "resampler": "Resampler | None",
+      "section_label": "str | None",
+      "text": "str"
+    },
+    "VerificationResult": {
+      "claims": "tuple[ClaimResult, ...]",
+      "completeness": "Completeness",
+      "disposition": "Disposition",
+      "gaps": "int",
+      "judge_model_profile_id": "str | None",
+      "markers": "tuple[dict[str, str], ...]",
+      "miscited": "int",
+      "score": "Decimal | None",
+      "supported": "int",
+      "tier": "EvidenceTier",
+      "tier0_disagreement": "float | None",
+      "tiers_run": "tuple[int, ...]",
+      "unsupported": "int"
     }
   },
   "errors": [
+    "ContentUnavailable",
     "EngineError",
     "InferenceUnavailable",
     "NothingToMint",
@@ -109,6 +160,7 @@
     "fail_section": "(ctx: 'RunContext', section_id: 'UUID', reason: 'str') -> 'SectionOutcome'",
     "gateway_context": "(ctx: 'RunContext', section_ref: 'str' = 'run', attempt: 'int' = 1) -> 'GatewayContext'",
     "load_pack": "(ctx: 'RunContext') -> 'PackBundle'",
+    "load_section_text": "(ctx: 'RunContext', section_id: 'UUID') -> 'str'",
     "mint_document_version": "(ctx: 'RunContext') -> 'MintedVersion'",
     "record_checkpoint": "(ctx: 'RunContext', section_id: 'UUID', activity_run_id: 'str', nodes: 'Sequence[tuple[str, int, int]]') -> 'None'",
     "record_coherence": "(ctx: 'RunContext', verdict: 'str', conflicts: 'Sequence[ConflictDraft]') -> 'CoherenceResult'",

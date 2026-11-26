@@ -251,6 +251,44 @@ def test_pack_codec_round_trips() -> None:
     assert bundle_from_dict(bundle_to_dict(original)) == original
 
 
+def test_pack_codec_carries_the_outline_and_fact_keys_and_old_packs_still_load() -> None:
+    """ADR-0003 gaps 1 and 2: both round-trip, and a pack without them parses to empty."""
+    import dataclasses
+
+    from rag.domain.packs.profile import SkeletonSection
+
+    b = bundle()
+    with_outline = dataclasses.replace(
+        b,
+        domain_profile=dataclasses.replace(
+            b.domain_profile,
+            outline_skeletons={"technical_proposal": (SkeletonSection("1", "summary", True),)},
+            fact_keys=("client", "contract_value"),
+        ),
+    )
+    assert bundle_from_dict(bundle_to_dict(with_outline)) == with_outline
+    old = bundle_to_dict(b)
+    old["domain_profile"].pop("outline_skeletons")
+    old["domain_profile"].pop("fact_keys")
+    parsed = bundle_from_dict(old).domain_profile
+    assert parsed.outline_skeletons == {} and parsed.fact_keys == ()
+    for key, bad in (
+        ("fact_keys", "client"),
+        ("fact_keys", [1]),
+        ("outline_skeletons", [{"ref": "1"}]),
+        ("outline_skeletons", {"c": [{"ref": None, "section_type": "x"}]}),
+        ("outline_skeletons", {"c": [{"ref": "1", "section_type": "x", "is_foundation": "no"}]}),
+        ("fact_keys", ["k"] * 501),
+    ):
+        broken = bundle_to_dict(b)
+        broken["domain_profile"][key] = bad
+        with pytest.raises(ValueError):
+            bundle_from_dict(broken)
+    nulls = bundle_to_dict(b)
+    nulls["domain_profile"]["fact_keys"] = nulls["domain_profile"]["outline_skeletons"] = None
+    assert bundle_from_dict(nulls).domain_profile.fact_keys == ()  # null is absent, not a 503
+
+
 async def test_pack_cache_is_tenant_prefixed_and_keyed_by_version() -> None:
     """§11.1: ``{tenant}:pack:{identity}:{version}``; a pinned read hits after any read of it."""
     kv = DictKV()

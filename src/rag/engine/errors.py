@@ -68,6 +68,16 @@ class RunTerminal(EngineError):  # noqa: N818
         super().__init__("run_terminal")
 
 
+class ContentUnavailable(EngineError):  # noqa: N818
+    """A section's stored text could not be read, or no longer matches its digest (ASV-4).
+
+    Retryable: the object store may recover. The message never names the section or its text.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("content_unavailable")
+
+
 class NothingToMint(EngineError):  # noqa: N818
     """No section has a version, so there is no document to roll up. The workflow fails the run."""
 

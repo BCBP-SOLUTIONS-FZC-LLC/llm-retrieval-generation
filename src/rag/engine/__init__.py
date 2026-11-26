@@ -11,6 +11,10 @@ contract test here and in ``llm-workers`` (WB-4).
 
 from __future__ import annotations
 
+from rag.application.verification.verify import VerificationRequest, VerificationResult
+from rag.domain.generation.prompt import ComposedPrompt, PromptChunk
+from rag.domain.packs.profile import SkeletonSection
+from rag.domain.verification.tiers import EvidenceChunk
 from rag.engine.blocks import (
     Blocks,
     ModelAnswer,
@@ -38,6 +42,7 @@ from rag.engine.documents import (
     record_facts,
 )
 from rag.engine.errors import (
+    ContentUnavailable,
     EngineError,
     InferenceUnavailable,
     NothingToMint,
@@ -54,27 +59,32 @@ from rag.engine.sections import (
     SectionDraft,
     begin_section,
     fail_section,
+    load_section_text,
     save_outline,
     save_section,
     save_section_gap,
 )
 from rag.infrastructure.persistence.generation.engine import OutlineEntry
 
-ENGINE_API_VERSION = "1.0.0"
+ENGINE_API_VERSION = "1.1.0"
 
 __all__ = [
     "ENGINE_API_VERSION",
     "Blocks",
+    "ComposedPrompt",
     "ConflictDraft",
+    "ContentUnavailable",
     "Engine",
     "EngineError",
     "EngineServices",
+    "EvidenceChunk",
     "FactDraft",
     "GapDraft",
     "InferenceUnavailable",
     "ModelAnswer",
     "NothingToMint",
     "OutlineEntry",
+    "PromptChunk",
     "QuotaRefused",
     "ResidencyRefused",
     "Retrieved",
@@ -85,6 +95,9 @@ __all__ = [
     "ScopeRevoked",
     "ScopeSnapshot",
     "SectionDraft",
+    "SkeletonSection",
+    "VerificationRequest",
+    "VerificationResult",
     "begin_section",
     "begin_stage",
     "build_engine",
@@ -95,6 +108,7 @@ __all__ = [
     "fail_section",
     "gateway_context",
     "load_pack",
+    "load_section_text",
     "mint_document_version",
     "record_checkpoint",
     "record_coherence",

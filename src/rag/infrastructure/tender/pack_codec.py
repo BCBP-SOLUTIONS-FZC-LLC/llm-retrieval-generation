@@ -20,6 +20,7 @@ from rag.domain.packs.profile import (
     PackBundle,
     PackSource,
     SectionTypeProfile,
+    SkeletonSection,
 )
 from rag.domain.retrieval.sufficiency import RequiredInputRule, SufficiencyThreshold
 from rag.domain.shared.enums import EligibilityState
@@ -72,6 +73,49 @@ def _schema(ref: str, d: dict[str, Any]) -> ExtractionSchema:
     )
 
 
+MAX_SKELETON_SECTIONS = 200
+MAX_FACT_KEYS = 500
+
+
+def _skeletons(raw: Any) -> dict[str, tuple[SkeletonSection, ...]]:
+    """``outline_skeletons`` from an untrusted pack.
+
+    Absent or null is empty; a bad shape is ``ValueError`` (the caller maps it to
+    ``PackUnavailable``).
+    """
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ValueError("outline_skeletons must be an object")
+    out: dict[str, tuple[SkeletonSection, ...]] = {}
+    for capability, entries in raw.items():
+        if not isinstance(entries, list) or len(entries) > MAX_SKELETON_SECTIONS:
+            raise ValueError("an outline skeleton must be a short list")
+        out[str(capability)] = tuple(_skeleton_section(e) for e in entries)
+    return out
+
+
+def _skeleton_section(e: Any) -> SkeletonSection:
+    if not isinstance(e, dict):
+        raise ValueError("a skeleton section must be an object")
+    ref, kind, foundation = e.get("ref"), e.get("section_type"), e.get("is_foundation", False)
+    if not (isinstance(ref, str) and ref and isinstance(kind, str) and kind):
+        raise ValueError("a skeleton section needs a ref and a section_type")
+    if not isinstance(foundation, bool):
+        raise ValueError("is_foundation must be a boolean")
+    return SkeletonSection(ref, kind, foundation)
+
+
+def _fact_keys(raw: Any) -> tuple[str, ...]:
+    if raw is None:
+        return ()
+    if not isinstance(raw, list) or len(raw) > MAX_FACT_KEYS:
+        raise ValueError("fact_keys must be a short list")
+    if not all(isinstance(k, str) and k for k in raw):
+        raise ValueError("a fact key must be a non-empty string")
+    return tuple(raw)
+
+
 def bundle_from_dict(body: dict[str, Any]) -> PackBundle:
     """Parse a pack document. ``KeyError``/``ValueError``/``TypeError`` where it is malformed."""
     dp, lp = body["domain_profile"], body["language_pack"]
@@ -95,6 +139,8 @@ def bundle_from_dict(body: dict[str, Any]) -> PackBundle:
         answer_skeleton=str(dp.get("answer_skeleton", "")),
         tenant_overrides=str(dp.get("tenant_overrides", "")),
         outline_gate_required=bool(dp.get("outline_gate_required", False)),
+        outline_skeletons=_skeletons(dp.get("outline_skeletons")),
+        fact_keys=_fact_keys(dp.get("fact_keys")),
         eligibility={k: _eligibility(v) for k, v in dp.get("eligibility", {}).items()},
         default_eligibility=_eligibility(dp.get("default_eligibility", {})),
         generation_model_profile=dp.get("generation_model_profile"),
@@ -183,6 +229,14 @@ def bundle_to_dict(bundle: PackBundle) -> dict[str, Any]:
             "answer_skeleton": dp.answer_skeleton,
             "tenant_overrides": dp.tenant_overrides,
             "outline_gate_required": dp.outline_gate_required,
+            "outline_skeletons": {
+                k: [
+                    {"ref": s.ref, "section_type": s.section_type, "is_foundation": s.is_foundation}
+                    for s in v
+                ]
+                for k, v in dp.outline_skeletons.items()
+            },
+            "fact_keys": list(dp.fact_keys),
             "eligibility": {k: _eligibility_dict(v) for k, v in dp.eligibility.items()},
             "default_eligibility": _eligibility_dict(dp.default_eligibility),
             "generation_model_profile": dp.generation_model_profile,

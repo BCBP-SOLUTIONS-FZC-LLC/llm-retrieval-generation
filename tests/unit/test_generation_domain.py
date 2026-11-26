@@ -228,6 +228,18 @@ def test_run_terminal_states_have_no_exit() -> None:
     assert RunStatus.COMPLETE not in RUN_TRANSITIONS[RunStatus.SUSPENDED]
 
 
+def test_run_can_fail_from_every_non_terminal_status() -> None:
+    """ADR-0003 gap 5: a suspension timeout and an early failure need an edge to ``failed``."""
+    for status in (
+        RunStatus.PENDING,
+        RunStatus.OUTLINE_BUILDING,
+        RunStatus.AWAITING_OUTLINE_APPROVAL,
+        RunStatus.GENERATING,
+        RunStatus.SUSPENDED,
+    ):
+        assert RunStatus.FAILED in RUN_TRANSITIONS[status]
+
+
 def test_run_gate_loop_w3_w4() -> None:
     """Outline gate: none -> building -> ready -> revising -> building -> ready -> approved."""
     run = make_run()
