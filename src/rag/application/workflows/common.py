@@ -167,7 +167,9 @@ class RunActions:
             raise
         if eligibility:
             artefact = (await self.load(run.id))[1]
-            bundle, _ = await resolve_or_default(self.packs, identity.tenant_id)
+            bundle, _ = await resolve_or_default(
+                self.packs, identity.tenant_id, allow_default=False
+            )
             resolve_eligibility(
                 bundle.domain_profile.eligibility_for(artefact.capability),
                 run.requested_mode,

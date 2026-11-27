@@ -208,7 +208,7 @@ def membership(svc: ConsumerServices, store: Store) -> Handler:
 
 
 def tender_lifecycle(svc: ConsumerServices, store: Store) -> Handler:
-    """``tender-rag-q``: restricted, purged and the four terminal outcomes (COL-8, ART-7, ART-9)."""
+    """``tender-rag-q``: restricted, purged and the six terminal outcomes (COL-8, ART-7, ART-9)."""
 
     async def handle(env: Envelope[Any]) -> None:
         if env.type not in c.CONSUMED or c.CONSUMED[env.type] is not c.TenderEvent:

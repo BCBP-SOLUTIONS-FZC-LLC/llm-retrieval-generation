@@ -315,7 +315,10 @@ class AdmitGeneration:
         if named:
             await self._gate.require_collections_open(sorted(named))
         bundle, markers = await resolve_or_default(
-            self._packs, identity.tenant_id, pinned_version=req.pinned_pack_version
+            self._packs,
+            identity.tenant_id,
+            pinned_version=req.pinned_pack_version,
+            allow_default=req.kind is ArtefactKind.ANSWER,  # answers may degrade, drafts never
         )
         dp = bundle.domain_profile
         if req.check_pack is not None:

@@ -66,18 +66,22 @@ channels:
     address: tender-rag-q
     description: SQS queue `tender-rag-q`.
     messages:
+      TenderContracted:
+        $ref: '#/components/messages/TenderContracted'
       TenderDeclined:
         $ref: '#/components/messages/TenderDeclined'
+      TenderLapsed:
+        $ref: '#/components/messages/TenderLapsed'
       TenderLost:
         $ref: '#/components/messages/TenderLost'
       TenderPurged:
         $ref: '#/components/messages/TenderPurged'
+      TenderRejected:
+        $ref: '#/components/messages/TenderRejected'
       TenderRestricted:
         $ref: '#/components/messages/TenderRestricted'
       TenderWithdrawn:
         $ref: '#/components/messages/TenderWithdrawn'
-      TenderWon:
-        $ref: '#/components/messages/TenderWon'
   usage-rag-q:
     address: usage-rag-q
     description: SQS queue `usage-rag-q`.
@@ -369,6 +373,15 @@ components:
       tags:
       - $ref: '#/components/tags/consumed'
       title: TenantStateChanged
+    TenderContracted:
+      contentType: application/json
+      name: TenderContracted
+      payload:
+        $ref: '#/components/schemas/TenderContracted'
+      summary: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      tags:
+      - $ref: '#/components/tags/consumed'
+      title: TenderContracted
     TenderDeclined:
       contentType: application/json
       name: TenderDeclined
@@ -378,6 +391,15 @@ components:
       tags:
       - $ref: '#/components/tags/consumed'
       title: TenderDeclined
+    TenderLapsed:
+      contentType: application/json
+      name: TenderLapsed
+      payload:
+        $ref: '#/components/schemas/TenderLapsed'
+      summary: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      tags:
+      - $ref: '#/components/tags/consumed'
+      title: TenderLapsed
     TenderLost:
       contentType: application/json
       name: TenderLost
@@ -396,6 +418,15 @@ components:
       tags:
       - $ref: '#/components/tags/consumed'
       title: TenderPurged
+    TenderRejected:
+      contentType: application/json
+      name: TenderRejected
+      payload:
+        $ref: '#/components/schemas/TenderRejected'
+      summary: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      tags:
+      - $ref: '#/components/tags/consumed'
+      title: TenderRejected
     TenderRestricted:
       contentType: application/json
       name: TenderRestricted
@@ -414,15 +445,6 @@ components:
       tags:
       - $ref: '#/components/tags/consumed'
       title: TenderWithdrawn
-    TenderWon:
-      contentType: application/json
-      name: TenderWon
-      payload:
-        $ref: '#/components/schemas/TenderWon'
-      summary: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
-      tags:
-      - $ref: '#/components/tags/consumed'
-      title: TenderWon
   schemas:
     ArtefactRegenerated:
       additionalProperties: true
@@ -1787,6 +1809,24 @@ components:
       - status
       title: TenantStateChanged
       type: object
+    TenderContracted:
+      description: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      properties:
+        tenant_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          default: null
+          title: Tenant Id
+        tender_id:
+          format: uuid
+          title: Tender Id
+          type: string
+      required:
+      - tender_id
+      title: TenderContracted
+      type: object
     TenderDeclined:
       description: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
       properties:
@@ -1804,6 +1844,24 @@ components:
       required:
       - tender_id
       title: TenderDeclined
+      type: object
+    TenderLapsed:
+      description: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      properties:
+        tenant_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          default: null
+          title: Tenant Id
+        tender_id:
+          format: uuid
+          title: Tender Id
+          type: string
+      required:
+      - tender_id
+      title: TenderLapsed
       type: object
     TenderLost:
       description: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
@@ -1841,6 +1899,24 @@ components:
       - tender_id
       title: TenderPurged
       type: object
+    TenderRejected:
+      description: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
+      properties:
+        tenant_id:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          default: null
+          title: Tenant Id
+        tender_id:
+          format: uuid
+          title: Tender Id
+          type: string
+      required:
+      - tender_id
+      title: TenderRejected
+      type: object
     TenderRestricted:
       description: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
       properties:
@@ -1877,24 +1953,6 @@ components:
       - tender_id
       title: TenderWithdrawn
       type: object
-    TenderWon:
-      description: 'Any Tender event this service reads: restricted, purged, or a terminal outcome.'
-      properties:
-        tenant_id:
-          anyOf:
-          - format: uuid
-            type: string
-          - type: 'null'
-          default: null
-          title: Tenant Id
-        tender_id:
-          format: uuid
-          title: Tender Id
-          type: string
-      required:
-      - tender_id
-      title: TenderWon
-      type: object
   tags:
     consumed:
       description: Received by this service.
@@ -1930,7 +1988,8 @@ operations:
     action: receive
     channel:
       $ref: '#/channels/tender-rag-q'
-    summary: Consume TenderDeclined, TenderLost, TenderPurged, TenderRestricted, TenderWithdrawn, TenderWon.
+    summary: Consume TenderContracted, TenderDeclined, TenderLapsed, TenderLost, TenderPurged, TenderRejected,
+      TenderRestricted, TenderWithdrawn.
   consume-usage-rag-q:
     action: receive
     channel:

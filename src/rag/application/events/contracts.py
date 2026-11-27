@@ -82,8 +82,17 @@ TENANT_STATE_CHANGED = "TenantStateChanged"
 TENANT_MEMBERSHIPS_PURGED = "TenantMembershipsPurged"
 TENDER_RESTRICTED = "TenderRestricted"
 TENDER_PURGED = "TenderPurged"
-TENDER_TERMINAL_TYPES = frozenset({"TenderDeclined", "TenderWon", "TenderLost", "TenderWithdrawn"})
-"""ASSUMED names of the four terminal outcomes (LD-89); Tender HLD §13.5 names transitions only."""
+TENDER_TERMINAL_TYPES = frozenset(
+    {
+        "TenderRejected",
+        "TenderDeclined",
+        "TenderContracted",
+        "TenderLost",
+        "TenderLapsed",
+        "TenderWithdrawn",
+    }
+)  # Tender, 27 Nov 2026; TenderWon is not terminal (TenderContracted follows it)
+"""The six terminal outcomes (LD-89, Tender reply of 27 November 2026); `TenderWon` is not one."""
 TENANT_QUOTA_RESTORED = "TenantQuotaRestored"
 
 # consumer names in the ``processed_events`` ledger (§12.4, EVT-6)

@@ -78,6 +78,17 @@ class ContentUnavailable(EngineError):  # noqa: N818
         super().__init__("content_unavailable")
 
 
+class ProfileUnavailable(EngineError):  # noqa: N818
+    """The run's Domain Profile cannot be served now (Tender outage). Retryable; never a default.
+
+    Generation and extraction never run on the platform default profile, so an outage is a wait
+    and a retry, not a degraded run (Tender, 27 Nov 2026).
+    """
+
+    def __init__(self) -> None:
+        super().__init__("profile_unavailable")
+
+
 class NothingToMint(EngineError):  # noqa: N818
     """No section has a version, so there is no document to roll up. The workflow fails the run."""
 

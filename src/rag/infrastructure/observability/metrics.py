@@ -28,8 +28,8 @@ from fastapicommon.metrics import (
 from rag.application.retrieval.ports import NullObserver, PipelineObserver
 from rag.infrastructure.config import Settings
 from rag.infrastructure.observability.logs import LoggingObserver
+from rag.infrastructure.observability.prefix import metric_prefix as _p
 
-P = "llm_retrieval_generation_"
 STAGES = frozenset(
     {"scope", "pack", "refine", "plan", "embed", "search", "fusion", "rerank", "assembly"}
 )
@@ -63,30 +63,38 @@ class PrometheusObserver:
 
     def __init__(self) -> None:
         self._stage = new_histogram(
-            P + "retrieval_stage_duration_seconds", "Retrieval stage duration", ["stage"]
+            _p() + "retrieval_stage_duration_seconds",
+            "Retrieval stage duration",
+            ["stage"],
         )
         self._markers = new_counter(
-            P + "degradation_marker_total", "Degradation markers", ["stage", "reason"]
+            _p() + "degradation_marker_total", "Degradation markers", ["stage", "reason"]
         )
         self._sufficiency = new_counter(
-            P + "sufficiency_verdict_total", "Sufficiency verdicts", ["verdict", "section_type"]
+            _p() + "sufficiency_verdict_total",
+            "Sufficiency verdicts",
+            ["verdict", "section_type"],
         )
         self._gaps = new_counter(
-            P + "required_input_gap_total", "Missing required roles", ["missing_role"]
+            _p() + "required_input_gap_total", "Missing required roles", ["missing_role"]
         )
         self._rerank_skipped = new_counter(
-            P + "rerank_skipped_total", "Rerank skipped or failed", ["reason"]
+            _p() + "rerank_skipped_total", "Rerank skipped or failed", ["reason"]
         )
-        self._scope_empty = new_counter(P + "scope_resolution_empty_total", "Empty scope")
+        self._scope_empty = new_counter(_p() + "scope_resolution_empty_total", "Empty scope")
         self._depth = new_counter(
-            P + "candidate_depth_band_total", "Candidate depth per band", ["profile_source", "band"]
+            _p() + "candidate_depth_band_total",
+            "Candidate depth per band",
+            ["profile_source", "band"],
         )
         self._verdicts = new_counter(
-            P + "retrieval_verdict_total", "Retrieval verdicts", ["verdict"]
+            _p() + "retrieval_verdict_total", "Retrieval verdicts", ["verdict"]
         )
-        self._widened = new_counter(P + "widened_retry_total", "Widened retries")
-        self._refiner = new_histogram(P + "refiner_latency_seconds", "Refiner latency", ["refiner"])
-        self._cache = new_gauge(P + "retrieval_cache_hit_ratio", "Retrieval-set cache hit ratio")
+        self._widened = new_counter(_p() + "widened_retry_total", "Widened retries")
+        self._refiner = new_histogram(
+            _p() + "refiner_latency_seconds", "Refiner latency", ["refiner"]
+        )
+        self._cache = new_gauge(_p() + "retrieval_cache_hit_ratio", "Retrieval-set cache hit ratio")
         self._hits = self._lookups = 0
 
     @asynccontextmanager
@@ -145,7 +153,9 @@ class PrometheusObserver:
 
 @functools.cache
 def _cache_failures() -> Any:
-    return new_counter(P + "cache_failure_total", "Valkey failures (the cache is bypassed)", ["op"])
+    return new_counter(
+        _p() + "cache_failure_total", "Valkey failures (the cache is bypassed)", ["op"]
+    )
 
 
 def cache_failure_hook(settings: Settings) -> Callable[[str], None] | None:

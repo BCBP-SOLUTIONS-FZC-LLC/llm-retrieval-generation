@@ -13,8 +13,9 @@ class PackResolver(Protocol):
 
     Cache-fronted (§11.1, RET-3): a hit never leaves the process; a miss goes to Tender with a
     2 s timeout, two retries and a breaker. ``pinned_version`` re-reads a version a run already
-    pinned (``ASYNC-3``). Raises ``PackUnavailable`` where Tender cannot answer; the caller
-    falls back to ``PLATFORM_DEFAULT_BUNDLE`` with a marker (LD-14).
+    pinned (``ASYNC-3``). Raises ``PackUnavailable`` where Tender cannot answer; an answer or search
+    falls back to ``PLATFORM_DEFAULT_BUNDLE`` with a marker (LD-14). Generation and extraction
+    do not: they raise ``PACK_UNAVAILABLE``.
     """
 
     async def resolve(

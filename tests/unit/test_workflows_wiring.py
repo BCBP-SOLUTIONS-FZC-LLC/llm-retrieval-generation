@@ -15,10 +15,10 @@ from rag.domain.shared.errors import DomainError, ErrorCode
 from rag.domain.shared.identity import DepartmentRole, ResidencyMode
 from rag.infrastructure.config import Settings
 from rag.infrastructure.iam.principals import HttpPrincipalDirectory, UnavailablePrincipalDirectory
+from rag.infrastructure.observability.prefix import API_PREFIX as P
 from rag.infrastructure.observability.workflow_metrics import (
     LABELS,
     METRIC_NAMES,
-    P,
     build_workflow_observer,
 )
 from rag.infrastructure.temporal.client import TemporalWorkflowClient

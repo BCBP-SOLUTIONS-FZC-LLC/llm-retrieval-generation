@@ -1,6 +1,6 @@
 # Metric inventory: llm-retrieval-generation
 
-Every Tier-3 collector this service declares, by group. Names are listed without the `llm_retrieval_generation_` prefix. Written from `METRIC_NAMES` and `LABELS` in `src/rag/infrastructure/observability/` (the unit tests name-check them against the platform registry); **update this file in the same change as any collector**. All of it is dormant until the `llm` metrics domain is registered and `ENABLE_METRICS=true` ([README](README.md)).
+Every Tier-3 collector this service declares, by group. Names are listed without the prefix (`llm_retrieval_generation_` for this service; the active metrics identity's `<domain>_<service>_` in general, `llm_workers_` when the engine runs in the Worker Pool, `observability/prefix.py`). Written from `METRIC_NAMES` and `LABELS` in `src/rag/infrastructure/observability/` (the unit tests name-check them against the platform registry); **update this file in the same change as any collector**. All of it is dormant until the `llm` metrics domain is registered and `ENABLE_METRICS=true` ([README](README.md)).
 
 The tables list each metric's own labels only; the platform adds `domain`, `service` and `environment`.
 
