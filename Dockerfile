@@ -41,10 +41,12 @@ ARG BUILD_VERSION=dev
 # Nothing installs at runtime: drop pip, whose vendored urllib3 and msgpack the CVE scan flags.
 RUN python -m pip uninstall -y pip && rm -rf /usr/local/lib/python3.15/site-packages/pip*
 
-# The pinned base ships apt 2.6.1, which the CVE scan flags (CVE-2026-109518, fixed in 2.6.2):
-# upgrade only apt until the base image is republished, then drop this layer.
+# The pinned base ships apt 2.6.1 (CVE-2026-109518, fixed in 2.6.2) and libpam 1.5.2-6+deb12u2
+# (CVE-2025-6020, fixed in deb12u3), which the CVE scan flags: upgrade only those until the base
+# image is republished, then drop this layer.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends --only-upgrade apt libapt-pkg6.0 && \
+    apt-get install -y --no-install-recommends --only-upgrade apt libapt-pkg6.0 \
+        libpam0g libpam-modules libpam-modules-bin libpam-runtime && \
     rm -rf /var/lib/apt/lists/*
 ENV BUILD_VERSION=${BUILD_VERSION} \
     PATH="/app/.venv/bin:$PATH" \
