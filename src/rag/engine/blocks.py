@@ -53,6 +53,7 @@ from rag.domain.shared.identity import RequestIdentity
 from rag.engine.context import RunContext
 from rag.engine.errors import (
     InferenceUnavailable,
+    ProfileUnavailable,
     QuotaRefused,
     ResidencyRefused,
     RunGone,
@@ -130,6 +131,8 @@ def translate(exc: Exception) -> Exception:
                 return ResidencyRefused()
             case ErrorCode.INFERENCE_UNAVAILABLE:
                 return InferenceUnavailable()
+            case ErrorCode.PACK_UNAVAILABLE:
+                return ProfileUnavailable()
             case ErrorCode.COLLECTION_NOT_FOUND | ErrorCode.GRANT_LEVEL_INSUFFICIENT:
                 return ScopeRevoked()
             case ErrorCode.EXTRACTION_SCHEMA_VIOLATION:
@@ -168,7 +171,10 @@ def gateway_context(ctx: RunContext, section_ref: str = "run", attempt: int = 1)
 async def load_pack(ctx: RunContext) -> PackBundle:
     """The pack version the run pinned at start, never the latest (``ASYNC-3``)."""
     bundle, _ = await resolve_or_default(
-        _blocks(ctx).packs, ctx.tenant_id, pinned_version=ctx.input.domain_profile_version
+        _blocks(ctx).packs,
+        ctx.tenant_id,
+        pinned_version=ctx.input.domain_profile_version,
+        allow_default=False,
     )
     return bundle
 

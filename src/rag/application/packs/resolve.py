@@ -8,6 +8,7 @@ from rag.application.packs.ports import PackResolver
 from rag.application.retrieval.ports import NullObserver, PipelineObserver
 from rag.domain.packs.profile import PLATFORM_DEFAULT_BUNDLE, PackBundle, PackUnavailable
 from rag.domain.retrieval.plan import DegradationMarker
+from rag.domain.shared.errors import DomainError, ErrorCode
 
 
 async def resolve_or_default(
@@ -18,10 +19,13 @@ async def resolve_or_default(
     domain_profile_ref: str | None = None,
     language: str | None = None,
     pinned_version: str | None = None,
+    allow_default: bool = True,
 ) -> tuple[PackBundle, list[DegradationMarker]]:
     """The bundle, and a marker where Tender could not answer and the default was used.
 
     Falls back only when Tender is unavailable (breaker open, or a failure after the retries).
+    ``allow_default=False`` is for generation and extraction: output made under a substitute
+    profile cannot be reproduced, so the outage is a retryable ``503 PACK_UNAVAILABLE`` instead.
     """
     obs = observer or NullObserver()
     try:
@@ -32,7 +36,11 @@ async def resolve_or_default(
             pinned_version=pinned_version,
         )
         return bundle, []
-    except PackUnavailable:
+    except PackUnavailable as exc:
+        if not allow_default:
+            raise DomainError(
+                ErrorCode.PACK_UNAVAILABLE, "The Domain Profile cannot be served."
+            ) from exc
         obs.marker("pack", "tender_unavailable")
         return PLATFORM_DEFAULT_BUNDLE, [
             DegradationMarker("pack", "tender_unavailable", "platform_default")

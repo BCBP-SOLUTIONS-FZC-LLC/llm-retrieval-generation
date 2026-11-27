@@ -123,7 +123,7 @@ The outbox schema is applied **before** the numbered sets (`migrate_all`) becaus
 Do not weaken or delete these without a design discussion:
 
 - `tests/architecture/test_dependency_rules.py` — layering and DEP-1..4 (Qdrant importer, gateway-only HTTP, `corpus` as a leaf, `verification` never importing `retrieval`).
-- `tests/unit/test_error_taxonomy.py` — the 32 error codes and their statuses.
+- `tests/unit/test_error_taxonomy.py` — the 33 error codes and their statuses.
 - `tests/unit/test_api_docs.py` — committed specs equal generated output.
 - `tests/unit/test_config.py` — every LLD §17 variable and default; the PgBouncer-mode startup refusal (ISO-11).
 - `tests/repository/*` and `tests/e2e/test_security.py` — cross-tenant isolation under `FORCE` RLS, including the PgBouncer pooled-backend case (RLS-6).

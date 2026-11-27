@@ -20,8 +20,8 @@ STATUS_BY_CODE = {
 
 
 def test_taxonomy_has_the_32_live_domain_codes() -> None:
-    """§24: 32 live domain codes; the five platform codes are not among them."""
-    assert len(ErrorCode) == len(ERROR_TAXONOMY) == 32
+    """§24: 33 live domain codes; the five platform codes are not among them."""
+    assert len(ErrorCode) == len(ERROR_TAXONOMY) == 33
     assert not {
         "VALIDATION_FAILED",
         "UNAUTHORIZED",

@@ -36,8 +36,6 @@ def assert_temporal_config(settings: Settings) -> None:
     """
     if bool(settings.temporal_tls_cert_path) != bool(settings.temporal_tls_key_path):
         raise ConfigError("TEMPORAL_TLS_CERT_PATH and TEMPORAL_TLS_KEY_PATH are set together")
-    if settings.temporal_tls_ca_path and not settings.temporal_tls_cert_path:
-        raise ConfigError("TEMPORAL_TLS_CA_PATH needs TEMPORAL_TLS_CERT_PATH and the key")
     if (
         settings.environment not in LOCAL_ENVIRONMENTS
         and "temporal_namespace" not in settings.model_fields_set
@@ -56,9 +54,6 @@ def _tls(settings: Settings) -> TLSConfig | None:
     if not settings.temporal_tls_cert_path:
         return None
     return TLSConfig(
-        server_root_ca_cert=_read(settings.temporal_tls_ca_path)
-        if settings.temporal_tls_ca_path
-        else None,
         client_cert=_read(settings.temporal_tls_cert_path),
         client_private_key=_read(settings.temporal_tls_key_path),
     )

@@ -230,7 +230,7 @@ async def test_a_terminal_outcome_archives_and_the_first_one_wins(outcome: str) 
     assert free.archive_state is ArtefactArchiveState.LIVE  # ART-8
     [entry] = bench.chain.entries
     assert (entry.draft.entry_type, entry.draft.artefact_id) == ("llm.artefact.archived", art.id)
-    await rig.send(envelope("TenderWon", {"tender_id": str(TENDER)}))
+    await rig.send(envelope("TenderLost", {"tender_id": str(TENDER)}))
     assert len(bench.chain.entries) == 1
     assert bench.world.state.collections[col.id].tender_closed_at == closed_at
     assert bench.artefacts == [art, free]  # archived, never deleted
@@ -239,6 +239,7 @@ async def test_a_terminal_outcome_archives_and_the_first_one_wins(outcome: str) 
 async def test_other_tender_types_are_ignored() -> None:
     rig = Rig(Bench(), h.tender_lifecycle)
     await rig.send(envelope("TenderReceived", {"tender_id": str(TENDER)}))
+    await rig.send(envelope("TenderWon", {"tender_id": str(TENDER)}))  # Contracted follows it
     assert rig.dlq.sent == []
 
 

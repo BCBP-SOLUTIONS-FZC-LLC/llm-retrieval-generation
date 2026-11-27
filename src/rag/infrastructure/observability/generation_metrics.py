@@ -27,8 +27,8 @@ from fastapicommon.telemetry import new_tracer, record_span_error
 
 from rag.application.shared.observability import GenerationObserver, NullGenerationObserver
 from rag.infrastructure.config import Settings
+from rag.infrastructure.observability.prefix import metric_prefix as _p
 
-P = "llm_retrieval_generation_"
 log = get_logger("rag.generation")
 
 METRIC_NAMES = {
@@ -92,7 +92,7 @@ class PrometheusGenerationObserver:
 
     def __init__(self) -> None:
         def counter(name: str, doc: str) -> Any:
-            return new_counter(P + name, doc, LABELS.get(name, []))
+            return new_counter(_p() + name, doc, LABELS.get(name, []))
 
         self._claims = counter("claim_outcome_total", "Claim outcomes")
         self._tiers = counter("verification_tier_total", "Ladder tier that settled a claim")
@@ -110,17 +110,23 @@ class PrometheusGenerationObserver:
         self._delivery = counter("delivery_state_total", "Delivery states")
         self._replays = counter("idempotent_replay_total", "Idempotent replays")
         self._first_token = new_histogram(
-            P + "answer_first_token_seconds", "Time to the first draft frame"
+            _p() + "answer_first_token_seconds", "Time to the first draft frame"
         )
         self._first_frame = new_histogram(
-            P + "first_frame_latency_seconds", "Time to the first frame", ["suppressed"]
+            _p() + "first_frame_latency_seconds",
+            "Time to the first frame",
+            ["suppressed"],
         )
         self._hist = {
-            "answer": new_histogram(P + "answer_verified_seconds", "Answer to verdict frame"),
-            "draft": new_histogram(P + "draft_verified_seconds", "Draft to verdict frame"),
-            "extraction": new_histogram(P + "extraction_duration_seconds", "Extraction duration"),
+            "answer": new_histogram(_p() + "answer_verified_seconds", "Answer to verdict frame"),
+            "draft": new_histogram(_p() + "draft_verified_seconds", "Draft to verdict frame"),
+            "extraction": new_histogram(
+                _p() + "extraction_duration_seconds", "Extraction duration"
+            ),
         }
-        self._delivered = new_gauge(P + "verdict_frame_delivered_ratio", "Verdict frames delivered")
+        self._delivered = new_gauge(
+            _p() + "verdict_frame_delivered_ratio", "Verdict frames delivered"
+        )
         self._sent = self._ok = 0
 
     @asynccontextmanager

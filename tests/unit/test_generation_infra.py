@@ -31,11 +31,11 @@ from rag.infrastructure.iam.llm_context import HttpUserContext
 from rag.infrastructure.observability.generation_metrics import (
     LABELS,
     METRIC_NAMES,
-    P,
     build_generation_observer,
     ratio_band,
     score_band,
 )
+from rag.infrastructure.observability.prefix import API_PREFIX as P
 from rag.infrastructure.persistence.generation.probes import (
     PROBE_TIMEOUT_SECONDS,
     CorpusTenderGate,

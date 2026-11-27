@@ -246,11 +246,10 @@ def test_the_queue_follows_kind_plan_and_residency(
     assert names.for_input(body) == queue
 
 
-def test_a_certificate_without_its_key_or_a_ca_alone_is_refused() -> None:
+def test_a_certificate_without_its_key_or_the_reverse_is_refused() -> None:
     for kw in (
         {"temporal_tls_cert_path": "c.pem"},
         {"temporal_tls_key_path": "k.pem"},
-        {"temporal_tls_ca_path": "ca.pem"},
     ):
         with pytest.raises(ConfigError):
             build_workflow_client(Settings(temporal_address="t:7233", environment="test", **kw))
@@ -282,19 +281,15 @@ def test_the_namespace_set_through_the_environment_passes_the_production_check(
 def test_mtls_files_become_the_connection_tls_config(tmp_path: Any) -> None:
     from rag.infrastructure.temporal.factory import _tls
 
-    for name, body in (("c.pem", b"CERT"), ("k.pem", b"KEY"), ("ca.pem", b"CA")):
+    for name, body in (("c.pem", b"CERT"), ("k.pem", b"KEY")):
         (tmp_path / name).write_bytes(body)
     paths = {
         "temporal_tls_cert_path": str(tmp_path / "c.pem"),
         "temporal_tls_key_path": str(tmp_path / "k.pem"),
     }
-    tls = _tls(Settings(**paths, temporal_tls_ca_path=str(tmp_path / "ca.pem")))
-    assert (tls.client_cert, tls.client_private_key, tls.server_root_ca_cert) == (
-        b"CERT",
-        b"KEY",
-        b"CA",
-    )
-    assert _tls(Settings(**paths)).server_root_ca_cert is None  # a public CA needs none
+    tls = _tls(Settings(**paths))
+    assert (tls.client_cert, tls.client_private_key) == (b"CERT", b"KEY")
+    assert tls.server_root_ca_cert is None  # the system store is trusted (WE-3)
     assert _tls(Settings()) is None
 
 

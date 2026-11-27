@@ -46,6 +46,7 @@ from rag.engine.errors import (
     EngineError,
     InferenceUnavailable,
     NothingToMint,
+    ProfileUnavailable,
     QuotaRefused,
     ResidencyRefused,
     RunGone,
@@ -66,7 +67,7 @@ from rag.engine.sections import (
 )
 from rag.infrastructure.persistence.generation.engine import OutlineEntry
 
-ENGINE_API_VERSION = "1.1.0"
+ENGINE_API_VERSION = "1.2.0"
 
 __all__ = [
     "ENGINE_API_VERSION",
@@ -83,6 +84,7 @@ __all__ = [
     "InferenceUnavailable",
     "ModelAnswer",
     "NothingToMint",
+    "ProfileUnavailable",
     "OutlineEntry",
     "PromptChunk",
     "QuotaRefused",

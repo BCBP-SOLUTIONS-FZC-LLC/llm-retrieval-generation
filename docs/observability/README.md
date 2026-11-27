@@ -7,7 +7,7 @@ How this service implements the platform observability standard through [`platfo
 | Piece | Location |
 |---|---|
 | Metric inventory (every metric this service declares, by group) | [`metric-registry.md`](metric-registry.md) |
-| Collector construction and the `llm_retrieval_generation_` prefix | `src/rag/infrastructure/observability/{metrics,generation_metrics,workflow_metrics}.py` |
+| Collector construction and the prefix (`llm_retrieval_generation_` here; the active metrics identity's `<domain>_<service>_`, so `llm_workers_` when the engine runs in the Worker Pool) | `src/rag/infrastructure/observability/{prefix,metrics,generation_metrics,workflow_metrics}.py` |
 | Structured logging and tracing wrappers | the same modules (`LoggingObserver`, `TracingGenerationObserver`, `TracingWorkflowObserver`) and `observability/logs.py` |
 | Name and label checks | `tests/unit/test_retrieval_infra.py`, `tests/unit/test_generation_infra.py`, `tests/unit/test_workflows_wiring.py` (names validated against the platform registry without a scrape) |
 | Wiring tests for the adapters | `tests/unit/test_observability_adapters.py` |
@@ -36,7 +36,7 @@ How this service implements the platform observability standard through [`platfo
 |---|---|---|
 | 1, `platform_*` | Emitted by the libraries only (`platform_http_*`, `platform_messages_*`, `platform_outbox_*`, `platform_dlq_messages_total`, `platform_db_*`). This service declares none. | `tests/architecture/test_metrics_standard.py` fails on a `platform_*` literal or any `new_shared_*` call |
 | 2, `<domain>_*` | None. `llm` has one service in this repo; a metric shared with Ingestion or the Worker Pool would need the domain registry first. | Same test |
-| 3, `llm_retrieval_generation_*` | Every collector in [`metric-registry.md`](metric-registry.md). | Prefix, `_total` / `_seconds` suffixes, label vocabulary and `check_custom` registry rules, for all three modules |
+| 3, `llm_retrieval_generation_*` (the active identity's prefix; `llm_workers_*` in a worker) | Every collector in [`metric-registry.md`](metric-registry.md). | Prefix, `_total` / `_seconds` suffixes, label vocabulary and `check_custom` registry rules, for all three modules |
 
 - `domain`, `service` and `environment` are injected by the library's registry, never declared (the test rejects them, and `tenant_id`, `user_id`, `email`, `request_id`, `event_id`, `session_id`, as labels).
 - The inventory document must list exactly the declared collectors, in both directions.

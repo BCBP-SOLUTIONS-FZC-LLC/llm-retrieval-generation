@@ -42,7 +42,7 @@ C-I1 `POST /resolve`, C-I2 `GET /{id}`, C-I4 `POST /{id}/index-generations/{n}/a
 - **Status commits at the first byte** of an SSE body (LD-2): everything that can be an HTTP problem runs before the stream opens (API-6). After it, failure is a terminal `error` frame on the `200`.
 - `206` where retrieval or extraction degraded; `202` + handle for async starts; `200` on an idempotent replay; `201` vs `200` on C-I1 and P-6 (create vs existing).
 - Pagination: `limit` (default 100, clamped to 500) and `offset`.
-- Errors: RFC 9457 problem bodies, 32 codes (`domain/shared/errors.py`, `presentation/errors.py`).
+- Errors: RFC 9457 problem bodies, 33 codes (`domain/shared/errors.py`, `presentation/errors.py`).
 - `Idempotency-Key` on W-1 and W-6 (TTL 1 h); a failed or cancelled run releases its key.
 
 ## 6. Caching (Valkey; an outage is a miss)
@@ -73,14 +73,14 @@ The pack-cache key shape is an **assumption** (§11.1 does not fix the identity)
 
 Emitted today: the corpus events, `ProfileCacheRefreshed`, `GenerationFailed` (sweeps and `scope_revoked`), `GenerationStarted` (every admission), `GenerationProgressed` (W-3/W-4/W-7), `GenerationCancelled` (W-5), `SectionCompleted` with `origin = regeneration` (A-6). **Still the Worker Pool's:** `OutlineReady`, `GenerationGapReported`, the activities' `GenerationProgressed` / `SectionCompleted` / `GenerationCompleted` / `ArtefactRegenerated`. `CorpusConflictDetected` is deferred past v1 (LD-52). No event is published for a failed or cancelled run beyond the cases above (audit entries only).
 
-### 7.3 Consumed (11 types, 5 queues)
+### 7.3 Consumed (13 types, 5 queues)
 
 | Queue | Consumer ledger | Codec | Events |
 |---|---|---|---|
 | `llm-document-rag-q` | `purge_projection` | plain | `DocumentPurged` |
 | `domainprofile-llm-invalidate-q` | `pack_invalidation` | plain | `DomainProfilePublished` |
 | `membership-rag-q` | `membership` | Glue | `TenantMembershipsPurged`, `TenantStateChanged` |
-| `tender-rag-q` | `tender_lifecycle` | plain | `TenderRestricted`, `TenderPurged`, the four terminal outcomes (`TenderDeclined/Won/Lost/Withdrawn`, names assumed) |
+| `tender-rag-q` | `tender_lifecycle` | plain | `TenderRestricted`, `TenderPurged`, the six terminal outcomes (`TenderRejected/Declined/Contracted/Lost/Lapsed/Withdrawn`, Tender 27 Nov 2026; `TenderWon` is ignored) |
 | `usage-rag-q` | `quota_resume` | plain | `TenantQuotaRestored` |
 
 Poison goes to the queue's DLQ at the fourth receive (`SQS_MAX_RECEIVE_COUNT=3`, eventcommon forwards when the count *exceeds* it) and is acknowledged. The authoritative lists are `runtime.QUEUES` and `contracts.py`.

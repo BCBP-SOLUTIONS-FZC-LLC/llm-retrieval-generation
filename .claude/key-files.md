@@ -25,7 +25,7 @@ Critical implementation files for `llm-retrieval-generation`. See also [`archite
 - **`src/rag/infrastructure/gateway/client.py`** — `HttpModelGateway`: embed (300 ms, one retry, breaker), rerank (no retry), complete, SSE stream, tokenize with an over-estimate fallback. **The paths and header names are settings (`gateway_*`), defaulting to Agent Router's; this file is the only place that knows them.**
 - **`src/rag/infrastructure/sweeps/runner.py`** — pools, per-instance advisory lock, `build_sweep`, `run_sweep`; `__main__.py` maps outcomes to exit codes 0/1/2/64.
 - **`src/rag/infrastructure/storage/artefact_content_store.py`** — tenant-prefixed keys, SSE-KMS with the tenant in the encryption context, batched prefix delete.
-- **`src/rag/application/events/contracts.py`** — the 17 published and 11 consumed event contracts (stdlib only); `infrastructure/events/schemas.py` derives the JSON Schemas.
+- **`src/rag/application/events/contracts.py`** — the 17 published and 13 consumed event contracts (stdlib only); `infrastructure/events/schemas.py` derives the JSON Schemas.
 - **`src/rag/infrastructure/config.py`** — `Settings` (every LLD §17 variable) and `assert_isolation_config`.
 - **`scripts/gen_api_docs.py`** — generates `docs/swagger/swagger.{json,yaml}`, `api/asyncapi.{yaml,html}` and checks drift (`--check`); pins `app_name` so `APP_NAME` in the environment cannot change the output.
 - **`migrations/README.md`** — numbering, ledger, DDL conventions; read before adding a migration.

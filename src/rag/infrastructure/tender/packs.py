@@ -2,7 +2,7 @@
 
 Tender is the pack authority and we pull. A hit in the Valkey cache never leaves the process
 (RET-3). A miss calls Tender with a 2 s timeout and two retries with backoff behind a breaker.
-Open breaker or a failure after the retries raises ``PackUnavailable``; the caller falls back
+Open breaker or a failure after the retries raises ``PackUnavailable``; answers and search fall back
 to the platform default profile with a marker. Assumed route:
 ``GET /internal/packs/resolve?domain_profile_ref=&language=&version=`` with ``x-tenant-id``.
 """

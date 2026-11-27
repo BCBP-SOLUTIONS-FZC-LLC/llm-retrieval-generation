@@ -1,4 +1,4 @@
-"""Error taxonomy of LLD §24: the 32 domain codes, their HTTP status and title.
+"""Error taxonomy of LLD §24: the 33 domain codes, their HTTP status and title.
 
 This module is the single source of the table. The five platform codes (``VALIDATION_FAILED``,
 ``UNAUTHORIZED``, ``INTERNAL_ERROR``, ``REQUEST_TIMEOUT``, ``FORBIDDEN``) belong to
@@ -45,6 +45,7 @@ class ErrorCode(StrEnum):
     RETRIEVAL_FAILED = "RETRIEVAL_FAILED"
     SCOPE_STORE_UNAVAILABLE = "SCOPE_STORE_UNAVAILABLE"
     INFERENCE_UNAVAILABLE = "INFERENCE_UNAVAILABLE"
+    PACK_UNAVAILABLE = "PACK_UNAVAILABLE"
     RESIDENCY_CAPACITY = "RESIDENCY_CAPACITY"
     RENDERER_UNAVAILABLE = "RENDERER_UNAVAILABLE"
     WORKFLOW_ENGINE_UNAVAILABLE = "WORKFLOW_ENGINE_UNAVAILABLE"
@@ -95,6 +96,7 @@ _ROWS: tuple[ErrorSpec, ...] = (
     ErrorSpec(E.RETRIEVAL_FAILED, 503, "Retrieval failed"),
     ErrorSpec(E.SCOPE_STORE_UNAVAILABLE, 503, "Scope store unavailable"),
     ErrorSpec(E.INFERENCE_UNAVAILABLE, 503, "Inference unavailable"),
+    ErrorSpec(E.PACK_UNAVAILABLE, 503, "Domain Profile unavailable"),
     ErrorSpec(E.RESIDENCY_CAPACITY, 503, "Residency capacity unavailable"),
     ErrorSpec(E.RENDERER_UNAVAILABLE, 503, "Renderer unavailable"),
     ErrorSpec(E.WORKFLOW_ENGINE_UNAVAILABLE, 503, "Workflow engine unavailable"),

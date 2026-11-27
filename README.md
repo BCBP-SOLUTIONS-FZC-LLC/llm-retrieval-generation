@@ -96,7 +96,7 @@ Reserved, not mounted: `C-I3`, `C-I9`. Retired: `C-T1`, `C-T2`.
 
 ### Errors
 
-RFC 9457 `application/problem+json` through `fastapicommon`: `errorCode` (upper snake case), `traceId`, `tenantId`, `timestamp`, `validationErrors`. 32 domain codes (`src/rag/domain/shared/errors.py`, LLD §24), mapped to statuses in `presentation/errors.py`.
+RFC 9457 `application/problem+json` through `fastapicommon`: `errorCode` (upper snake case), `traceId`, `tenantId`, `timestamp`, `validationErrors`. 33 domain codes (`src/rag/domain/shared/errors.py`, LLD §24), mapped to statuses in `presentation/errors.py`.
 
 ---
 
@@ -151,7 +151,7 @@ schemas/events/                   JSON Schemas derived from the event contracts
 
 ## Integrating with other services
 
-1. **Tender** calls the public routes (R-, A-, W-, P-), serves Domain Profile / Language Pack resolution (pulled, cache-fronted), publishes `TenderRestricted` / `TenderPurged` and the four terminal outcomes, and consumes `llm-generation-events`.
+1. **Tender** calls the public routes (R-, A-, W-, P-), serves Domain Profile / Language Pack resolution (pulled, cache-fronted), publishes `TenderRestricted` / `TenderPurged` and the six terminal outcomes, and consumes `llm-generation-events`.
 2. **Ingestion** calls the C-I routes. It creates the Qdrant collections, builds and verifies index generations, and reports each state to this service, which writes it. Promotion point-copy (C-I7) and source purge (C-I10) are *required of Ingestion*, not routes here.
 3. **IAM** is called for principal memberships (`GET /users/:id/memberships`), the user LLM context, and the Tender ACL overlay (TAC-4); it publishes `TenantStateChanged` and `TenantMembershipsPurged`.
 4. **Model Gateway** (Agent Router, formerly Envoy AI Gateway; run by this team) is the only path to inference: seven task classes (`embed`, `rerank`, `draft`, `judge`, `extract`, `refine-query`, `refine-instruction`). `preferred_model` is a hint; `x-residency-mode` is forwarded on every call.
@@ -164,7 +164,7 @@ Peer contracts that the LLD does not fix (Tender pack JSON, IAM bodies, Gateway 
 
 Published (17): `llm-generation-events` — `GenerationStarted`, `GenerationGapReported`, `OutlineReady`, `SectionCompleted`, `GenerationProgressed`, `GenerationCompleted`, `GenerationFailed`, `GenerationCancelled`, `ArtefactRegenerated`, `ExtractionCompleted`; `llm-index-events` — `IndexGenerationActivated`, `IndexGenerationFailed`, `CorpusConflictDetected`, `CollectionProvisioned`, `CollectionPromoted`, `CollectionStatusChanged`, `ProfileCacheRefreshed`.
 
-Consumed (11 types on 5 queues): `llm-document-rag-q`, `domainprofile-llm-invalidate-q`, `membership-rag-q`, `tender-rag-q`, `usage-rag-q`. Poison messages go to the queue's DLQ at the fourth receive and are acknowledged.
+Consumed (13 types on 5 queues): `llm-document-rag-q`, `domainprofile-llm-invalidate-q`, `membership-rag-q`, `tender-rag-q`, `usage-rag-q`. Poison messages go to the queue's DLQ at the fourth receive and are acknowledged.
 
 Events are written to the outbox **in the same transaction** as the state change (EVT-8) and relayed by one claim loop per database through a routing publisher. An unregistered type or an off-schema payload fails closed inside that transaction.
 
@@ -276,7 +276,7 @@ Troubleshooting: count stays 0 → `EVENTS_ENABLED` is still false or the app wa
 
 - `tests/architecture/test_dependency_rules.py` — layering and DEP-1..5.
 - `tests/unit/test_api_docs.py` — committed specs equal generated output; docs routes served.
-- `tests/unit/test_error_taxonomy.py` — the 32 error codes and their statuses.
+- `tests/unit/test_error_taxonomy.py` — the 33 error codes and their statuses.
 - `tests/repository/*` and `tests/e2e/test_security.py` — cross-tenant isolation under `FORCE` RLS.
 - `tests/unit/test_config.py` — every LLD §17 variable and default; the PgBouncer-mode startup refusal.
 
@@ -378,13 +378,13 @@ For Claude Code, `.claude/settings.json` registers two hooks (`format-python.sh`
 | Outbound, sync | Temporal | Start and signal | Async routes `503 WORKFLOW_ENGINE_UNAVAILABLE`; admission rows stay `pending` and a repeat of the same key restarts them |
 | Outbound, sync | Qdrant, Valkey, S3 | Vectors, caches, section text | Qdrant: scope store refuses (`503`); Valkey: cache miss; S3: content `503` |
 | Inbound | Tender, Ingestion, Worker Pool, operators | Public, C-I, activity writes, W-8 | — |
-| Async | SNS / SQS | 17 published, 11 consumed event types | Outbox retries; poison messages dead-letter |
+| Async | SNS / SQS | 17 published, 13 consumed event types | Outbox retries; poison messages dead-letter |
 
 ---
 
 ## Out of scope
 
-- **The workflows, the orchestration activities and every LangGraph graph** — the Worker Pool (scope cut S-1; its design is `docs/lld/llm-lld-workers-service.md`, draft 2). It calls this service's `rag.engine` for every table write and building block. No worker exists yet, so outline, stage and coherence steps, `OutlineReady`, gate expiry and the suspend path are untested end to end.
+- **The workflows, the orchestration activities and every LangGraph graph** — the Worker Pool (scope cut S-1; its design is `docs/lld/llm-lld-workers-service.md` in the `llm-workers` repo, which owns it). It calls this service's `rag.engine` for every table write and building block. No worker exists yet, so outline, stage and coherence steps, `OutlineReady`, gate expiry and the suspend path are untested end to end.
 - **Ingestion's write path** — parsing, chunking, embedding, Qdrant writes, the lexical table (S-2, DEP-5).
 - **Model Gateway configuration** — only the HTTP client and adapter live here (S-3).
 - **Output content safety** — Tender's, not ours (§15.3).

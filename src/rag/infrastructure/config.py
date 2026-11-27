@@ -150,10 +150,10 @@ class Settings(PlatformSettings):
     temporal_task_queue_extraction_enterprise: str = "llm-extraction-enterprise"
     temporal_task_queue_extraction_strict: str = "llm-extraction-strict"
     # mTLS to the cluster (the Workflow Engine team's, workers LLD WF-3). All empty: no TLS (local).
-    # A cert needs its key. The CA is only for a private authority. One client cert per caller.
+    # A cert needs its key. The system certificate store is trusted (no CA path, WE-3).
+    # One client cert per caller.
     temporal_tls_cert_path: str = ""
     temporal_tls_key_path: str = ""
-    temporal_tls_ca_path: str = ""
     gateway_base_url: str = "http://model-gateway.internal"
     tender_base_url: str = "http://tender.internal"
     iam_base_url: str = "http://iam.internal"

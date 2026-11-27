@@ -25,10 +25,10 @@ from rag.infrastructure.config import Settings
 from rag.infrastructure.gateway.client import HttpModelGateway
 from rag.infrastructure.observability.metrics import (
     METRIC_NAMES,
-    P,
     build_observer,
     depth_band,
 )
+from rag.infrastructure.observability.prefix import API_PREFIX as P
 from rag.infrastructure.resilience import BreakerOpen, CircuitBreaker
 from rag.infrastructure.retrieval.lexical import PgLexicalSearch, build_sql
 from rag.infrastructure.retrieval.qdrant import to_candidate
@@ -315,7 +315,7 @@ def resolver(handler, cache=None) -> HttpPackResolver:  # type: ignore[no-untype
 
 
 async def test_pack_resolution_retries_twice_then_is_unavailable() -> None:
-    """§14.3: 2 retries with backoff, then ``PackUnavailable`` (the caller falls to default)."""
+    """§14.3: 2 retries with backoff, then ``PackUnavailable`` (only answers fall back)."""
     calls = {"n": 0}
 
     def handler(request: httpx.Request) -> httpx.Response:

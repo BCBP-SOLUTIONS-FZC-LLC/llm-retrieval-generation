@@ -11,8 +11,8 @@ confirmed by the Worker Pool owner.
 
 | Argument | Value |
 |---|---|
-| Namespace | `llm-generation` (`TEMPORAL_NAMESPACE`). **Required outside `local`, `dev` and `test`** (one namespace per environment on the shared cluster). mTLS with `TEMPORAL_TLS_CERT_PATH` and `TEMPORAL_TLS_KEY_PATH`, a CA in `TEMPORAL_TLS_CA_PATH` only for a private authority; a certificate needs its key. The names are this service's choice until the Workflow team confirms theirs |
-| Workflow type | `GenerationWorkflow` (W-1, A-5) or `ExtractionWorkflow` (W-6). Fixed by the workers LLD (LW-2, rev 0.2, draft) |
+| Namespace | `llm-generation` (`TEMPORAL_NAMESPACE`). **Required outside `local`, `dev` and `test`** (one namespace per environment on the shared cluster). mTLS with `TEMPORAL_TLS_CERT_PATH` and `TEMPORAL_TLS_KEY_PATH`, the system certificate store is trusted and there is no CA path (WE-3); a certificate needs its key. The names are this service's choice until the Workflow team confirms theirs |
+| Workflow type | `GenerationWorkflow` (W-1, A-5) or `ExtractionWorkflow` (W-6). Fixed by the workers LLD (LW-2) |
 | `workflow_id` | `generation_runs.workflow_id` (RUN-2): `{artefact_id}` for an original, `regen:{base_version_id}` for an A-5 regeneration. Unique per tenant (`uq_run_workflow`) |
 | Task queue (WP-10) **(names assumed until the platform team names the namespaces and confirms them, workers LLD PL-9)** | Six, by run kind then tier: generation `llm-generation`, `llm-generation-enterprise` (`plan = enterprise`, compared in lower case against `ENTERPRISE_PLANS`), `llm-generation-strict` (any non-standard `residency_mode`; strict wins over plan); extraction (W-6, `kind = extraction`) `llm-extraction`, `llm-extraction-enterprise`, `llm-extraction-strict`. Names come from `TEMPORAL_TASK_QUEUE*` |
 | Id reuse / conflict policy | W-1, W-6, A-5, orphan sweep: `REJECT_DUPLICATE` + `FAIL`; `WorkflowAlreadyStarted` is treated as success (ASYNC-2). W-8 only: `ALLOW_DUPLICATE` + `FAIL` (a closed id may be reused, a live one answers `409`) |
@@ -139,11 +139,12 @@ this distribution, `rag.engine`, and the stdlib-only plain types `llm_models.wor
 |---|---|
 | Public API, version `ENGINE_API_VERSION` (semantic) | `src/rag/engine/__init__.py` (`__all__`) |
 | Recorded shape, compared by a contract test here and in `llm-workers` (WB-4) | `src/rag/engine/engine_api_v1.json`, regenerated with `python -m rag.engine.snapshot` |
+| Metrics identity (1.2.0) | The engine's Tier 3 metrics are named `<domain>_<service>_<metric>` from the identity fastapicommon holds when `build_engine` runs, so a worker that initialises `llm-workers` first gets `llm_workers_*` and may pass `enable_metrics=True`. That flag also enables eventcommon's `platform_*` outbox metrics in the worker | `observability/prefix.py` |
 | Run writes | `begin_stage`, `suspend_for_quota`, `complete_run`, `fail_run`, `run_state` (`runs.py`) |
 | Outline and sections | `save_outline` (gated or not), `begin_section`, `save_section`, `save_section_gap`, `fail_section`, `load_section_text` (`sections.py`) |
 | Facts, coherence, version | `record_facts` (supersedes first, `DF-2`), `record_coherence`, `mint_document_version`, `record_checkpoint` (names, timings and counts only) (`documents.py`) |
 | Building blocks | `load_pack` (the pinned version), `reresolve`, `retrieve`, `compose_prompt`, `call_model`, `verify`, `refine_instruction`, `run_extraction` (`blocks.py`) |
-| Errors (no Temporal import, WB-7) | `RunGone`, `RunTerminal`, `QuotaRefused`, `ScopeRevoked`, `ResidencyRefused`, `SchemaViolation`, `InferenceUnavailable`, `ContentUnavailable`, `NothingToMint` |
+| Errors (no Temporal import, WB-7) | `RunGone`, `RunTerminal`, `QuotaRefused`, `ScopeRevoked`, `ResidencyRefused`, `SchemaViolation`, `InferenceUnavailable`, `ContentUnavailable`, `ProfileUnavailable`, `NothingToMint` |
 | Composition root, no application and no lifespan | `rag.engine.bootstrap.build_engine(settings)` |
 
 Every write function takes the run's row `FOR UPDATE`, applies the domain machine, publishes its event in the same transaction,

@@ -20,8 +20,8 @@ from fastapicommon.telemetry import new_tracer, record_span_error
 
 from rag.application.workflows.observability import NullWorkflowObserver, WorkflowObserver
 from rag.infrastructure.config import Settings
+from rag.infrastructure.observability.prefix import metric_prefix as _p
 
-P = "llm_retrieval_generation_"
 log = get_logger("rag.workflows")
 
 METRIC_NAMES = {
@@ -52,7 +52,7 @@ class PrometheusWorkflowObserver:
 
     def __init__(self) -> None:
         def counter(name: str, doc: str) -> Any:
-            return new_counter(P + name, doc, LABELS.get(name, []))
+            return new_counter(_p() + name, doc, LABELS.get(name, []))
 
         self._revoked = counter("scope_revoked_async_total", "Runs ended by scope re-resolution")
         self._regen = counter("regeneration_total", "Regenerations admitted")

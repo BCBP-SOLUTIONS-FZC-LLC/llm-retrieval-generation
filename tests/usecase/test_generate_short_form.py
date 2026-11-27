@@ -751,7 +751,7 @@ async def test_an_ungranted_caller_gets_404_not_a_409_that_reveals_a_closed_tend
 
 async def test_a_pack_fallback_is_reported_once_not_once_per_resolution() -> None:
     rig = GenRig()
-    rig.packs.down = True  # admission and the pipeline each fall back to the platform default
+    rig.packs.down = True  # answers fall back to the platform default; generation does not
     v = (await drain(await rig.answer.execute(identity(), Q))).of(VerdictFrame)[0]
     await rig.settle()
     packs = [m for m in v.degradation_markers if m["stage"] == "pack"]
